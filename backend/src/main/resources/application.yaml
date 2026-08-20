@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: decision-assistant-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/decision_assistant}
+    username: ${DB_USERNAME:decision_assistant}
+    password: ${DB_PASSWORD:decision_assistant}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  ai:
+    model:
+      chat: ${AI_CHAT_PROVIDER:none}
+    openai:
+      api-key: ${OPENAI_API_KEY:disabled}
+      chat:
+        model: ${OPENAI_MODEL:gpt-5.4-nano}
+        store: false
+    retry:
+      max-attempts: 2
+      backoff:
+        initial-interval: 500ms
+        multiplier: 2
+        max-interval: 2s
+
+decision-assistant:
+  ai:
+    enabled: ${DECISION_ASSISTANT_AI_ENABLED:false}
+    provider: openai
+    model: ${OPENAI_MODEL:gpt-5.4-nano}
+    timeout: 30s
+
+springdoc:
+  api-docs:
+    path: /api/openapi
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

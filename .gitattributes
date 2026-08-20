@@ -1,0 +1,16 @@
+/backend/gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary
+
+# Keep text files consistent across the frontend and backend applications.
+*.java text eol=lf
+*.groovy text eol=lf
+*.gradle text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.md text eol=lf

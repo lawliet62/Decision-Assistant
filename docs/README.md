@@ -1,0 +1,11 @@
+# 문서 색인
+
+- [Product scope](product.md): 문제, MVP boundary, 성공 신호
+- [Domain model](domain.md): 용어, aggregate, invariant
+- [System architecture](architecture.md): runtime/data/security 경계
+- [API contract](api-contract.md): OpenAPI 생성·소비 workflow
+- [Development workflow](development.md): golden commands와 변경 절차
+- [Known limitations](known-limitations.md): 배포 blocker와 deferred decision
+- [ADR](decisions/): 장기간 유지할 architecture decision과 trade-off
+
+AGENTS.md는 작업 시 반드시 필요한 짧은 지침과 링크만 담는다. 설계의 이유와 상세 설명은 이곳에서 관리한다.

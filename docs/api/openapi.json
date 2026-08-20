@@ -1,0 +1,1200 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost",
+    "description" : "Generated server url"
+  } ],
+  "paths" : {
+    "/api/v1/decisions/{decisionId}/draft" : {
+      "put" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "update",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateDraftRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions" : {
+      "get" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DecisionSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "decision-controller" ],
+        "summary" : "Create a Decision from a versioned template",
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateDecisionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/structure-proposals" : {
+      "post" : {
+        "tags" : [ "ai-controller" ],
+        "operationId" : "create_1",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateStructureProposalRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StructureRunResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/resolutions" : {
+      "post" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "resolve",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateResolutionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResolutionData"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/outcome-check-ins" : {
+      "post" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "addOutcome",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateOutcomeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OutcomeData"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/evaluations" : {
+      "post" : {
+        "tags" : [ "evaluation-controller" ],
+        "operationId" : "create_2",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateEvaluationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EvaluationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/evaluations/{evaluationId}/llm-retries" : {
+      "post" : {
+        "tags" : [ "evaluation-controller" ],
+        "operationId" : "retry",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "evaluationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RetryLlmRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EvaluationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}" : {
+      "get" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "get",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/evaluations/{evaluationId}" : {
+      "get" : {
+        "tags" : [ "evaluation-controller" ],
+        "operationId" : "get_1",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "evaluationId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EvaluationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ai/capabilities" : {
+      "get" : {
+        "tags" : [ "ai-controller" ],
+        "operationId" : "capabilities",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AiCapabilitiesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ConstraintData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "NUMERIC_MIN", "NUMERIC_MAX", "BOOLEAN_REQUIRED", "MANUAL" ]
+          },
+          "criterionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "threshold" : {
+            "type" : "number"
+          },
+          "unit" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "minLength" : 0
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "kind", "name" ]
+      },
+      "ConstraintResultData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "optionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "constraintId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PASS", "FAIL", "UNKNOWN" ]
+          },
+          "note" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "constraintId", "optionId", "status" ]
+      },
+      "ContextData" : {
+        "type" : "object",
+        "properties" : {
+          "intendedUse" : {
+            "type" : "string",
+            "maxLength" : 1000,
+            "minLength" : 0
+          },
+          "budget" : {
+            "type" : "number"
+          },
+          "currency" : {
+            "type" : "string",
+            "maxLength" : 3,
+            "minLength" : 0
+          },
+          "notes" : {
+            "type" : "string"
+          }
+        }
+      },
+      "CriterionData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "NUMERIC_UTILITY", "RATING_1_TO_5" ]
+          },
+          "direction" : {
+            "type" : "string",
+            "enum" : [ "HIGHER_BETTER", "LOWER_BETTER", "NOT_APPLICABLE" ]
+          },
+          "weight" : {
+            "type" : "number"
+          },
+          "worstAnchor" : {
+            "type" : "number"
+          },
+          "bestAnchor" : {
+            "type" : "number"
+          },
+          "unit" : {
+            "type" : "string",
+            "maxLength" : 30,
+            "minLength" : 0
+          },
+          "active" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "direction", "kind", "name", "weight" ]
+      },
+      "OptionData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "sourceUrl" : {
+            "type" : "string",
+            "maxLength" : 2048,
+            "minLength" : 0
+          },
+          "sourceText" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "OptionValueData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "optionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "criterionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "numericValue" : {
+            "type" : "number"
+          },
+          "rating" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 5,
+            "minimum" : 1
+          },
+          "certainty" : {
+            "type" : "string",
+            "enum" : [ "CONFIRMED", "ESTIMATED" ]
+          },
+          "sourceUrl" : {
+            "type" : "string",
+            "maxLength" : 2048,
+            "minLength" : 0
+          },
+          "sourceNote" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "certainty", "criterionId", "optionId" ]
+      },
+      "UpdateDraftRequest" : {
+        "type" : "object",
+        "properties" : {
+          "expectedVersion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "context" : {
+            "$ref" : "#/components/schemas/ContextData"
+          },
+          "options" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OptionData"
+            },
+            "maxItems" : 5,
+            "minItems" : 0
+          },
+          "criteria" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CriterionData"
+            }
+          },
+          "values" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OptionValueData"
+            }
+          },
+          "constraints" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConstraintData"
+            }
+          },
+          "constraintResults" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConstraintResultData"
+            }
+          }
+        },
+        "required" : [ "constraintResults", "constraints", "context", "criteria", "options", "title", "values" ]
+      },
+      "DecisionResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "templateKey" : {
+            "type" : "string",
+            "enum" : [ "LAPTOP", "CUSTOM" ]
+          },
+          "templateVersion" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED" ]
+          },
+          "context" : {
+            "$ref" : "#/components/schemas/ContextData"
+          },
+          "options" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OptionData"
+            }
+          },
+          "criteria" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CriterionData"
+            }
+          },
+          "values" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OptionValueData"
+            }
+          },
+          "constraints" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConstraintData"
+            }
+          },
+          "constraintResults" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConstraintResultData"
+            }
+          },
+          "resolutions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ResolutionData"
+            }
+          },
+          "outcomes" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OutcomeData"
+            }
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "OutcomeData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "satisfaction" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "expectationStatus" : {
+            "type" : "string",
+            "enum" : [ "MET", "PARTIALLY_MET", "NOT_MET", "TOO_EARLY" ]
+          },
+          "notes" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ResolutionData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "CHOSEN", "DEFERRED", "ABANDONED" ]
+          },
+          "selectedOptionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "rationale" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CreateDecisionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "title" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "templateKey" : {
+            "type" : "string",
+            "enum" : [ "LAPTOP", "CUSTOM" ]
+          }
+        },
+        "required" : [ "templateKey", "title" ]
+      },
+      "CreateStructureProposalRequest" : {
+        "type" : "object",
+        "properties" : {
+          "expectedVersion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "aiConsent" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ConstraintSuggestion" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "criterionName" : {
+            "type" : "string"
+          },
+          "threshold" : {
+            "type" : "number"
+          },
+          "rationale" : {
+            "type" : "string"
+          }
+        }
+      },
+      "CriterionSuggestion" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "direction" : {
+            "type" : "string"
+          },
+          "suggestedWeight" : {
+            "type" : "number"
+          },
+          "worstAnchor" : {
+            "type" : "number"
+          },
+          "bestAnchor" : {
+            "type" : "number"
+          },
+          "unit" : {
+            "type" : "string"
+          },
+          "rationale" : {
+            "type" : "string"
+          }
+        }
+      },
+      "StructureProposal" : {
+        "type" : "object",
+        "properties" : {
+          "criteria" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CriterionSuggestion"
+            }
+          },
+          "values" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ValueSuggestion"
+            }
+          },
+          "constraints" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConstraintSuggestion"
+            }
+          },
+          "missingInformation" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "assumptions" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "StructureRunResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "decisionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "decisionVersion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "PENDING", "SUCCEEDED", "FAILED" ]
+          },
+          "proposal" : {
+            "$ref" : "#/components/schemas/StructureProposal"
+          },
+          "error" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "promptVersion" : {
+            "type" : "string"
+          },
+          "schemaVersion" : {
+            "type" : "string"
+          },
+          "latencyMs" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "inputTokens" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "outputTokens" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ValueSuggestion" : {
+        "type" : "object",
+        "properties" : {
+          "optionId" : {
+            "type" : "string"
+          },
+          "criterionName" : {
+            "type" : "string"
+          },
+          "numericValue" : {
+            "type" : "number"
+          },
+          "rating" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "certainty" : {
+            "type" : "string"
+          },
+          "evidenceNote" : {
+            "type" : "string"
+          }
+        }
+      },
+      "CreateResolutionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "kind" : {
+            "type" : "string",
+            "enum" : [ "CHOSEN", "DEFERRED", "ABANDONED" ]
+          },
+          "selectedOptionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "rationale" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "kind" ]
+      },
+      "CreateOutcomeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "satisfaction" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 5,
+            "minimum" : 1
+          },
+          "expectationStatus" : {
+            "type" : "string",
+            "enum" : [ "MET", "PARTIALLY_MET", "NOT_MET", "TOO_EARLY" ]
+          },
+          "notes" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "expectationStatus" ]
+      },
+      "CreateEvaluationRequest" : {
+        "type" : "object",
+        "properties" : {
+          "expectedVersion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "includeLlm" : {
+            "type" : "boolean"
+          },
+          "aiConsent" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "AlgorithmResult" : {
+        "type" : "object",
+        "properties" : {
+          "recommendedOptionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "options" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OptionResult"
+            }
+          }
+        }
+      },
+      "Contribution" : {
+        "type" : "object",
+        "properties" : {
+          "criterionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "criterionName" : {
+            "type" : "string"
+          },
+          "utility" : {
+            "type" : "number"
+          },
+          "weightedPoints" : {
+            "type" : "number"
+          }
+        }
+      },
+      "EvaluationResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "decisionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "decisionVersion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "inputHash" : {
+            "type" : "string"
+          },
+          "algorithmResult" : {
+            "$ref" : "#/components/schemas/AlgorithmResult"
+          },
+          "llmStatus" : {
+            "type" : "string",
+            "enum" : [ "NOT_REQUESTED", "PENDING", "SUCCEEDED", "FAILED" ]
+          },
+          "llmAssessment" : {
+            "$ref" : "#/components/schemas/LlmAssessment"
+          },
+          "llmError" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "promptVersion" : {
+            "type" : "string"
+          },
+          "schemaVersion" : {
+            "type" : "string"
+          },
+          "llmLatencyMs" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "inputTokens" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "outputTokens" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "LlmAssessment" : {
+        "type" : "object",
+        "properties" : {
+          "recommendedOptionId" : {
+            "type" : "string"
+          },
+          "abstained" : {
+            "type" : "boolean"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "decisiveFactors" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "tradeOffs" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "assumptions" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "risks" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "OptionResult" : {
+        "type" : "object",
+        "properties" : {
+          "optionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "optionName" : {
+            "type" : "string"
+          },
+          "feasible" : {
+            "type" : "boolean"
+          },
+          "score" : {
+            "type" : "number"
+          },
+          "usesEstimatedValues" : {
+            "type" : "boolean"
+          },
+          "contributions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Contribution"
+            }
+          },
+          "failedConstraints" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "RetryLlmRequest" : {
+        "type" : "object",
+        "properties" : {
+          "aiConsent" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "DecisionSummary" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "templateKey" : {
+            "type" : "string",
+            "enum" : [ "LAPTOP", "CUSTOM" ]
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED" ]
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "AiCapabilitiesResponse" : {
+        "type" : "object",
+        "properties" : {
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "dataNotice" : {
+            "type" : "string"
+          }
+        }
+      }
+    }
+  }
+}

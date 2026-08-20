@@ -1,0 +1,16 @@
+{
+  "name": "decision-assistant",
+  "private": true,
+  "scripts": {
+    "check": "node scripts/validate.mjs full",
+    "check:quick": "node scripts/validate.mjs quick",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:lint": "npm --prefix frontend run lint",
+    "frontend:typecheck": "npm --prefix frontend run typecheck",
+    "frontend:build": "npm --prefix frontend run build",
+    "backend:dev": "node scripts/gradle.mjs bootRun",
+    "backend:test": "node scripts/gradle.mjs test",
+    "backend:integration": "node scripts/gradle.mjs integrationTest",
+    "backend:build": "node scripts/gradle.mjs build"
+  }
+}
