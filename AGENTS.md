@@ -22,6 +22,7 @@
 - schema 변경은 기존 Flyway migration을 수정하지 않고 새 migration으로 추가한다.
 - LLM output과 deterministic result를 하나의 임의 점수로 합치지 않는다.
 - 사용자 제공 URL은 evidence reference일 뿐 server가 자동 fetch하지 않는다.
+- 도메인 동작을 변경할 때는 `docs/business-rules.md`의 영향 규칙을 확인하고, 규칙과 관련 검증을 함께 갱신한다.
 - architecture/workflow 규칙을 바꿀 때는 이유와 영향 범위를 제시하고 검토 가능한 문서 또는 ADR로 남긴다.
 
 지침은 반복되는 오류나 탐색 비용을 줄일 때만 추가한다. 코드가 이미 강제하는 세부사항을 복사하지 말고, 더 이상 유효하지 않은 규칙은 관련 변경과 함께 삭제한다.
