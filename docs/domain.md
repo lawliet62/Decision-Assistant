@@ -4,6 +4,8 @@
 
 `Decision`이 수정 가능한 aggregate root다. Context, Option, Criterion, OptionValue, Constraint, ConstraintResult를 소유하며 optimistic `version`을 가진다.
 
+사용자에게 관찰 가능한 상태 전이·평가·AI 경계 규칙은 [Business rules](business-rules.md)에서 관리한다.
+
 ```text
 Decision draft ──evaluate──> Evaluation(snapshot + results)
        │
