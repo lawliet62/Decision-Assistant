@@ -2,6 +2,7 @@
 
 - [Product scope](product.md): 문제, MVP boundary, 성공 신호
 - [Domain model](domain.md): 용어, aggregate, invariant
+- [Business rules](business-rules.md): 사용자에게 관찰 가능한 도메인 규칙과 검증 상태
 - [System architecture](architecture.md): runtime/data/security 경계
 - [API contract](api-contract.md): OpenAPI 생성·소비 workflow
 - [Development workflow](development.md): golden commands와 변경 절차
