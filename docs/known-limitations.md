@@ -12,6 +12,7 @@
 - Laptop vertical의 실제 사용자와 acquisition channel
 - template version upgrade 정책
 - weight elicitation UX와 sensitivity analysis
+- 동점 추천 표시와 `ARCHIVED` lifecycle 정책
 - Algorithm/LLM 품질 평가 지표와 결합 여부
 - outcome reminder와 preference learning
 
