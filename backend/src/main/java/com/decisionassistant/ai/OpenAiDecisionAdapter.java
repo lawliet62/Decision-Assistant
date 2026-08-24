@@ -12,6 +12,7 @@ import static com.decisionassistant.ai.AiContracts.*;
 
 @Component
 @ConditionalOnProperty(prefix = "decision-assistant.ai", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "decision-assistant.ai", name = "provider", havingValue = "openai")
 @ConditionalOnBean(ChatClient.Builder.class)
 public class OpenAiDecisionAdapter implements DecisionStructurer, DecisionAssessor {
 
