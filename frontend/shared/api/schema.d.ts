@@ -302,6 +302,7 @@ export interface components {
             /** Format: int64 */
             expectedVersion?: number;
             aiConsent?: boolean;
+            sensitiveDataAcknowledged?: boolean;
         };
         ConstraintSuggestion: {
             name?: string;
@@ -379,6 +380,7 @@ export interface components {
             expectedVersion?: number;
             includeLlm?: boolean;
             aiConsent?: boolean;
+            sensitiveDataAcknowledged?: boolean;
         };
         AlgorithmResult: {
             /** Format: uuid */
@@ -439,6 +441,7 @@ export interface components {
         };
         RetryLlmRequest: {
             aiConsent?: boolean;
+            sensitiveDataAcknowledged?: boolean;
         };
         DecisionSummary: {
             /** Format: uuid */
@@ -457,6 +460,7 @@ export interface components {
             enabled?: boolean;
             provider?: string;
             model?: string;
+            requiresSensitiveDataAcknowledgement?: boolean;
             dataNotice?: string;
         };
     };
