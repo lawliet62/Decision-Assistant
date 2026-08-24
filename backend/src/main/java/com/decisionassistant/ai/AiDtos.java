@@ -12,7 +12,8 @@ public final class AiDtos {
 
     public record CreateStructureProposalRequest(
             long expectedVersion,
-            @AssertTrue(message = "AI 전송 동의가 필요합니다.") boolean aiConsent
+            @AssertTrue(message = "AI 전송 동의가 필요합니다.") boolean aiConsent,
+            Boolean sensitiveDataAcknowledged
     ) {
     }
 
@@ -38,6 +39,7 @@ public final class AiDtos {
             boolean enabled,
             String provider,
             String model,
+            boolean requiresSensitiveDataAcknowledgement,
             String dataNotice
     ) {
     }
