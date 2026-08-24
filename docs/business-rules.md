@@ -64,10 +64,10 @@
 
 ## AI 경계
 
-### BR-AI-01: AI 호출에는 명시적 동의가 필요하다
+### BR-AI-01: AI 호출에는 명시적 동의와 provider별 데이터 확인이 필요하다
 
-- **동작:** structure proposal, LLM assessment, assessment retry는 명시적 AI 전송 동의가 있어야 한다. AI 실행 시 전송되는 현재 Decision 정보와 source text를 사용자에게 고지한다.
-- **이유:** 사용자가 외부 provider 전송 여부를 통제해야 한다.
+- **동작:** structure proposal, LLM assessment, assessment retry는 명시적 AI 전송 동의가 있어야 한다. AI 실행 시 전송되는 현재 Decision 정보와 source text를 사용자에게 고지한다. Gemini Developer API를 사용할 때는 개인 식별·금융·건강·비공개 업무 정보가 없음을 추가로 확인해야 한다.
+- **이유:** 사용자가 외부 provider 전송 여부와 무료 티어의 데이터 사용 위험을 통제해야 한다.
 
 ### BR-AI-02: Structure proposal은 draft를 자동으로 바꾸지 않는다
 
@@ -96,6 +96,11 @@
 - **동작:** pairwise comparison, 확률 모델, 자동 preference learning, 범용 대화형 agent, LLM의 자동 draft 변경을 제공하지 않는다. outcome 데이터가 쌓인 뒤 학습 또는 Algorithm/LLM 결합을 검토할 때는 별도 제품 결정과 ADR가 필요하다.
 - **이유:** 현재 MVP는 사용자의 명시적 비교와 실제 outcome 기록을 축적·검증하는 단계다.
 
+### BR-SCP-02: Gemini 무료 티어는 저민감 dogfooding에만 사용한다
+
+- **동작:** Gemini Developer API 무료 티어에는 제품 정보와 일반 구매 메모만 보낸다. 개인 식별 정보, 연락처·주소·주문 번호, 인증·금융 정보, 건강 정보, 비공개 업무·고객 정보는 입력하거나 전송하지 않는다.
+- **이유:** 무료 티어에서는 전송 콘텐츠가 provider 제품 개선에 사용될 수 있다. 민감 데이터 처리나 production 배포에는 별도 retention/delete 정책과 provider 검토가 필요하다.
+
 ## 현재 검증 상태
 
 이 표는 규칙의 전체 테스트 명세가 아니라, 현재 자동 검증의 시작점이다. 규칙을 변경하면 영향을 받는 행의 테스트를 추가하거나 보강한다.
@@ -105,7 +110,8 @@
 | BR-EVAL-01 | `SnapshotFactoryTest.blocksEvaluationWhenAnActiveValueIsMissing` |
 | BR-EVAL-02, BR-EVAL-03 | `AlgorithmEvaluatorTest.appliesConstraintsAnchorsWeightsAndEstimatedFlag`, `AlgorithmEvaluatorTest.clampsNumericUtilityOutsideAnchors` |
 | BR-EVAL-04 | `DecisionApiIntegrationTest.savesCompleteDraftAndCreatesReproducibleAlgorithmEvaluation` |
-| BR-DEC-01~05, BR-AI-01~04, BR-EVD-01, BR-SCP-01 | 명시적 규칙 단위 테스트 연결이 아직 없다. 해당 동작을 변경할 때 추가한다. |
+| BR-AI-01, BR-SCP-02 | `AiDataPolicyTest`, `DecisionApiIntegrationTest.bootsMigratesDatabaseAndCreatesLaptopDecision` |
+| BR-DEC-01~05, BR-AI-02~04, BR-EVD-01, BR-SCP-01 | 명시적 규칙 단위 테스트 연결이 아직 없다. 해당 동작을 변경할 때 추가한다. |
 
 ## 아직 정하지 않은 동작
 
