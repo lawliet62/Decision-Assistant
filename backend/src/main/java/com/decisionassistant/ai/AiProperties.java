@@ -11,4 +11,7 @@ public record AiProperties(
         String model,
         Duration timeout
 ) {
+    public boolean usesGemini() {
+        return "gemini".equalsIgnoreCase(provider);
+    }
 }
