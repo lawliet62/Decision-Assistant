@@ -24,19 +24,22 @@ public class StructureService {
     private final AiContracts.DecisionStructurer structurer;
     private final AiCallExecutor executor;
     private final AiProperties properties;
+    private final AiDataPolicy dataPolicy;
     private final Clock clock = Clock.systemUTC();
 
     public StructureService(DecisionService decisions, StructureRunRepository runs,
                             ObjectProvider<AiContracts.DecisionStructurer> structurer,
-                            AiCallExecutor executor, AiProperties properties) {
+                            AiCallExecutor executor, AiProperties properties, AiDataPolicy dataPolicy) {
         this.decisions = decisions;
         this.runs = runs;
         this.structurer = structurer.getIfAvailable();
         this.executor = executor;
         this.properties = properties;
+        this.dataPolicy = dataPolicy;
     }
 
     public StructureRunResponse create(UUID decisionId, CreateStructureProposalRequest request) {
+        dataPolicy.validateSensitiveDataAcknowledgement(Boolean.TRUE.equals(request.sensitiveDataAcknowledged()));
         var decision = decisions.get(decisionId);
         if (decision.version() != request.expectedVersion()) {
             throw new ConflictException("Decision version이 변경되었습니다. 최신 draft에서 다시 요청하세요.");
@@ -67,7 +70,7 @@ public class StructureService {
         return new AiCapabilitiesResponse(
                 properties.enabled() && structurer != null,
                 properties.provider(), properties.model(),
-                "AI 실행 시 현재 Decision의 context, Option 설명과 붙여 넣은 source text가 외부 provider로 전송됩니다.");
+                dataPolicy.requiresSensitiveDataAcknowledgement(), dataPolicy.dataNotice());
     }
 
     private AiContracts.StructureInput input(DecisionDtos.DecisionResponse decision) {
