@@ -2,6 +2,7 @@ package com.decisionassistant.evaluation;
 
 import com.decisionassistant.ai.AiCallExecutor;
 import com.decisionassistant.ai.AiContracts;
+import com.decisionassistant.ai.AiDataPolicy;
 import com.decisionassistant.ai.AiProperties;
 import com.decisionassistant.common.ConflictException;
 import com.decisionassistant.common.NotFoundException;
@@ -34,12 +35,13 @@ public class EvaluationService {
     private final AiContracts.DecisionAssessor assessor;
     private final AiCallExecutor aiExecutor;
     private final AiProperties aiProperties;
+    private final AiDataPolicy aiDataPolicy;
     private final Clock clock;
 
     public EvaluationService(SnapshotLoader snapshots, AlgorithmEvaluator algorithm,
                              EvaluationRepository evaluations, ObjectMapper objectMapper,
                              ObjectProvider<AiContracts.DecisionAssessor> assessor,
-                             AiCallExecutor aiExecutor, AiProperties aiProperties) {
+                             AiCallExecutor aiExecutor, AiProperties aiProperties, AiDataPolicy aiDataPolicy) {
         this.snapshots = snapshots;
         this.algorithm = algorithm;
         this.evaluations = evaluations;
@@ -47,10 +49,14 @@ public class EvaluationService {
         this.assessor = assessor.getIfAvailable();
         this.aiExecutor = aiExecutor;
         this.aiProperties = aiProperties;
+        this.aiDataPolicy = aiDataPolicy;
         this.clock = Clock.systemUTC();
     }
 
     public EvaluationResponse create(UUID decisionId, CreateEvaluationRequest request) {
+        if (request.includeLlm()) {
+            aiDataPolicy.validateSensitiveDataAcknowledgement(Boolean.TRUE.equals(request.sensitiveDataAcknowledged()));
+        }
         var snapshot = snapshots.load(decisionId, request.expectedVersion());
         var algorithmResult = algorithm.evaluate(snapshot);
         var inputNode = objectMapper.valueToTree(snapshot);
@@ -69,6 +75,7 @@ public class EvaluationService {
     }
 
     public EvaluationResponse retry(UUID decisionId, UUID evaluationId, RetryLlmRequest request) {
+        aiDataPolicy.validateSensitiveDataAcknowledgement(Boolean.TRUE.equals(request.sensitiveDataAcknowledged()));
         var evaluation = required(decisionId, evaluationId);
         if (evaluation.llmStatus() == Evaluation.LlmStatus.SUCCEEDED) {
             throw new ConflictException("이미 성공한 LLM 평가는 retry하지 않습니다.");
