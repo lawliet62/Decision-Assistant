@@ -16,20 +16,32 @@
 
 ## Run locally
 
-### 1. PostgreSQL
+### 전체 실행
+
+Docker Desktop이 실행 중인 상태에서 root에서 다음 명령을 실행한다.
+
+```bash
+npm run dev
+```
+
+이 명령은 `backend/compose.yaml`의 PostgreSQL을 시작한 뒤 backend와 frontend 개발 서버를 함께 실행한다. 종료해도 PostgreSQL 컨테이너는 데이터 보존을 위해 유지된다.
+
+### 개별 실행
+
+PostgreSQL만 시작하려면 다음 명령을 사용한다.
 
 ```bash
 docker compose -f backend/compose.yaml up -d
 ```
 
-### 2. Backend
+Backend:
 
 ```bash
 cd backend
 ./gradlew bootRun # Windows: gradlew.bat bootRun
 ```
 
-### Frontend
+Frontend:
 
 ```bash
 cd frontend
