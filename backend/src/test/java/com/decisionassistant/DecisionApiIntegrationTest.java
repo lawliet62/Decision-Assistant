@@ -54,6 +54,17 @@ class DecisionApiIntegrationTest {
         mvc.perform(get("/api/v1/decisions/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("새 노트북"));
+        mvc.perform(get("/api/v1/ai/capabilities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.provider").value("gemini"))
+                .andExpect(jsonPath("$.requiresSensitiveDataAcknowledgement").value(true));
+        mvc.perform(post("/api/v1/decisions/{id}/structure-proposals", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"expectedVersion":0,"aiConsent":true,"sensitiveDataAcknowledged":false}
+                                """))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.violations[0]").value(org.hamcrest.Matchers.containsString("Gemini API")));
         var openApi = mvc.perform(get("/api/openapi"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.openapi").exists())
