@@ -49,7 +49,7 @@ npm ci
 npm run dev
 ```
 
-`http://localhost:3000`에서 사용한다. AI는 기본 비활성화다. 사용하려면 `backend/.env.example`을 참고해 환경 변수를 설정한다.
+`http://localhost:3000`에서 사용한다. AI는 기본 비활성화다. Gemini Developer API는 dogfooding 기본 provider이며, 사용하려면 `backend/.env.example`을 참고해 환경 변수를 설정한다. Gemini 무료 티어에는 제품 정보와 일반 구매 메모만 보내고 민감한 개인정보·금융·비공개 업무 정보는 입력하지 않는다.
 
 ## Validate
 
