@@ -16,7 +16,8 @@ public final class EvaluationDtos {
     public record CreateEvaluationRequest(
             long expectedVersion,
             boolean includeLlm,
-            boolean aiConsent
+            boolean aiConsent,
+            Boolean sensitiveDataAcknowledged
     ) {
         @AssertTrue(message = "LLM 평가를 요청할 때는 aiConsent가 필요합니다.")
         @JsonIgnore
@@ -27,7 +28,8 @@ public final class EvaluationDtos {
     }
 
     public record RetryLlmRequest(
-            @AssertTrue(message = "AI 전송 동의가 필요합니다.") boolean aiConsent
+            @AssertTrue(message = "AI 전송 동의가 필요합니다.") boolean aiConsent,
+            Boolean sensitiveDataAcknowledged
     ) {
     }
 
