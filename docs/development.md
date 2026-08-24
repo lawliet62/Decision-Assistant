@@ -16,6 +16,7 @@
 
 ## Commands
 
+- `npm run dev`: Docker PostgreSQL과 backend/frontend 개발 서버를 함께 시작한다. 종료해도 PostgreSQL 컨테이너는 유지한다.
 - `npm run check:quick`: backend unit + frontend lint/typecheck
 - `npm run check`: quick + Testcontainers PostgreSQL integration + OpenAPI drift + frontend production build
 - `npm --prefix frontend run api:generate`: committed OpenAPI에서 TypeScript type 재생성
