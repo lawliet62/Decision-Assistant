@@ -13,6 +13,7 @@
 
 - 빠른 검증: `npm run check:quick`
 - 전체 검증(PostgreSQL Docker 필요): `npm run check`
+- 전체 로컬 실행: `npm run dev`
 - 로컬 실행: `docker compose -f backend/compose.yaml up -d`, backend `bootRun`, frontend `npm run dev`
 
 ## 공통 규칙
