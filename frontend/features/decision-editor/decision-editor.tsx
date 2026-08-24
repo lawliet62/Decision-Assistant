@@ -17,6 +17,7 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
   const [capabilities, setCapabilities] = useState<AiCapabilitiesResponse>();
   const [includeLlm, setIncludeLlm] = useState(false);
   const [aiConsent, setAiConsent] = useState(false);
+  const [sensitiveDataAcknowledged, setSensitiveDataAcknowledged] = useState(false);
   const [selectedOptionId, setSelectedOptionId] = useState("");
   const [rationale, setRationale] = useState("");
   const [satisfaction, setSatisfaction] = useState(4);
@@ -134,10 +135,10 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
   async function requestStructure() {
     clearFeedback();
     if (isDirty) return setError("AI proposal 전에 draft를 저장하세요.");
-    if (!aiConsent) return setError("외부 AI 전송 범위를 확인하고 동의하세요.");
+    if (!hasAiDataConsent()) return;
     const { data, error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/structure-proposals", {
       params: { path: { decisionId: decision.id! } },
-      body: { expectedVersion: decision.version, aiConsent: true },
+      body: { expectedVersion: decision.version, aiConsent: true, sensitiveDataAcknowledged },
     });
     if (apiError || !data) return setError(problemMessage(apiError));
     setProposal(data);
@@ -146,10 +147,10 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
   async function evaluate() {
     clearFeedback();
     if (isDirty) return setError("평가 전에 draft를 저장하세요.");
-    if (includeLlm && !aiConsent) return setError("LLM 평가에는 외부 전송 동의가 필요합니다.");
+    if (includeLlm && !hasAiDataConsent()) return;
     const { data, error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/evaluations", {
       params: { path: { decisionId: decision.id! } },
-      body: { expectedVersion: decision.version, includeLlm, aiConsent: includeLlm && aiConsent },
+      body: { expectedVersion: decision.version, includeLlm, aiConsent: includeLlm && aiConsent, sensitiveDataAcknowledged: includeLlm && sensitiveDataAcknowledged },
     });
     if (apiError || !data) return setError(problemMessage(apiError));
     setEvaluation(data);
@@ -179,6 +180,18 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
   }
 
   function clearFeedback() { setMessage(undefined); setError(undefined); }
+
+  function hasAiDataConsent() {
+    if (!aiConsent) {
+      setError("외부 AI 전송 범위를 확인하고 동의하세요.");
+      return false;
+    }
+    if (capabilities?.requiresSensitiveDataAcknowledgement && !sensitiveDataAcknowledged) {
+      setError("민감한 개인정보·금융 정보·비공개 업무 정보가 없음을 확인하세요.");
+      return false;
+    }
+    return true;
+  }
 
   return (
     <div className="mt-6 space-y-8">
@@ -264,14 +277,14 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
       </form>
 
       <Section title="AI proposal" description={capabilities?.dataNotice ?? "AI 상태를 확인 중입니다."}>
-        <AiConsent enabled={Boolean(capabilities?.enabled)} checked={aiConsent} onChange={setAiConsent} provider={capabilities?.provider} model={capabilities?.model} />
+        <AiConsent enabled={Boolean(capabilities?.enabled)} checked={aiConsent} onChange={setAiConsent} provider={capabilities?.provider} model={capabilities?.model} requiresSensitiveDataAcknowledgement={Boolean(capabilities?.requiresSensitiveDataAcknowledgement)} sensitiveDataAcknowledged={sensitiveDataAcknowledged} onSensitiveDataAcknowledgedChange={setSensitiveDataAcknowledged} />
         <button type="button" onClick={requestStructure} disabled={!capabilities?.enabled} className={secondaryButton}>구조화 proposal 요청</button>
         {proposal && <pre className="max-h-96 overflow-auto rounded-2xl bg-zinc-950 p-4 text-xs text-emerald-100">{JSON.stringify(proposal, null, 2)}</pre>}
       </Section>
 
       <Section title="Evaluate" description="Algorithm과 LLM은 같은 확정 snapshot을 서로의 결과 없이 평가합니다.">
         <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeLlm} onChange={(event) => setIncludeLlm(event.target.checked)} disabled={!capabilities?.enabled} /> LLM Assessment 포함</label>
-        {includeLlm && <AiConsent enabled checked={aiConsent} onChange={setAiConsent} provider={capabilities?.provider} model={capabilities?.model} />}
+        {includeLlm && <AiConsent enabled checked={aiConsent} onChange={setAiConsent} provider={capabilities?.provider} model={capabilities?.model} requiresSensitiveDataAcknowledgement={Boolean(capabilities?.requiresSensitiveDataAcknowledgement)} sensitiveDataAcknowledged={sensitiveDataAcknowledged} onSensitiveDataAcknowledgedChange={setSensitiveDataAcknowledged} />}
         <button type="button" onClick={evaluate} className="rounded-full bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-600">평가 실행</button>
       </Section>
 
@@ -299,8 +312,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <label className="block text-sm font-medium text-zinc-700"><span>{label}</span><div className="mt-2">{children}</div></label>;
 }
 
-function AiConsent({ enabled, checked, onChange, provider, model }: { enabled: boolean; checked: boolean; onChange: (checked: boolean) => void; provider?: string; model?: string }) {
-  return <label className="flex items-start gap-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-950"><input type="checkbox" className="mt-1" checked={checked} onChange={(event) => onChange(event.target.checked)} disabled={!enabled} /><span>현재 Decision 내용이 외부 provider({provider ?? "-"}, {model ?? "-"})로 전송됨을 확인했습니다.</span></label>;
+function AiConsent({ enabled, checked, onChange, provider, model, requiresSensitiveDataAcknowledgement, sensitiveDataAcknowledged, onSensitiveDataAcknowledgedChange }: { enabled: boolean; checked: boolean; onChange: (checked: boolean) => void; provider?: string; model?: string; requiresSensitiveDataAcknowledgement: boolean; sensitiveDataAcknowledged: boolean; onSensitiveDataAcknowledgedChange: (checked: boolean) => void }) {
+  return <div className="space-y-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">
+    <label className="flex items-start gap-3"><input type="checkbox" className="mt-1" checked={checked} onChange={(event) => onChange(event.target.checked)} disabled={!enabled} /><span>현재 Decision 내용이 외부 provider({provider ?? "-"}, {model ?? "-"})로 전송됨을 확인했습니다.</span></label>
+    {requiresSensitiveDataAcknowledgement && <label className="flex items-start gap-3"><input type="checkbox" className="mt-1" checked={sensitiveDataAcknowledged} onChange={(event) => onSensitiveDataAcknowledgedChange(event.target.checked)} disabled={!enabled} /><span>제품 정보와 일반 구매 메모만 포함했으며, 개인 식별·금융·건강·비공개 업무 정보는 포함하지 않았음을 확인했습니다.</span></label>}
+  </div>;
 }
 
 const inputClass = "w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 outline-none focus:border-emerald-500";
