@@ -11,7 +11,7 @@ spring:
       ddl-auto: validate
   ai:
     model:
-      chat: ${AI_CHAT_PROVIDER:none}
+      chat: ${AI_CHAT_PROVIDER:google-genai}
     openai:
       api-key: ${OPENAI_API_KEY:disabled}
       chat:
@@ -21,7 +21,7 @@ spring:
       genai:
         api-key: ${GEMINI_API_KEY:disabled}
         chat:
-          model: ${GEMINI_MODEL:gemini-2.5-flash-lite}
+          model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
     retry:
       max-attempts: 2
       backoff:
@@ -31,9 +31,9 @@ spring:
 
 decision-assistant:
   ai:
-    enabled: ${DECISION_ASSISTANT_AI_ENABLED:false}
+    enabled: ${DECISION_ASSISTANT_AI_ENABLED:true}
     provider: ${DECISION_ASSISTANT_AI_PROVIDER:gemini}
-    model: ${DECISION_ASSISTANT_AI_MODEL:${GEMINI_MODEL:gemini-2.5-flash-lite}}
+    model: ${DECISION_ASSISTANT_AI_MODEL:${GEMINI_MODEL:gemini-3.5-flash-lite}}
     timeout: 30s
 
 springdoc:
