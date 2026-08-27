@@ -4,7 +4,6 @@ import com.decisionassistant.evaluation.DecisionSnapshot;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
@@ -13,7 +12,6 @@ import static com.decisionassistant.ai.AiContracts.*;
 @Component
 @ConditionalOnProperty(prefix = "decision-assistant.ai", name = "enabled", havingValue = "true")
 @ConditionalOnProperty(prefix = "decision-assistant.ai", name = "provider", havingValue = "gemini")
-@ConditionalOnBean(ChatClient.Builder.class)
 public class GeminiDecisionAdapter implements DecisionStructurer, DecisionAssessor {
 
     private final ChatClient chatClient;
