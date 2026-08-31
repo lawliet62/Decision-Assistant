@@ -1,7 +1,17 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { DecisionCreateForm } from "@/features/decision-create/decision-create-form";
+import { ApiError, serverApi } from "@/shared/api/server";
 
-export default function NewDecisionPage() {
+export const dynamic = "force-dynamic";
+
+export default async function NewDecisionPage() {
+  try {
+    await serverApi.me();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) redirect("/login");
+    throw error;
+  }
   return (
     <main className="mx-auto min-h-screen w-full max-w-3xl px-6 py-14">
       <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-900">← 돌아가기</Link>

@@ -3,6 +3,7 @@ package com.decisionassistant.decision;
 import com.decisionassistant.common.ConflictException;
 import com.decisionassistant.common.InvalidDecisionException;
 import com.decisionassistant.common.NotFoundException;
+import com.decisionassistant.identity.CurrentUserProvider;
 import com.decisionassistant.template.DecisionTemplateFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,21 +27,25 @@ public class DecisionService {
     private final ResolutionRepository resolutions;
     private final OutcomeCheckInRepository outcomes;
     private final DecisionTemplateFactory templates;
+    private final CurrentUserProvider currentUser;
     private final Clock clock;
 
     public DecisionService(DecisionRepository decisions, ResolutionRepository resolutions,
-                           OutcomeCheckInRepository outcomes, DecisionTemplateFactory templates) {
+                           OutcomeCheckInRepository outcomes, DecisionTemplateFactory templates,
+                           CurrentUserProvider currentUser) {
         this.decisions = decisions;
         this.resolutions = resolutions;
         this.outcomes = outcomes;
         this.templates = templates;
+        this.currentUser = currentUser;
         this.clock = Clock.systemUTC();
     }
 
     @Transactional
     public DecisionResponse create(CreateDecisionRequest request) {
         var now = Instant.now(clock);
-        var decision = new Decision(request.title(), request.templateKey(), templates.version(request.templateKey()), now);
+        var decision = new Decision(currentUser.current().id(), request.title(), request.templateKey(),
+                templates.version(request.templateKey()), now);
         templates.apply(decision);
         decisions.saveAndFlush(decision);
         return response(decision);
@@ -48,7 +53,7 @@ public class DecisionService {
 
     @Transactional(readOnly = true)
     public List<DecisionSummary> list() {
-        return decisions.findAllByOrderByUpdatedAtDesc().stream()
+        return decisions.findAllByOwnerUserIdOrderByUpdatedAtDesc(currentUser.current().id()).stream()
                 .map(decision -> new DecisionSummary(
                         decision.id(), decision.version(), decision.title(), decision.templateKey(),
                         decision.status(), decision.updatedAt()))
@@ -120,7 +125,8 @@ public class DecisionService {
 
     @Transactional(readOnly = true)
     public Decision required(UUID id) {
-        return decisions.findById(id).orElseThrow(() -> new NotFoundException("Decision을 찾을 수 없습니다: " + id));
+        return decisions.findByIdAndOwnerUserId(id, currentUser.current().id())
+                .orElseThrow(() -> new NotFoundException("Decision을 찾을 수 없습니다: " + id));
     }
 
     private void syncOptions(Decision decision, List<OptionData> inputs) {

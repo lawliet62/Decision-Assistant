@@ -9,6 +9,7 @@ Decision Assistant는 사용자를 대신해 정답을 고르는 추천 엔진�
 지원한다.
 
 - 단일 사용자의 2~5개 Option 비교
+- 초대된 사용자의 Google 또는 이메일 OTP 로그인과 개인별 데이터 격리
 - Criterion weight와 numeric/rating value
 - hard Constraint와 불확실성 표시
 - Laptop purchase template 및 내부 실험용 Custom template
@@ -17,7 +18,7 @@ Decision Assistant는 사용자를 대신해 정답을 고르는 추천 엔진�
 
 지원하지 않는다.
 
-- 계정, 협업, 공개 공유
+- 협업, 공개 공유, 관리자용 사용자 관리 UI
 - web crawling, 가격/재고 자동 갱신, domain catalog
 - pairwise comparison, 확률 모델, 자동 preference learning
 - 범용 대화형 agent나 LLM의 자동 draft 변경

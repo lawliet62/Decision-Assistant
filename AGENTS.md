@@ -16,6 +16,15 @@
 - 전체 로컬 실행: `npm run dev`
 - 로컬 실행: `docker compose -f backend/compose.yaml up -d`, backend `bootRun`, frontend `npm run dev`
 
+## Git safety and delivery
+
+- 변경 작업은 repository의 canonical default branch가 아닌 작업별 branch에서 수행하고, default branch에 직접 commit하거나 push하지 않는다.
+- 작업 전에 current branch, upstream, working tree를 확인하고, 사용자의 미커밋·untracked·unrelated change를 임의로 discard, overwrite, stash, stage, commit하지 않는다.
+- `reset --hard`, `clean -fd`, 강제 checkout, history rewrite, force push 등 복구 위험이 큰 Git 작업은 agent가 독자적으로 실행하지 않는다.
+- agent는 구현과 원격 전달이 요청된 변경을 commit, push, Pull Request까지 준비하되, 자신의 PR을 merge하거나 auto-merge하지 않는다. 최종 수용과 merge는 human이 수행한다.
+- CI는 우회하거나 test·quality gate를 약화하지 않는다. 자기 변경으로 인한 실패는 원인을 분석하고 정상적인 수정으로 해결한다.
+- branch, commit, push, Pull Request, CI 대응의 상세 절차는 [Development workflow](docs/development.md)를 따른다.
+
 ## 공통 규칙
 
 - 현재 구조는 modular monolith다. 배포 단위나 module을 근거 없이 추가하지 않는다.

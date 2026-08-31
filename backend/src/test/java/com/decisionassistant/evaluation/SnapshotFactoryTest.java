@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.UUID;
 
 import static com.decisionassistant.decision.DecisionTypes.CriterionKind.RATING_1_TO_5;
 import static com.decisionassistant.decision.DecisionTypes.PreferenceDirection.NOT_APPLICABLE;
@@ -19,7 +20,8 @@ class SnapshotFactoryTest {
 
     @Test
     void blocksEvaluationWhenAnActiveValueIsMissing() {
-        var decision = new Decision("Laptop", TemplateKey.CUSTOM, "custom-v1", Instant.EPOCH);
+        var decision = new Decision(UUID.fromString("00000000-0000-0000-0000-000000000001"),
+                "Laptop", TemplateKey.CUSTOM, "custom-v1", Instant.EPOCH);
         var optionA = decision.addOption(null, "A", null, null, null);
         decision.addOption(null, "B", null, null, null);
         var criterion = decision.addCriterion(null, "Fit", RATING_1_TO_5, NOT_APPLICABLE,

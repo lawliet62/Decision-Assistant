@@ -9,6 +9,10 @@ spring:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+  session:
+    timeout: 7d
+    jdbc:
+      initialize-schema: never
   ai:
     model:
       chat: ${AI_CHAT_PROVIDER:google-genai}
@@ -30,6 +34,9 @@ spring:
         max-interval: 2s
 
 decision-assistant:
+  auth:
+    allowed-emails: ${DECISION_ASSISTANT_ALLOWED_EMAILS:}
+    public-base-url: ${DECISION_ASSISTANT_PUBLIC_BASE_URL:http://localhost:3000}
   ai:
     enabled: ${DECISION_ASSISTANT_AI_ENABLED:true}
     provider: ${DECISION_ASSISTANT_AI_PROVIDER:gemini}
@@ -45,3 +52,14 @@ management:
     web:
       exposure:
         include: health,info
+
+server:
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      cookie:
+        name: DECISION_ASSISTANT_SESSION
+        http-only: true
+        secure: true
+        same-site: lax
+        max-age: 7d

@@ -30,6 +30,9 @@ public class Decision {
     @Version
     private long version;
 
+    @Column(name = "owner_user_id", nullable = false)
+    private UUID ownerUserId;
+
     @Column(nullable = false, length = 200)
     private String title;
 
@@ -74,8 +77,9 @@ public class Decision {
     protected Decision() {
     }
 
-    public Decision(String title, TemplateKey templateKey, String templateVersion, Instant now) {
+    public Decision(UUID ownerUserId, String title, TemplateKey templateKey, String templateVersion, Instant now) {
         this.id = UUID.randomUUID();
+        this.ownerUserId = ownerUserId;
         this.title = title;
         this.templateKey = templateKey;
         this.templateVersion = templateVersion;
@@ -143,6 +147,7 @@ public class Decision {
     }
 
     public UUID id() { return id; }
+    public UUID ownerUserId() { return ownerUserId; }
     public long version() { return version; }
     public String title() { return title; }
     public TemplateKey templateKey() { return templateKey; }

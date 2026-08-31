@@ -117,6 +117,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/{decisionId}": {
         parameters: {
             query?: never;
@@ -443,6 +459,12 @@ export interface components {
             aiConsent?: boolean;
             sensitiveDataAcknowledged?: boolean;
         };
+        CurrentUserResponse: {
+            /** Format: uuid */
+            id?: string;
+            email?: string;
+            displayName?: string;
+        };
         DecisionSummary: {
             /** Format: uuid */
             id?: string;
@@ -669,6 +691,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["EvaluationResponse"];
+                };
+            };
+        };
+    };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CurrentUserResponse"];
                 };
             };
         };

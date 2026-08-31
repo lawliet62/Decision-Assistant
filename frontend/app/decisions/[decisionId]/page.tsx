@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DecisionEditor } from "@/features/decision-editor/decision-editor";
-import { serverApi } from "@/shared/api/server";
+import { ApiError, serverApi } from "@/shared/api/server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +10,10 @@ export default async function DecisionPage({ params }: { params: Promise<{ decis
   let decision;
   try {
     decision = await serverApi.decision(decisionId);
-  } catch {
-    notFound();
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) redirect("/login");
+    if (error instanceof ApiError && error.status === 404) notFound();
+    throw error;
   }
   return (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-5 py-10">
