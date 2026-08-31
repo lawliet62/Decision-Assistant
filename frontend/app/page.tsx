@@ -1,15 +1,19 @@
 import Link from "next/link";
-import { serverApi } from "@/shared/api/server";
+import { redirect } from "next/navigation";
+import { UserMenu } from "@/features/auth/user-menu";
+import { ApiError, serverApi } from "@/shared/api/server";
 import type { DecisionSummary } from "@/shared/api/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  let user: Awaited<ReturnType<typeof serverApi.me>>;
   let decisions: DecisionSummary[];
   try {
-    decisions = await serverApi.decisions();
-  } catch {
-    decisions = [];
+    [user, decisions] = await Promise.all([serverApi.me(), serverApi.decisions()]);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) redirect("/login");
+    throw error;
   }
 
   return (
@@ -20,9 +24,12 @@ export default async function Home() {
           <h1 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-950">판단을 구조화하고, 결과까지 돌아보세요.</h1>
           <p className="mt-3 max-w-2xl text-zinc-600">후보와 기준을 직접 확인한 뒤 Algorithm과 LLM의 독립적인 관점을 비교합니다.</p>
         </div>
-        <Link href="/decisions/new" className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white hover:bg-zinc-800">
-          새 Decision
-        </Link>
+        <div className="flex flex-col items-end gap-3">
+          <UserMenu email={user.email ?? ""} />
+          <Link href="/decisions/new" className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white hover:bg-zinc-800">
+            새 Decision
+          </Link>
+        </div>
       </header>
 
       <section>

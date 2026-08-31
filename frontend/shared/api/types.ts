@@ -6,3 +6,4 @@ export type UpdateDraftRequest = components["schemas"]["UpdateDraftRequest"];
 export type EvaluationResponse = components["schemas"]["EvaluationResponse"];
 export type StructureRunResponse = components["schemas"]["StructureRunResponse"];
 export type AiCapabilitiesResponse = components["schemas"]["AiCapabilitiesResponse"];
+export type CurrentUserResponse = components["schemas"]["CurrentUserResponse"];

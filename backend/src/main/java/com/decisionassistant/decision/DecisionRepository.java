@@ -8,5 +8,7 @@ import java.util.UUID;
 
 public interface DecisionRepository extends JpaRepository<Decision, UUID> {
 
-    List<Decision> findAllByOrderByUpdatedAtDesc();
+    List<Decision> findAllByOwnerUserIdOrderByUpdatedAtDesc(UUID ownerUserId);
+
+    Optional<Decision> findByIdAndOwnerUserId(UUID id, UUID ownerUserId);
 }

@@ -12,6 +12,7 @@ function run(command, args, options = {}) {
       cwd: options.cwd ?? root,
       stdio: "inherit",
       shell: false,
+      env: options.env ?? process.env,
     });
 
     if (options.keepAlive) {
@@ -64,6 +65,10 @@ async function main() {
   const backendProcess = run(backend.command, backend.args, {
     cwd: `${root}/backend`,
     keepAlive: true,
+    env: {
+      ...process.env,
+      SPRING_PROFILES_ACTIVE: process.env.SPRING_PROFILES_ACTIVE ?? "local",
+    },
   });
   const frontend = frontendCommand();
   const frontendProcess = run(frontend.command, frontend.args, {

@@ -6,6 +6,7 @@ import com.decisionassistant.ai.AiDataPolicy;
 import com.decisionassistant.ai.AiProperties;
 import com.decisionassistant.common.ConflictException;
 import com.decisionassistant.common.NotFoundException;
+import com.decisionassistant.decision.DecisionService;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.ObjectProvider;
@@ -29,6 +30,7 @@ public class EvaluationService {
     static final String SCHEMA_VERSION = "llm-assessment-v1";
 
     private final SnapshotLoader snapshots;
+    private final DecisionService decisions;
     private final AlgorithmEvaluator algorithm;
     private final EvaluationRepository evaluations;
     private final ObjectMapper objectMapper;
@@ -38,11 +40,12 @@ public class EvaluationService {
     private final AiDataPolicy aiDataPolicy;
     private final Clock clock;
 
-    public EvaluationService(SnapshotLoader snapshots, AlgorithmEvaluator algorithm,
+    public EvaluationService(SnapshotLoader snapshots, DecisionService decisions, AlgorithmEvaluator algorithm,
                              EvaluationRepository evaluations, ObjectMapper objectMapper,
                              ObjectProvider<AiContracts.DecisionAssessor> assessor,
                              AiCallExecutor aiExecutor, AiProperties aiProperties, AiDataPolicy aiDataPolicy) {
         this.snapshots = snapshots;
+        this.decisions = decisions;
         this.algorithm = algorithm;
         this.evaluations = evaluations;
         this.objectMapper = objectMapper;
@@ -127,6 +130,7 @@ public class EvaluationService {
     }
 
     private Evaluation required(UUID decisionId, UUID evaluationId) {
+        decisions.required(decisionId);
         return evaluations.findByIdAndDecisionId(evaluationId, decisionId)
                 .orElseThrow(() -> new NotFoundException("Evaluation을 찾을 수 없습니다: " + evaluationId));
     }

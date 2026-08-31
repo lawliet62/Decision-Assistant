@@ -13,7 +13,10 @@ const executable = isWindows ? (process.env.ComSpec ?? "cmd.exe") : wrapper;
 const args = isWindows
   ? ["/d", "/s", "/c", wrapper, "-p", "backend", ...tasks]
   : ["-p", "backend", ...tasks];
-const result = spawnSync(executable, args, { stdio: "inherit", shell: false });
+const env = tasks.includes("bootRun")
+  ? { ...process.env, SPRING_PROFILES_ACTIVE: process.env.SPRING_PROFILES_ACTIVE ?? "local" }
+  : process.env;
+const result = spawnSync(executable, args, { stdio: "inherit", shell: false, env });
 
 if (result.error) {
   console.error(result.error.message);
