@@ -12,6 +12,16 @@
 
 ## Decision과 결과 기록
 
+### BR-AUTH-01: 초대되고 검증된 사용자만 로그인한다
+
+- **동작:** Auth0가 제공한 verified email이 배포의 exact-email allowlist에 포함될 때만 로컬 사용자를 생성하고 접근을 허용한다. 같은 이메일의 다른 issuer/subject identity는 자동 병합하지 않는다.
+- **이유:** 초기 dogfooding의 사용자·AI 비용 범위를 제한하고 이메일 일치만으로 다른 identity가 기존 데이터 ownership을 가져가지 못하게 한다.
+
+### BR-OWN-01: 사용자 데이터는 소유자에게만 보인다
+
+- **동작:** Decision과 이에 연결된 Evaluation, StructureRun, Resolution, OutcomeCheckIn은 Decision 소유자만 조회·변경할 수 있다. 다른 사용자의 resource identifier에는 `404`로 응답한다.
+- **이유:** UUID 노출 여부와 무관하게 개인 의사결정 내용과 AI snapshot을 사용자 사이에서 격리하고 resource 존재 여부도 공개하지 않는다.
+
 ### BR-DEC-01: Decision은 versioned template의 draft로 시작한다
 
 - **동작:** 새 Decision은 선택한 template의 현재 version을 보존하고 `DRAFT` 상태로 시작한다.
@@ -107,6 +117,8 @@
 
 | 규칙 | 현재 자동 검증 |
 | --- | --- |
+| BR-AUTH-01 | `UserProvisioningServiceTest` |
+| BR-OWN-01 | `DecisionApiIntegrationTest.isolatesEveryDecisionOperationByOwner`, `DecisionApiIntegrationTest.requiresAuthenticationAndCsrf` |
 | BR-EVAL-01 | `SnapshotFactoryTest.blocksEvaluationWhenAnActiveValueIsMissing` |
 | BR-EVAL-02, BR-EVAL-03 | `AlgorithmEvaluatorTest.appliesConstraintsAnchorsWeightsAndEstimatedFlag`, `AlgorithmEvaluatorTest.clampsNumericUtilityOutsideAnchors` |
 | BR-EVAL-04 | `DecisionApiIntegrationTest.savesCompleteDraftAndCreatesReproducibleAlgorithmEvaluation` |
