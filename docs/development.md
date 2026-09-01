@@ -10,12 +10,37 @@
 
 1. 변경 전 root와 scoped `AGENTS.md`, 관련 docs/ADR을 읽고 current branch, upstream, working tree를 확인한다.
 2. canonical default branch의 최신 기준에서 `<type>/<short-kebab-description>` 형식의 작업별 branch를 준비한다. 기존 branch의 목적과 변경이 현재 task와 명확히 같으면 session이 달라도 그 branch를 이어서 사용한다.
-3. 작은 단위로 구현하고 가까운 unit/type test를 실행한다.
-4. `npm run check:quick`으로 빠르게 검증하고, API/DB 변경 또는 완료 전에는 `npm run check`을 실행한다.
-5. 자기 변경만 stage하고 staged diff를 검토한 뒤 `<type>: <summary>` 형식으로 commit한다.
-6. repository를 변경한 구현 작업은 별도의 원격 전달 요청을 기다리지 않고 작업 branch를 remote에 push한 뒤 Pull Request를 생성한다. PR에는 목적, 주요 변경, 실행한 검증, 남은 제약을 기록한다.
-7. CI 결과를 확인하고 자기 변경이 유발한 실패는 로컬 재현과 원인 분석 후 수정·검증·추가 commit으로 해결한다.
-8. CI가 통과하면 human review를 기다린다. agent는 자신의 PR을 merge하지 않는다.
+3. 구현이 [Human Decision Gate](#human-decision-gate)에 해당하는지 확인하고, 해당하면 선택을 구현하기 전에 human의 결정을 받는다.
+4. 작은 단위로 구현하고 가까운 unit/type test를 실행한다.
+5. `npm run check:quick`으로 빠르게 검증하고, API/DB 변경 또는 완료 전에는 `npm run check`을 실행한다.
+6. 자기 변경만 stage하고 staged diff를 검토한 뒤 `<type>: <summary>` 형식으로 commit한다.
+7. repository를 변경한 구현 작업은 별도의 원격 전달 요청을 기다리지 않고 작업 branch를 remote에 push한 뒤 Pull Request를 생성한다. PR에는 목적, 주요 변경, 실행한 검증, 남은 제약을 기록한다.
+8. CI 결과를 확인하고 자기 변경이 유발한 실패는 로컬 재현과 원인 분석 후 수정·검증·추가 commit으로 해결한다.
+9. CI가 통과하면 human review를 기다린다. agent는 자신의 PR을 merge하지 않는다.
+
+## Human Decision Gate
+
+이 gate는 이미 정해진 요구사항을 재승인하는 절차가 아니다. 현재 human 요청, human이 승인한 spec·issue 또는 Accepted ADR이 선택을 명확히 결정했다면 충족된 것으로 본다. 그렇지 않다면 agent는 다음 선택을 확정하는 구현 전에 human의 명시적 결정을 받는다.
+
+- 제품 boundary, 핵심 domain invariant 또는 사용자에게 적용되는 정책 변경
+- 데이터 삭제·재해석·대규모 backfill이나 ownership·retention 변경처럼 비가역적이거나 데이터 의미를 바꾸는 migration
+- 인증·인가·보안·개인정보 또는 외부 AI·service로의 데이터 전송 경계 변경
+- 새로운 외부 provider, 배포 단위, 운영 infrastructure 또는 핵심 runtime capability 도입
+- Accepted ADR을 뒤집거나 현재 architecture boundary 변경
+- 기존 관례로 결정할 수 없고, 선택이 지속적인 contract·운영 비용·vendor lock-in을 만들거나 전환 비용이 큰 경우
+
+기존 architecture와 승인된 제품 동작 안에서의 국소적 구현, 쉽게 되돌릴 수 있는 refactoring, source of truth에 맞추는 bug fix, 승인된 기능을 위한 additive schema 변경, routine dependency 갱신, boilerplate·formatting·generated code 갱신은 agent가 자율적으로 수행한다. 기존 validation과 test로 충분히 검증할 수 있는 세부 구현은 가장 단순하고 가역적인 선택을 우선한다.
+
+결정을 요청할 때는 한 화면에서 판단할 수 있도록 다음만 간결하게 제시한다. 현실적인 대안은 최대 두 개로 제한하고 상세 배경은 요청받을 때 확장한다.
+
+- 지금 해결하려는 문제
+- 추천안
+- 현실적인 대안
+- 핵심 trade-off와 영향 범위·되돌리기 비용
+- 검증 방법
+- human이 실제로 선택할 항목
+
+ADR은 human이 내린 장기 결정을 기록하지만 승인 자체를 대신하지 않는다.
 
 ## Git workflow details
 
