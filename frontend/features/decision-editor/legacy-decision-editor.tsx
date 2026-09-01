@@ -348,4 +348,3 @@ function problemMessage(error: unknown): string {
   const problem = error as Problem | undefined;
   return problem?.violations?.join(" · ") ?? problem?.detail ?? "요청을 처리하지 못했습니다.";
 }
-

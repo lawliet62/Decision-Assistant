@@ -35,6 +35,8 @@ frontend/.vercel/
 frontend/build/
 frontend/next-env.d.ts
 frontend/*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
 
 # Environment and local files
 **/.env*
