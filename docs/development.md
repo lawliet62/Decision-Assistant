@@ -52,7 +52,7 @@ GitHub Pro 활성화 전에는 default branch 보호가 문서화된 soft bounda
 
 - Pull Request를 통한 변경만 허용하고 approving review 1개를 요구한다.
 - 새 commit이 push되면 stale approval을 dismiss하고, 가장 최근 push는 PR 작성자가 아닌 human이 승인하게 한다.
-- required status check으로 `validate`와 `qodana`를 지정하고, branch가 최신 `main`과 동기화되어야 merge할 수 있게 한다.
+- required status check으로 `validate`를 지정하고, branch가 최신 `main`과 동기화되어야 merge할 수 있게 한다. Qodana는 warning 실패 기준을 확정하기 전까지 필요할 때 수동으로 실행하는 진단 도구로 사용한다.
 - conversation resolution을 요구하고 force push와 branch deletion을 금지하며 administrator bypass도 허용하지 않는다.
 - repository merge method는 squash merge만 허용하고 merge 후 head branch를 자동 삭제한다.
 
