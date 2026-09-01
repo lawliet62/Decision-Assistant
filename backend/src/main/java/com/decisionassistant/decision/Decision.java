@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static com.decisionassistant.decision.DecisionTypes.DecisionStatus;
+import static com.decisionassistant.decision.DecisionTypes.ProcessingStatus;
 import static com.decisionassistant.decision.DecisionTypes.TemplateKey;
 
 @Entity
@@ -46,6 +47,22 @@ public class Decision {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private DecisionStatus status;
+
+    @Column(name = "intent_text", columnDefinition = "text")
+    private String intentText;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "processing_status", nullable = false, length = 30)
+    private ProcessingStatus processingStatus;
+
+    @Column(name = "ai_consent", nullable = false)
+    private boolean aiConsent;
+
+    @Column(name = "web_consent", nullable = false)
+    private boolean webConsent;
+
+    @Column(name = "consent_policy_version", length = 50)
+    private String consentPolicyVersion;
 
     @Embedded
     private DecisionContext context;
@@ -84,6 +101,7 @@ public class Decision {
         this.templateKey = templateKey;
         this.templateVersion = templateVersion;
         this.status = DecisionStatus.DRAFT;
+        this.processingStatus = ProcessingStatus.READY;
         this.context = new DecisionContext(null, null, null, null);
         this.createdAt = now;
         this.updatedAt = now;
@@ -93,6 +111,57 @@ public class Decision {
         this.title = title;
         this.context = context;
         this.updatedAt = now;
+    }
+
+    public void startGuidedIntake(String intentText, boolean aiConsent, boolean webConsent,
+                                  String policyVersion, Instant now) {
+        this.intentText = intentText;
+        this.aiConsent = aiConsent;
+        this.webConsent = webConsent;
+        this.consentPolicyVersion = policyVersion;
+        this.processingStatus = webConsent ? ProcessingStatus.IMPORTING : ProcessingStatus.NEEDS_INPUT;
+        this.updatedAt = now;
+    }
+
+    public void processingStatus(ProcessingStatus processingStatus, Instant now) {
+        this.processingStatus = processingStatus;
+        this.updatedAt = now;
+    }
+
+    public void applyImportedOption(UUID optionId, String name, String sourceText, Instant now) {
+        options.stream().filter(option -> option.id().equals(optionId)).findFirst()
+                .ifPresent(option -> option.applyImportedSource(name, sourceText));
+        this.updatedAt = now;
+    }
+
+    public void upsertGeneratedValue(UUID optionId, UUID criterionId, java.math.BigDecimal numericValue,
+                                     Integer rating, DecisionTypes.ValueCertainty certainty,
+                                     String sourceUrl, String sourceNote, DecisionTypes.ValueOrigin origin) {
+        var existing = values.stream().filter(value -> value.optionId().equals(optionId)
+                && value.criterionId().equals(criterionId)).findFirst();
+        if (existing.isPresent()) {
+            var value = existing.get();
+            if (value.origin() == DecisionTypes.ValueOrigin.USER
+                    || value.verificationStatus() == DecisionTypes.VerificationStatus.CONFIRMED) return;
+            value.update(optionId, criterionId, numericValue, rating, certainty, sourceUrl, sourceNote);
+            value.markGenerated(origin, DecisionTypes.VerificationStatus.UNREVIEWED);
+            return;
+        }
+        var value = addValue(null, optionId, criterionId, numericValue, rating, certainty, sourceUrl, sourceNote);
+        value.markGenerated(origin, DecisionTypes.VerificationStatus.UNREVIEWED);
+    }
+
+    public boolean confirmValue(UUID valueId, java.math.BigDecimal numericValue, Integer rating, boolean disputed,
+                                Instant now) {
+        var value = values.stream().filter(item -> item.id().equals(valueId)).findFirst().orElse(null);
+        if (value == null) return false;
+        value.update(value.optionId(), value.criterionId(), numericValue == null ? value.numericValue() : numericValue,
+                rating == null ? value.rating() : rating, DecisionTypes.ValueCertainty.CONFIRMED,
+                value.sourceUrl(), value.sourceNote());
+        value.markGenerated(value.origin(), disputed ? DecisionTypes.VerificationStatus.DISPUTED
+                : DecisionTypes.VerificationStatus.CONFIRMED);
+        this.updatedAt = now;
+        return true;
     }
 
     public DecisionOption addOption(UUID id, String name, String description, String sourceUrl, String sourceText) {
@@ -153,6 +222,11 @@ public class Decision {
     public TemplateKey templateKey() { return templateKey; }
     public String templateVersion() { return templateVersion; }
     public DecisionStatus status() { return status; }
+    public String intentText() { return intentText; }
+    public ProcessingStatus processingStatus() { return processingStatus; }
+    public boolean aiConsent() { return aiConsent; }
+    public boolean webConsent() { return webConsent; }
+    public String consentPolicyVersion() { return consentPolicyVersion; }
     public DecisionContext context() {
         return context == null ? new DecisionContext(null, null, null, null) : context;
     }

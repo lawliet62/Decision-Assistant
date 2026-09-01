@@ -130,6 +130,43 @@
         }
       }
     },
+    "/api/v1/decisions/{decisionId}/sources" : {
+      "post" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "addSource",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AddSourceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/decisions/{decisionId}/resolutions" : {
       "post" : {
         "tags" : [ "decision-controller" ],
@@ -167,6 +204,51 @@
         }
       }
     },
+    "/api/v1/decisions/{decisionId}/questions/{questionId}/answer" : {
+      "post" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "answerQuestion",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "questionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AnswerQuestionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/decisions/{decisionId}/outcome-check-ins" : {
       "post" : {
         "tags" : [ "decision-controller" ],
@@ -197,6 +279,41 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/OutcomeData"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/evidence/{evidenceId}/retry" : {
+      "post" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "retryEvidence",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "evidenceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
                 }
               }
             }
@@ -279,6 +396,254 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/EvaluationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preferences/{preferenceId}" : {
+      "delete" : {
+        "tags" : [ "preference-controller" ],
+        "operationId" : "delete",
+        "parameters" : [ {
+          "name" : "preferenceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "preference-controller" ],
+        "operationId" : "update_1",
+        "parameters" : [ {
+          "name" : "preferenceId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdatePreferenceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PreferenceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/notification-preferences" : {
+      "get" : {
+        "tags" : [ "reminder-controller" ],
+        "operationId" : "preference",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NotificationPreferenceResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "reminder-controller" ],
+        "operationId" : "updatePreference",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateNotificationPreferenceRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NotificationPreferenceResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/values/{valueId}/verification" : {
+      "patch" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "confirmValue",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "valueId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmValueRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/reminders/{reminderId}" : {
+      "patch" : {
+        "tags" : [ "reminder-controller" ],
+        "operationId" : "updateReminder",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "reminderId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateReminderRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/candidate-suggestions/{suggestionId}" : {
+      "patch" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "updateSuggestion",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "suggestionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateSuggestionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/preferences" : {
+      "get" : {
+        "tags" : [ "preference-controller" ],
+        "operationId" : "list_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PreferenceResponse"
+                  }
                 }
               }
             }
@@ -571,6 +936,14 @@
           },
           "sourceNote" : {
             "type" : "string"
+          },
+          "origin" : {
+            "type" : "string",
+            "enum" : [ "USER", "WEB_EXTRACTED", "AI_INFERRED" ]
+          },
+          "verificationStatus" : {
+            "type" : "string",
+            "enum" : [ "UNREVIEWED", "CONFIRMED", "DISPUTED" ]
           }
         },
         "required" : [ "certainty", "criterionId", "optionId" ]
@@ -625,6 +998,27 @@
         },
         "required" : [ "constraintResults", "constraints", "context", "criteria", "options", "title", "values" ]
       },
+      "CandidateSuggestionData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        }
+      },
       "DecisionResponse" : {
         "type" : "object",
         "properties" : {
@@ -641,7 +1035,7 @@
           },
           "templateKey" : {
             "type" : "string",
-            "enum" : [ "LAPTOP", "CUSTOM" ]
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
           },
           "templateVersion" : {
             "type" : "string"
@@ -695,6 +1089,9 @@
               "$ref" : "#/components/schemas/OutcomeData"
             }
           },
+          "guidance" : {
+            "$ref" : "#/components/schemas/GuidanceData"
+          },
           "createdAt" : {
             "type" : "string",
             "format" : "date-time"
@@ -702,6 +1099,92 @@
           "updatedAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "EvidenceData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "optionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "excerpt" : {
+            "type" : "string"
+          },
+          "error" : {
+            "type" : "string"
+          },
+          "fetchedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "stale" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "GuidanceData" : {
+        "type" : "object",
+        "properties" : {
+          "intentText" : {
+            "type" : "string"
+          },
+          "aiConsent" : {
+            "type" : "boolean"
+          },
+          "processingStatus" : {
+            "type" : "string",
+            "enum" : [ "IMPORTING", "NEEDS_INPUT", "READY", "FAILED" ]
+          },
+          "readiness" : {
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          },
+          "questions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/QuestionData"
+            }
+          },
+          "evidence" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/EvidenceData"
+            }
+          },
+          "candidateSuggestions" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CandidateSuggestionData"
+            }
+          },
+          "appliedPreferences" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PreferenceData"
+            }
+          },
+          "reminders" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ReminderData"
+            }
           }
         }
       },
@@ -723,9 +1206,103 @@
           "notes" : {
             "type" : "string"
           },
+          "wouldChooseAgain" : {
+            "type" : "boolean"
+          },
+          "workedWell" : {
+            "type" : "string"
+          },
+          "disappointedBy" : {
+            "type" : "string"
+          },
           "createdAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "PreferenceData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "templateKey" : {
+            "type" : "string",
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
+          },
+          "criterionName" : {
+            "type" : "string"
+          },
+          "statement" : {
+            "type" : "string"
+          },
+          "strength" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "confidence" : {
+            "type" : "string"
+          },
+          "sourceDecisionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
+      "QuestionData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "targetKey" : {
+            "type" : "string"
+          },
+          "prompt" : {
+            "type" : "string"
+          },
+          "impact" : {
+            "type" : "string"
+          },
+          "options" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "answer" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ReminderData" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "dueAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "channel" : {
+            "type" : "string"
           }
         }
       },
@@ -763,10 +1340,33 @@
           },
           "templateKey" : {
             "type" : "string",
-            "enum" : [ "LAPTOP", "CUSTOM" ]
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
+          },
+          "intentText" : {
+            "type" : "string",
+            "maxLength" : 4000,
+            "minLength" : 0
+          },
+          "sourceUrls" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "maxLength" : 2048,
+              "minLength" : 0
+            },
+            "maxItems" : 5,
+            "minItems" : 0
+          },
+          "aiConsent" : {
+            "type" : "boolean"
+          },
+          "webConsent" : {
+            "type" : "boolean"
+          },
+          "sensitiveDataAcknowledged" : {
+            "type" : "boolean"
           }
-        },
-        "required" : [ "templateKey", "title" ]
+        }
       },
       "CreateStructureProposalRequest" : {
         "type" : "object",
@@ -946,6 +1546,17 @@
           }
         }
       },
+      "AddSourceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "url" : {
+            "type" : "string",
+            "maxLength" : 2048,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "url" ]
+      },
       "CreateResolutionRequest" : {
         "type" : "object",
         "properties" : {
@@ -963,6 +1574,17 @@
         },
         "required" : [ "kind" ]
       },
+      "AnswerQuestionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "answer" : {
+            "type" : "string",
+            "maxLength" : 2000,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "answer" ]
+      },
       "CreateOutcomeRequest" : {
         "type" : "object",
         "properties" : {
@@ -977,6 +1599,15 @@
             "enum" : [ "MET", "PARTIALLY_MET", "NOT_MET", "TOO_EARLY" ]
           },
           "notes" : {
+            "type" : "string"
+          },
+          "wouldChooseAgain" : {
+            "type" : "boolean"
+          },
+          "workedWell" : {
+            "type" : "string"
+          },
+          "disappointedBy" : {
             "type" : "string"
           }
         },
@@ -1176,6 +1807,114 @@
           }
         }
       },
+      "UpdatePreferenceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "action" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "statement" : {
+            "type" : "string"
+          },
+          "strength" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 3,
+            "minimum" : 1
+          }
+        },
+        "required" : [ "action" ]
+      },
+      "PreferenceResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "templateKey" : {
+            "type" : "string",
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
+          },
+          "criterionName" : {
+            "type" : "string"
+          },
+          "statement" : {
+            "type" : "string"
+          },
+          "strength" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "confidence" : {
+            "type" : "string"
+          },
+          "sourceDecisionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }
+      },
+      "UpdateNotificationPreferenceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "emailEnabled" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "NotificationPreferenceResponse" : {
+        "type" : "object",
+        "properties" : {
+          "emailEnabled" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "ConfirmValueRequest" : {
+        "type" : "object",
+        "properties" : {
+          "numericValue" : {
+            "type" : "number"
+          },
+          "rating" : {
+            "type" : "integer",
+            "format" : "int32",
+            "maximum" : 5,
+            "minimum" : 1
+          },
+          "disputed" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "UpdateReminderRequest" : {
+        "type" : "object",
+        "properties" : {
+          "action" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "dueAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "action" ]
+      },
+      "UpdateSuggestionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "action" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "action" ]
+      },
       "CurrentUserResponse" : {
         "type" : "object",
         "properties" : {
@@ -1207,7 +1946,7 @@
           },
           "templateKey" : {
             "type" : "string",
-            "enum" : [ "LAPTOP", "CUSTOM" ]
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
           },
           "status" : {
             "type" : "string",

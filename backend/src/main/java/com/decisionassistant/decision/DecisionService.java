@@ -4,12 +4,32 @@ import com.decisionassistant.common.ConflictException;
 import com.decisionassistant.common.InvalidDecisionException;
 import com.decisionassistant.common.NotFoundException;
 import com.decisionassistant.identity.CurrentUserProvider;
+import com.decisionassistant.evaluation.ReadinessAnalyzer;
+import com.decisionassistant.guidance.CandidateSuggestion;
+import com.decisionassistant.guidance.CandidateSuggestionRepository;
+import com.decisionassistant.guidance.DecisionQuestion;
+import com.decisionassistant.guidance.DecisionQuestionRepository;
+import com.decisionassistant.guidance.EvidenceImport;
+import com.decisionassistant.guidance.EvidenceImportRepository;
+import com.decisionassistant.guidance.PublicUrlPolicy;
+import com.decisionassistant.guidance.WebProperties;
+import com.decisionassistant.notification.OutcomeReminder;
+import com.decisionassistant.notification.OutcomeReminderRepository;
+import com.decisionassistant.preference.PreferenceMemory;
+import com.decisionassistant.preference.PreferenceMemoryRepository;
 import com.decisionassistant.template.DecisionTemplateFactory;
+import com.decisionassistant.ai.AiDataPolicy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.math.BigDecimal;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -23,31 +43,88 @@ import static com.decisionassistant.decision.DecisionDtos.*;
 @Service
 public class DecisionService {
 
+    private static final Logger log = LoggerFactory.getLogger(DecisionService.class);
+
     private final DecisionRepository decisions;
     private final ResolutionRepository resolutions;
     private final OutcomeCheckInRepository outcomes;
     private final DecisionTemplateFactory templates;
     private final CurrentUserProvider currentUser;
+    private final EvidenceImportRepository evidenceImports;
+    private final DecisionQuestionRepository questions;
+    private final CandidateSuggestionRepository candidateSuggestions;
+    private final PreferenceMemoryRepository preferences;
+    private final OutcomeReminderRepository reminders;
+    private final PublicUrlPolicy urlPolicy;
+    private final ReadinessAnalyzer readiness;
+    private final WebProperties webProperties;
+    private final AiDataPolicy aiDataPolicy;
     private final Clock clock;
 
     public DecisionService(DecisionRepository decisions, ResolutionRepository resolutions,
                            OutcomeCheckInRepository outcomes, DecisionTemplateFactory templates,
-                           CurrentUserProvider currentUser) {
+                           CurrentUserProvider currentUser, EvidenceImportRepository evidenceImports,
+                           DecisionQuestionRepository questions, CandidateSuggestionRepository candidateSuggestions,
+                           PreferenceMemoryRepository preferences, OutcomeReminderRepository reminders,
+                           PublicUrlPolicy urlPolicy, ReadinessAnalyzer readiness, WebProperties webProperties,
+                           AiDataPolicy aiDataPolicy) {
         this.decisions = decisions;
         this.resolutions = resolutions;
         this.outcomes = outcomes;
         this.templates = templates;
         this.currentUser = currentUser;
+        this.evidenceImports = evidenceImports;
+        this.questions = questions;
+        this.candidateSuggestions = candidateSuggestions;
+        this.preferences = preferences;
+        this.reminders = reminders;
+        this.urlPolicy = urlPolicy;
+        this.readiness = readiness;
+        this.webProperties = webProperties;
+        this.aiDataPolicy = aiDataPolicy;
         this.clock = Clock.systemUTC();
     }
 
     @Transactional
     public DecisionResponse create(CreateDecisionRequest request) {
+        if (request.intentText() != null && !request.intentText().isBlank()) return createGuided(request);
+        if (request.title() == null || request.title().isBlank() || request.templateKey() == null) {
+            throw new InvalidDecisionException(List.of("결정 설명과 후보 링크 또는 title/templateKey가 필요합니다."));
+        }
         var now = Instant.now(clock);
         var decision = new Decision(currentUser.current().id(), request.title(), request.templateKey(),
                 templates.version(request.templateKey()), now);
         templates.apply(decision);
         decisions.saveAndFlush(decision);
+        return response(decision);
+    }
+
+    private DecisionResponse createGuided(CreateDecisionRequest request) {
+        if (Boolean.TRUE.equals(request.aiConsent())) {
+            aiDataPolicy.validateSensitiveDataAcknowledgement(Boolean.TRUE.equals(request.sensitiveDataAcknowledged()));
+        }
+        var urls = request.sourceUrls() == null ? List.<String>of() : request.sourceUrls().stream()
+                .filter(value -> value != null && !value.isBlank()).map(urlPolicy::validate).distinct().toList();
+        if (urls.isEmpty()) throw new InvalidDecisionException(List.of("비교를 시작할 공개 후보 URL을 하나 이상 추가하세요."));
+        var now = Instant.now(clock);
+        var template = request.templateKey() == null ? inferTemplate(request.intentText(), urls) : request.templateKey();
+        if (template == DecisionTypes.TemplateKey.CUSTOM) template = DecisionTypes.TemplateKey.LAPTOP;
+        var title = request.title() == null || request.title().isBlank()
+                ? conciseTitle(request.intentText()) : request.title().trim();
+        var decision = new Decision(currentUser.current().id(), title, template, templates.version(template), now);
+        decision.startGuidedIntake(request.intentText().trim(), Boolean.TRUE.equals(request.aiConsent()),
+                Boolean.TRUE.equals(request.webConsent()), "guided-v1", now);
+        if (!webProperties.configured()) decision.processingStatus(DecisionTypes.ProcessingStatus.NEEDS_INPUT, now);
+        decision.updateDraft(title, new DecisionContext(request.intentText().trim(), null, "KRW", null), now);
+        templates.apply(decision);
+        applyConfirmedPreferences(decision);
+        urls.forEach(url -> decision.addOption(null, optionName(url), null, url, null));
+        decisions.saveAndFlush(decision);
+        if (decision.webConsent() && webProperties.configured()) decision.options().forEach(option ->
+                evidenceImports.save(new EvidenceImport(decision.id(), option.id(), option.sourceUrl(), now)));
+        seedQuestions(decision, now);
+        log.info("product_event=guided_decision_started decision_id={} owner_id={} source_count={} template={}",
+                decision.id(), decision.ownerUserId(), urls.size(), decision.templateKey());
         return response(decision);
     }
 
@@ -63,6 +140,104 @@ public class DecisionService {
     @Transactional(readOnly = true)
     public DecisionResponse get(UUID id) {
         return response(required(id));
+    }
+
+    @Transactional
+    public DecisionResponse addSource(UUID id, AddSourceRequest request) {
+        var decision = required(id);
+        ensureEditable(decision);
+        if (decision.options().size() >= 5) throw new InvalidDecisionException(List.of("Option은 최대 5개까지 추가할 수 있습니다."));
+        var url = urlPolicy.validate(request.url());
+        if (decision.options().stream().anyMatch(option -> url.equals(option.sourceUrl()))) return response(decision);
+        var now = Instant.now(clock);
+        var option = decision.addOption(null, optionName(url), null, url, null);
+        if (decision.webConsent() && webProperties.configured()) {
+            evidenceImports.save(new EvidenceImport(decision.id(), option.id(), url, now));
+            decision.processingStatus(DecisionTypes.ProcessingStatus.IMPORTING, now);
+        }
+        decisions.flush();
+        return response(decision);
+    }
+
+    @Transactional
+    public DecisionResponse retryEvidence(UUID id, UUID evidenceId) {
+        var decision = required(id);
+        ensureEditable(decision);
+        if (!webProperties.configured()) throw new ConflictException("웹 수집 provider가 비활성화되어 있습니다.");
+        var evidence = evidenceImports.findByIdAndDecisionId(evidenceId, id)
+                .orElseThrow(() -> new NotFoundException("Evidence import를 찾을 수 없습니다."));
+        evidence.retry(Instant.now(clock));
+        decision.processingStatus(DecisionTypes.ProcessingStatus.IMPORTING, Instant.now(clock));
+        return response(decision);
+    }
+
+    @Transactional
+    public DecisionResponse answerQuestion(UUID id, UUID questionId, AnswerQuestionRequest request) {
+        var decision = required(id);
+        ensureEditable(decision);
+        var question = questions.findByIdAndDecisionId(questionId, id)
+                .orElseThrow(() -> new NotFoundException("확인 질문을 찾을 수 없습니다."));
+        var answer = request.answer().trim();
+        var context = decision.context();
+        if ("context.budget".equals(question.targetKey())) {
+            try {
+                decision.updateDraft(decision.title(), new DecisionContext(context.intendedUse(),
+                        new BigDecimal(answer.replace(",", "")), context.currency(), context.notes()), Instant.now(clock));
+            } catch (NumberFormatException exception) {
+                throw new InvalidDecisionException(List.of("예산은 숫자로 입력하세요."));
+            }
+        } else if ("priority".equals(question.targetKey())) {
+            decision.criteria().stream().filter(item -> item.name().equals(answer)).findFirst().ifPresent(item ->
+                    item.update(item.name(), item.kind(), item.direction(), BigDecimal.valueOf(3),
+                            item.worstAnchor(), item.bestAnchor(), item.unit(), item.active()));
+        } else {
+            var notes = context.notes() == null || context.notes().isBlank() ? answer : context.notes() + "\n" + answer;
+            decision.updateDraft(decision.title(), new DecisionContext(context.intendedUse(), context.budget(),
+                    context.currency(), notes), Instant.now(clock));
+        }
+        question.answer(answer, Instant.now(clock));
+        log.info("product_event=decision_question_answered decision_id={} question_id={} target={}",
+                decision.id(), question.id(), question.targetKey());
+        decisions.flush();
+        return response(decision);
+    }
+
+    @Transactional
+    public DecisionResponse updateSuggestion(UUID id, UUID suggestionId, UpdateSuggestionRequest request) {
+        var decision = required(id);
+        ensureEditable(decision);
+        var suggestion = candidateSuggestions.findByIdAndDecisionId(suggestionId, id)
+                .orElseThrow(() -> new NotFoundException("대안 후보를 찾을 수 없습니다."));
+        if ("DISMISS".equalsIgnoreCase(request.action())) {
+            suggestion.dismiss();
+            return response(decision);
+        }
+        if (!"ACCEPT".equalsIgnoreCase(request.action())) {
+            throw new InvalidDecisionException(List.of("action은 ACCEPT 또는 DISMISS여야 합니다."));
+        }
+        if (decision.options().size() >= 5) throw new InvalidDecisionException(List.of("Option은 최대 5개까지 추가할 수 있습니다."));
+        var url = urlPolicy.validate(suggestion.url());
+        var now = Instant.now(clock);
+        var option = decision.addOption(null, suggestion.name(), suggestion.reason(), url, null);
+        suggestion.accept();
+        if (decision.webConsent() && webProperties.configured()) {
+            evidenceImports.save(new EvidenceImport(id, option.id(), url, now));
+            decision.processingStatus(DecisionTypes.ProcessingStatus.IMPORTING, now);
+        }
+        decisions.flush();
+        return response(decision);
+    }
+
+    @Transactional
+    public DecisionResponse confirmValue(UUID id, UUID valueId, ConfirmValueRequest request) {
+        var decision = required(id);
+        ensureEditable(decision);
+        if (!decision.confirmValue(valueId, request.numericValue(), request.rating(),
+                Boolean.TRUE.equals(request.disputed()), Instant.now(clock))) {
+            throw new NotFoundException("비교 값을 찾을 수 없습니다.");
+        }
+        decisions.flush();
+        return response(decision);
     }
 
     @Transactional
@@ -109,6 +284,8 @@ public class DecisionService {
             case DEFERRED -> DecisionTypes.DecisionStatus.DEFERRED;
             case ABANDONED -> DecisionTypes.DecisionStatus.ABANDONED;
         }, now);
+        if (request.kind() == DecisionTypes.ResolutionKind.CHOSEN) scheduleReminders(id, now);
+        log.info("product_event=decision_resolved decision_id={} kind={}", id, request.kind());
         return resolutionData(resolution);
     }
 
@@ -119,7 +296,15 @@ public class DecisionService {
             throw new ConflictException("Outcome은 실제 Option을 선택한 Decision에만 기록할 수 있습니다.");
         }
         var outcome = outcomes.save(new OutcomeCheckIn(
-                id, request.satisfaction(), request.expectationStatus(), request.notes(), Instant.now(clock)));
+                id, request.satisfaction(), request.expectationStatus(), request.notes(), request.wouldChooseAgain(),
+                request.workedWell(), request.disappointedBy(), Instant.now(clock)));
+        var activeReminders = reminders.findByDecisionIdOrderByDueAtAsc(id).stream()
+                .filter(item -> item.status() == OutcomeReminder.Status.PENDING || item.status() == OutcomeReminder.Status.SENT)
+                .toList();
+        activeReminders.stream().map(OutcomeReminder::dueAt).min(Instant::compareTo).ifPresent(firstDue ->
+                activeReminders.stream().filter(item -> item.dueAt().equals(firstDue)).forEach(OutcomeReminder::complete));
+        proposeMemories(decision, outcome, request);
+        log.info("product_event=outcome_recorded decision_id={} outcome_id={}", id, outcome.id());
         return outcomeData(outcome);
     }
 
@@ -193,6 +378,10 @@ public class DecisionService {
                 item.update(input.optionId(), input.criterionId(), input.numericValue(), input.rating(),
                         input.certainty(), input.sourceUrl(), input.sourceNote());
             }
+            var saved = decision.mutableValues().stream().filter(value -> value.id().equals(id)).findFirst().orElse(null);
+            if (saved != null && input.origin() != null && input.verificationStatus() != null) {
+                saved.markGenerated(input.origin(), input.verificationStatus());
+            }
         });
     }
 
@@ -254,6 +443,81 @@ public class DecisionService {
         return currency == null || currency.isBlank() ? null : currency.toUpperCase(java.util.Locale.ROOT);
     }
 
+    private void ensureEditable(Decision decision) {
+        if (decision.status() != DecisionTypes.DecisionStatus.DRAFT
+                && decision.status() != DecisionTypes.DecisionStatus.DEFERRED) {
+            throw new ConflictException("선택 또는 포기된 Decision은 수정할 수 없습니다.");
+        }
+    }
+
+    private DecisionTypes.TemplateKey inferTemplate(String intent, List<String> urls) {
+        var text = (intent + " " + String.join(" ", urls)).toLowerCase(java.util.Locale.ROOT);
+        if (text.contains("monitor") || text.contains("모니터") || text.contains("display")) return DecisionTypes.TemplateKey.MONITOR;
+        if (text.contains("tablet") || text.contains("태블릿") || text.contains("ipad")) return DecisionTypes.TemplateKey.TABLET;
+        if (text.contains("phone") || text.contains("스마트폰") || text.contains("휴대폰") || text.contains("iphone")) return DecisionTypes.TemplateKey.PHONE;
+        return DecisionTypes.TemplateKey.LAPTOP;
+    }
+
+    private String conciseTitle(String intent) {
+        var normalized = intent.strip().replaceAll("\\s+", " ");
+        return normalized.length() <= 80 ? normalized : normalized.substring(0, 80);
+    }
+
+    private String optionName(String url) {
+        try {
+            var host = URI.create(url).getHost();
+            return host == null ? "후보 제품" : "후보 · " + host.replaceFirst("^www\\.", "");
+        } catch (RuntimeException exception) {
+            return "후보 제품";
+        }
+    }
+
+    private void seedQuestions(Decision decision, Instant now) {
+        questions.save(new DecisionQuestion(decision.id(), DecisionQuestion.Kind.NUMBER, "context.budget",
+                "이번 구매의 최대 예산은 얼마인가요?", "예산을 넘는 후보를 먼저 걸러냅니다.", List.of(), 1, now));
+        questions.save(new DecisionQuestion(decision.id(), DecisionQuestion.Kind.SINGLE_CHOICE, "priority",
+                "이번 결정에서 가장 중요한 기준은 무엇인가요?", "가장 중요한 기준은 다른 기준보다 세 배의 weight로 시작합니다.",
+                decision.criteria().stream().filter(Criterion::active).map(Criterion::name).limit(6).toList(), 2, now));
+        questions.save(new DecisionQuestion(decision.id(), DecisionQuestion.Kind.TEXT, "context.avoid",
+                "반드시 피하고 싶은 단점이나 조건이 있나요?", "숨은 hard constraint를 확인해 잘못된 추천을 막습니다.", List.of(), 3, now));
+    }
+
+    private void applyConfirmedPreferences(Decision decision) {
+        preferences.findByOwnerUserIdAndStatusAndTemplateKey(currentUser.current().id(),
+                PreferenceMemory.Status.CONFIRMED, decision.templateKey()).forEach(memory ->
+                decision.criteria().stream().filter(item -> item.name().equals(memory.criterionName())).findFirst()
+                        .ifPresent(item -> item.update(item.name(), item.kind(), item.direction(),
+                                BigDecimal.valueOf(Math.max(1, Math.min(3, memory.strength()))), item.worstAnchor(),
+                                item.bestAnchor(), item.unit(), item.active())));
+    }
+
+    private void scheduleReminders(UUID decisionId, Instant now) {
+        for (var days : List.of(14L, 60L)) {
+            var due = now.plus(days, ChronoUnit.DAYS);
+            reminders.save(new OutcomeReminder(decisionId, due, OutcomeReminder.Channel.IN_APP, now));
+            reminders.save(new OutcomeReminder(decisionId, due, OutcomeReminder.Channel.EMAIL, now));
+        }
+    }
+
+    private void proposeMemories(Decision decision, OutcomeCheckIn outcome, CreateOutcomeRequest request) {
+        if (request.workedWell() != null && !request.workedWell().isBlank()) {
+            preferences.save(new PreferenceMemory(decision.ownerUserId(), decision.templateKey(), request.workedWell(),
+                    "‘%s’을 중요하게 본 선택이 실제 사용에서 잘 맞았습니다.".formatted(request.workedWell()),
+                    3, decision.id(), outcome.id(), Instant.now(clock)));
+        }
+        if (request.disappointedBy() != null && !request.disappointedBy().isBlank()) {
+            preferences.save(new PreferenceMemory(decision.ownerUserId(), decision.templateKey(), request.disappointedBy(),
+                    "다음 %s 비교에서는 ‘%s’을 더 엄격히 확인합니다."
+                            .formatted(categoryLabel(decision.templateKey()), request.disappointedBy()),
+                    2, decision.id(), outcome.id(), Instant.now(clock)));
+        }
+    }
+
+    private String categoryLabel(DecisionTypes.TemplateKey key) {
+        return switch (key) { case LAPTOP -> "노트북"; case PHONE -> "휴대폰"; case TABLET -> "태블릿";
+            case MONITOR -> "모니터"; case CUSTOM -> "구매"; };
+    }
+
     private DecisionResponse response(Decision decision) {
         return new DecisionResponse(
                 decision.id(), decision.version(), decision.title(), decision.templateKey(), decision.templateVersion(),
@@ -266,7 +530,8 @@ public class DecisionService {
                         criterion.worstAnchor(), criterion.bestAnchor(), criterion.unit(), criterion.active())).toList(),
                 decision.values().stream().map(value -> new OptionValueData(
                         value.id(), value.optionId(), value.criterionId(), value.numericValue(), value.rating(),
-                        value.certainty(), value.sourceUrl(), value.sourceNote())).toList(),
+                        value.certainty(), value.sourceUrl(), value.sourceNote(), value.origin(),
+                        value.verificationStatus())).toList(),
                 decision.constraints().stream().map(constraint -> new ConstraintData(
                         constraint.id(), constraint.name(), constraint.kind(), constraint.criterionId(),
                         constraint.threshold(), constraint.unit(), constraint.description(), constraint.active())).toList(),
@@ -274,6 +539,7 @@ public class DecisionService {
                         result.id(), result.optionId(), result.constraintId(), result.status(), result.note())).toList(),
                 resolutions.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().map(this::resolutionData).toList(),
                 outcomes.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().map(this::outcomeData).toList(),
+                guidance(decision),
                 decision.createdAt(), decision.updatedAt());
     }
 
@@ -284,6 +550,38 @@ public class DecisionService {
 
     private OutcomeData outcomeData(OutcomeCheckIn outcome) {
         return new OutcomeData(outcome.id(), outcome.satisfaction(), outcome.expectationStatus(),
-                outcome.notes(), outcome.createdAt());
+                outcome.notes(), outcome.wouldChooseAgain(), outcome.workedWell(), outcome.disappointedBy(),
+                outcome.createdAt());
+    }
+
+    private GuidanceData guidance(Decision decision) {
+        if (decision.intentText() == null) return null;
+        var analyzed = readiness.analyze(decision);
+        var processing = decision.processingStatus();
+        var summary = processing == DecisionTypes.ProcessingStatus.IMPORTING
+                ? "후보 링크에서 제품 정보와 근거를 가져오는 중입니다." : analyzed.summary();
+        var applied = preferences.findByOwnerUserIdAndStatusAndTemplateKey(decision.ownerUserId(),
+                PreferenceMemory.Status.CONFIRMED, decision.templateKey()).stream().map(this::preferenceData).toList();
+        return new GuidanceData(decision.intentText(), decision.aiConsent(), processing, analyzed.readiness(), summary,
+                questions.findTop3ByDecisionIdAndStatusOrderByPriorityAscCreatedAtAsc(
+                        decision.id(), DecisionQuestion.Status.OPEN).stream().map(question -> new QuestionData(
+                        question.id(), question.kind().name(), question.targetKey(), question.prompt(), question.impact(),
+                        question.options(), question.answer(), question.status().name())).toList(),
+                evidenceImports.findByDecisionIdOrderByCreatedAtAsc(decision.id()).stream().map(item -> new EvidenceData(
+                        item.id(), item.optionId(), item.url(), item.status().name(), item.title(), item.excerpt(),
+                        item.error(), item.fetchedAt(), item.fetchedAt() != null
+                                && item.fetchedAt().isBefore(Instant.now(clock).minus(24, ChronoUnit.HOURS)))).toList(),
+                candidateSuggestions.findByDecisionIdOrderByCreatedAtAsc(decision.id()).stream()
+                        .filter(item -> item.status() == CandidateSuggestion.Status.PROPOSED)
+                        .map(item -> new CandidateSuggestionData(item.id(), item.name(), item.url(), item.reason(),
+                                item.status().name())).toList(),
+                applied,
+                reminders.findByDecisionIdOrderByDueAtAsc(decision.id()).stream().map(item -> new ReminderData(
+                        item.id(), item.dueAt(), item.status().name(), item.channel().name())).toList());
+    }
+
+    private PreferenceData preferenceData(PreferenceMemory item) {
+        return new PreferenceData(item.id(), item.templateKey(), item.criterionName(), item.statement(), item.strength(),
+                item.status().name(), item.confidence().name(), item.sourceDecisionId());
     }
 }

@@ -191,6 +191,68 @@ class DecisionApiIntegrationTest {
     }
 
     @Test
+    void createsGuidedDecisionAnswersCriticalQuestionsAndBuildsPreferenceMemory() throws Exception {
+        var created = mapper.readTree(mvc.perform(post("/api/v1/decisions").with(signedIn()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "intentText":"카메라와 배터리가 중요한 새 스마트폰을 고르고 있어요.",
+                                  "sourceUrls":["https://example.com/phone-a"],
+                                  "templateKey":"PHONE",
+                                  "webConsent":false,
+                                  "aiConsent":false
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.templateKey").value("PHONE"))
+                .andExpect(jsonPath("$.options.length()").value(1))
+                .andExpect(jsonPath("$.guidance.processingStatus").value("NEEDS_INPUT"))
+                .andExpect(jsonPath("$.guidance.readiness").value("PROVISIONAL"))
+                .andExpect(jsonPath("$.guidance.questions.length()").value(3))
+                .andReturn().getResponse().getContentAsString());
+        var decisionId = created.get("id").asText();
+        var optionId = created.get("options").get(0).get("id").asText();
+        var budgetQuestion = created.get("guidance").get("questions").get(0).get("id").asText();
+
+        mvc.perform(post("/api/v1/decisions/{id}/questions/{questionId}/answer", decisionId, budgetQuestion)
+                        .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"answer\":\"1500000\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.context.budget").value(1500000));
+
+        mvc.perform(post("/api/v1/decisions/{id}/sources", decisionId).with(signedIn()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"url\":\"https://example.org/phone-b\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.options.length()").value(2));
+
+        mvc.perform(post("/api/v1/decisions/{id}/resolutions", decisionId).with(signedIn()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"CHOSEN\",\"selectedOptionId\":\"%s\",\"rationale\":\"배터리\"}".formatted(optionId)))
+                .andExpect(status().isCreated());
+
+        mvc.perform(post("/api/v1/decisions/{id}/outcome-check-ins", decisionId).with(signedIn()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"satisfaction":4,"expectationStatus":"MET","wouldChooseAgain":true,
+                                 "workedWell":"배터리 적합도","disappointedBy":"가격"}
+                                """))
+                .andExpect(status().isCreated());
+
+        var memories = mapper.readTree(mvc.perform(get("/api/v1/preferences").with(signedIn()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].status").value("PROPOSED"))
+                .andReturn().getResponse().getContentAsString());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/v1/preferences/{id}", memories.get(0).get("id").asText())
+                        .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"action\":\"CONFIRM\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+    }
+
+    @Test
     void requiresAuthenticationAndCsrf() throws Exception {
         mvc.perform(get("/api/v1/decisions"))
                 .andExpect(status().isUnauthorized());
