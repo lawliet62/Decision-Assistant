@@ -1,156 +1,143 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { api } from "@/shared/api/client";
-import type { AiCapabilitiesResponse, DecisionResponse, EvaluationResponse, StructureRunResponse, UpdateDraftRequest } from "@/shared/api/types";
+import type { AiCapabilitiesResponse, DecisionResponse, EvaluationResponse, UpdateDraftRequest } from "@/shared/api/types";
 import { EvaluationResultView } from "@/features/evaluation-result/evaluation-result";
 
 type Problem = { detail?: string; violations?: string[] };
+type DraftValue = NonNullable<UpdateDraftRequest["values"]>[number];
 
 export function DecisionEditor({ initialDecision }: { initialDecision: DecisionResponse }) {
   const [decision, setDecision] = useState(initialDecision);
+  const [values, setValues] = useState<DraftValue[]>(() => initialDecision.values ?? []);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [newUrl, setNewUrl] = useState("");
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
   const [evaluation, setEvaluation] = useState<EvaluationResponse>();
-  const [proposal, setProposal] = useState<StructureRunResponse>();
   const [capabilities, setCapabilities] = useState<AiCapabilitiesResponse>();
   const [includeLlm, setIncludeLlm] = useState(false);
-  const [aiConsent, setAiConsent] = useState(false);
-  const [sensitiveDataAcknowledged, setSensitiveDataAcknowledged] = useState(false);
-  const [selectedOptionId, setSelectedOptionId] = useState("");
+  const [selectedOptionId, setSelectedOptionId] = useState(initialDecision.options?.[0]?.id ?? "");
   const [rationale, setRationale] = useState("");
   const [satisfaction, setSatisfaction] = useState(4);
   const [expectationStatus, setExpectationStatus] = useState<"MET" | "PARTIALLY_MET" | "NOT_MET" | "TOO_EARLY">("TOO_EARLY");
+  const [wouldChooseAgain, setWouldChooseAgain] = useState<boolean>();
+  const [workedWell, setWorkedWell] = useState("");
+  const [disappointedBy, setDisappointedBy] = useState("");
   const [outcomeNotes, setOutcomeNotes] = useState("");
 
-  const { control, register, handleSubmit, getValues, setValue, reset, formState: { isDirty, isSubmitting } } = useForm<UpdateDraftRequest>({
-    defaultValues: toDraft(initialDecision),
-  });
-  const optionsArray = useFieldArray({ control, name: "options", keyName: "formKey" });
-  const criteriaArray = useFieldArray({ control, name: "criteria", keyName: "formKey" });
-  const constraintsArray = useFieldArray({ control, name: "constraints", keyName: "formKey" });
-  const options = useWatch({ control, name: "options" }) ?? [];
-  const criteria = useWatch({ control, name: "criteria" }) ?? [];
-  const values = useWatch({ control, name: "values" }) ?? [];
-  const constraints = useWatch({ control, name: "constraints" }) ?? [];
-  const constraintResults = useWatch({ control, name: "constraintResults" }) ?? [];
+  const guidance = decision.guidance;
+  const options = decision.options ?? [];
+  const criteria = (decision.criteria ?? []).filter((item) => item.active);
+  const pending = guidance?.processingStatus === "IMPORTING";
+  const llmAvailable = Boolean(capabilities?.enabled) && (!guidance || guidance.aiConsent);
 
+  useEffect(() => { api.GET("/api/v1/ai/capabilities").then(({ data }) => setCapabilities(data)); }, []);
   useEffect(() => {
-    api.GET("/api/v1/ai/capabilities").then(({ data }) => setCapabilities(data));
-  }, []);
-
-  async function saveDraft(body: UpdateDraftRequest) {
-    clearFeedback();
-    const { data, error: apiError } = await api.PUT("/api/v1/decisions/{decisionId}/draft", {
-      params: { path: { decisionId: decision.id! } },
-      body: { ...body, expectedVersion: decision.version },
-    });
-    if (apiError || !data) {
-      setError(problemMessage(apiError));
-      return;
-    }
-    applyDecision(data);
-    setMessage("Draft를 저장했습니다.");
-  }
+    if (!pending) return;
+    const timer = window.setInterval(async () => {
+      const { data } = await api.GET("/api/v1/decisions/{decisionId}", { params: { path: { decisionId: decision.id! } } });
+      if (data) { setDecision(data); setValues(data.values ?? []); }
+    }, 2500);
+    return () => window.clearInterval(timer);
+  }, [pending, decision.id]);
 
   async function refreshDecision() {
-    const { data } = await api.GET("/api/v1/decisions/{decisionId}", {
-      params: { path: { decisionId: decision.id! } },
-    });
-    if (data) applyDecision(data);
+    const { data } = await api.GET("/api/v1/decisions/{decisionId}", { params: { path: { decisionId: decision.id! } } });
+    if (data) { setDecision(data); setValues(data.values ?? []); }
   }
+  function clearFeedback() { setMessage(undefined); setError(undefined); }
+  function apply(next?: DecisionResponse) { if (next) { setDecision(next); setValues(next.values ?? []); } }
 
-  function applyDecision(next: DecisionResponse) {
-    setDecision(next);
-    reset(toDraft(next));
-  }
-
-  function addOption() {
-    const id = crypto.randomUUID();
-    optionsArray.append({ id, name: `Option ${options.length + 1}`, description: "", sourceUrl: "", sourceText: "" });
-    const nextValues = [...getValues("values")];
-    for (const criterion of getValues("criteria")) {
-      nextValues.push(emptyValue(id, criterion.id!));
-    }
-    setValue("values", nextValues, { shouldDirty: true });
-    const nextResults = [...getValues("constraintResults")];
-    for (const constraint of getValues("constraints").filter((item) => item.active && !item.kind.startsWith("NUMERIC"))) {
-      nextResults.push(emptyConstraintResult(id, constraint.id!));
-    }
-    setValue("constraintResults", nextResults, { shouldDirty: true });
-  }
-
-  function removeOption(index: number) {
-    const optionId = getValues(`options.${index}.id`);
-    optionsArray.remove(index);
-    setValue("values", getValues("values").filter((value) => value.optionId !== optionId), { shouldDirty: true });
-    setValue("constraintResults", getValues("constraintResults").filter((result) => result.optionId !== optionId), { shouldDirty: true });
-  }
-
-  function addCriterion() {
-    const id = crypto.randomUUID();
-    criteriaArray.append({ id, name: "새 Criterion", kind: "RATING_1_TO_5", direction: "NOT_APPLICABLE", weight: 1, active: true });
-    setValue("values", [
-      ...getValues("values"),
-      ...getValues("options").map((option) => emptyValue(option.id!, id)),
-    ], { shouldDirty: true });
-  }
-
-  function removeCriterion(index: number) {
-    const criterionId = getValues(`criteria.${index}.id`);
-    criteriaArray.remove(index);
-    setValue("values", getValues("values").filter((value) => value.criterionId !== criterionId), { shouldDirty: true });
-    setValue("constraints", getValues("constraints").map((constraint) => constraint.criterionId === criterionId ? { ...constraint, criterionId: undefined, active: false } : constraint), { shouldDirty: true });
-  }
-
-  function addConstraint() {
-    const id = crypto.randomUUID();
-    constraintsArray.append({ id, name: "새 Constraint", kind: "MANUAL", description: "", active: false });
-  }
-
-  function removeConstraint(index: number) {
-    const constraintId = getValues(`constraints.${index}.id`);
-    constraintsArray.remove(index);
-    setValue("constraintResults", getValues("constraintResults").filter((result) => result.constraintId !== constraintId), { shouldDirty: true });
-  }
-
-  function setConstraintActive(index: number, active: boolean) {
-    setValue(`constraints.${index}.active`, active, { shouldDirty: true });
-    const constraint = getValues(`constraints.${index}`);
-    if (active && !constraint.kind.startsWith("NUMERIC")) {
-      const existing = getValues("constraintResults");
-      const additions = getValues("options")
-        .filter((option) => !existing.some((result) => result.optionId === option.id && result.constraintId === constraint.id))
-        .map((option) => emptyConstraintResult(option.id!, constraint.id!));
-      setValue("constraintResults", [...existing, ...additions], { shouldDirty: true });
-    }
-  }
-
-  function ensureValue(optionId: string, criterionId: string) {
-    if (getValues("values").some((value) => value.optionId === optionId && value.criterionId === criterionId)) return;
-    setValue("values", [...getValues("values"), emptyValue(optionId, criterionId)], { shouldDirty: true });
-  }
-
-  async function requestStructure() {
+  async function answerQuestion(questionId: string) {
     clearFeedback();
-    if (isDirty) return setError("AI proposal 전에 draft를 저장하세요.");
-    if (!hasAiDataConsent()) return;
-    const { data, error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/structure-proposals", {
-      params: { path: { decisionId: decision.id! } },
-      body: { expectedVersion: decision.version, aiConsent: true, sensitiveDataAcknowledged },
+    const answer = answers[questionId]?.trim();
+    if (!answer) return setError("질문에 답을 입력하세요.");
+    const { data, error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/questions/{questionId}/answer", {
+      params: { path: { decisionId: decision.id!, questionId } }, body: { answer },
     });
     if (apiError || !data) return setError(problemMessage(apiError));
-    setProposal(data);
+    apply(data); setMessage("답을 결정 문서에 반영했습니다.");
+  }
+
+  async function addSource() {
+    clearFeedback();
+    if (!newUrl.trim()) return;
+    const { data, error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/sources", {
+      params: { path: { decisionId: decision.id! } }, body: { url: newUrl.trim() },
+    });
+    if (apiError || !data) return setError(problemMessage(apiError));
+    setNewUrl(""); apply(data); setMessage("후보 링크를 추가했습니다.");
+  }
+
+  async function retryEvidence(evidenceId: string) {
+    clearFeedback();
+    const { data, error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/evidence/{evidenceId}/retry", {
+      params: { path: { decisionId: decision.id!, evidenceId } },
+    });
+    if (apiError || !data) return setError(problemMessage(apiError));
+    apply(data); setMessage("후보 정보 수집을 다시 시작했습니다.");
+  }
+
+  async function skipReminder(reminderId: string) {
+    clearFeedback();
+    const { error: apiError } = await api.PATCH("/api/v1/decisions/{decisionId}/reminders/{reminderId}", {
+      params: { path: { decisionId: decision.id!, reminderId } }, body: { action: "SKIP" },
+    });
+    if (apiError) return setError(problemMessage(apiError));
+    await refreshDecision(); setMessage("이번 회고 reminder를 건너뜁니다.");
+  }
+
+  async function updateSuggestion(suggestionId: string, action: "ACCEPT" | "DISMISS") {
+    clearFeedback();
+    const { data, error: apiError } = await api.PATCH("/api/v1/decisions/{decisionId}/candidate-suggestions/{suggestionId}", {
+      params: { path: { decisionId: decision.id!, suggestionId } }, body: { action },
+    });
+    if (apiError || !data) return setError(problemMessage(apiError));
+    apply(data); setMessage(action === "ACCEPT" ? "대안을 후보로 추가했습니다." : "대안을 제외했습니다.");
+  }
+
+  function setCell(optionId: string, criterionId: string, field: "numericValue" | "rating", raw: string) {
+    const parsed = raw === "" ? undefined : Number(raw);
+    setValues((current) => {
+      const index = current.findIndex((item) => item.optionId === optionId && item.criterionId === criterionId);
+      const next = [...current];
+      const base: DraftValue = index >= 0 ? next[index] : { id: crypto.randomUUID(), optionId, criterionId, certainty: "CONFIRMED", origin: "USER", verificationStatus: "CONFIRMED" };
+      const updated = { ...base, [field]: parsed, certainty: "CONFIRMED" as const, origin: "USER" as const, verificationStatus: "CONFIRMED" as const };
+      if (field === "numericValue") delete updated.rating; else delete updated.numericValue;
+      if (index >= 0) next[index] = updated; else next.push(updated);
+      return next;
+    });
+  }
+
+  async function saveComparison() {
+    clearFeedback();
+    const body: UpdateDraftRequest = { expectedVersion: decision.version ?? 0, title: decision.title ?? "Decision",
+      context: decision.context ?? {}, options: decision.options ?? [], criteria: decision.criteria ?? [], values,
+      constraints: decision.constraints ?? [], constraintResults: decision.constraintResults ?? [] };
+    const { data, error: apiError } = await api.PUT("/api/v1/decisions/{decisionId}/draft", {
+      params: { path: { decisionId: decision.id! } }, body,
+    });
+    if (apiError || !data) return setError(problemMessage(apiError));
+    apply(data); setMessage("검증 입력을 저장했습니다.");
+  }
+
+  async function verifyValue(valueId: string) {
+    clearFeedback();
+    const { data, error: apiError } = await api.PATCH("/api/v1/decisions/{decisionId}/values/{valueId}/verification", {
+      params: { path: { decisionId: decision.id!, valueId } }, body: { disputed: false },
+    });
+    if (apiError || !data) return setError(problemMessage(apiError));
+    apply(data); setMessage("근거 값을 확인했습니다.");
   }
 
   async function evaluate() {
     clearFeedback();
-    if (isDirty) return setError("평가 전에 draft를 저장하세요.");
-    if (includeLlm && !hasAiDataConsent()) return;
+    const include = includeLlm && llmAvailable;
     const { data, error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/evaluations", {
       params: { path: { decisionId: decision.id! } },
-      body: { expectedVersion: decision.version, includeLlm, aiConsent: includeLlm && aiConsent, sensitiveDataAcknowledged: includeLlm && sensitiveDataAcknowledged },
+      body: { expectedVersion: decision.version!, includeLlm: include, aiConsent: include, sensitiveDataAcknowledged: include },
     });
     if (apiError || !data) return setError(problemMessage(apiError));
     setEvaluation(data);
@@ -159,192 +146,46 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
   async function resolveDecision(kind: "CHOSEN" | "DEFERRED" | "ABANDONED") {
     clearFeedback();
     const { error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/resolutions", {
-      params: { path: { decisionId: decision.id! } },
-      body: { kind, selectedOptionId: kind === "CHOSEN" ? selectedOptionId : undefined, rationale },
+      params: { path: { decisionId: decision.id! } }, body: { kind, selectedOptionId: kind === "CHOSEN" ? selectedOptionId : undefined, rationale },
     });
     if (apiError) return setError(problemMessage(apiError));
-    await refreshDecision();
-    setMessage("실제 선택 상태를 기록했습니다.");
+    await refreshDecision(); setMessage("실제 선택을 기록했습니다. 14일과 60일 뒤 회고를 알려드릴게요.");
   }
 
   async function addOutcome() {
     clearFeedback();
     const { error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/outcome-check-ins", {
       params: { path: { decisionId: decision.id! } },
-      body: { satisfaction, expectationStatus, notes: outcomeNotes },
+      body: { satisfaction, expectationStatus, notes: outcomeNotes, wouldChooseAgain, workedWell, disappointedBy },
     });
     if (apiError) return setError(problemMessage(apiError));
-    setOutcomeNotes("");
-    await refreshDecision();
-    setMessage("Outcome check-in을 기록했습니다.");
+    await refreshDecision(); setOutcomeNotes(""); setMessage("회고를 기록하고 검토할 성향 기억을 만들었습니다.");
   }
 
-  function clearFeedback() { setMessage(undefined); setError(undefined); }
+  return <div className="mt-6 space-y-6">
+    <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-medium text-emerald-700">{decision.templateKey} · {decision.status}</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">{decision.title}</h1></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${guidance?.readiness === "VERIFIED_READY" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{guidance?.readiness === "VERIFIED_READY" ? "검증 준비됨" : "잠정 비교"}</span></header>
+    {(message || error) && <div className={`rounded-xl p-4 text-sm ${error ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{error ?? message}</div>}
 
-  function hasAiDataConsent() {
-    if (!aiConsent) {
-      setError("외부 AI 전송 범위를 확인하고 동의하세요.");
-      return false;
-    }
-    if (capabilities?.requiresSensitiveDataAcknowledgement && !sensitiveDataAcknowledged) {
-      setError("민감한 개인정보·금융 정보·비공개 업무 정보가 없음을 확인하세요.");
-      return false;
-    }
-    return true;
-  }
+    <Section title="현재 조언" description="확인된 근거와 적용된 성향만으로 만든 현재 상태입니다.">{pending && <div className="flex items-center gap-3 text-sm text-emerald-800"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />후보 링크를 읽고 있습니다. 이 화면은 자동으로 갱신됩니다.</div>}<p className="text-lg leading-8 text-zinc-800">{guidance?.summary ?? "기존 Decision입니다. 아래 검증 입력에서 비교를 계속할 수 있습니다."}</p>{(guidance?.appliedPreferences?.length ?? 0) > 0 && <div><p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">과거 결정에서 적용</p><div className="mt-2 flex flex-wrap gap-2">{guidance?.appliedPreferences?.map((item) => <span key={item.id} className="rounded-full bg-violet-50 px-3 py-1 text-xs text-violet-800">{item.statement}</span>)}</div></div>}</Section>
 
-  return (
-    <div className="mt-6 space-y-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-emerald-700">{decision.templateKey} · {decision.status} · v{decision.version}</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{decision.title}</h1>
-        </div>
-        <button form="decision-form" disabled={isSubmitting || !isDirty} className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">Draft 저장</button>
-      </header>
+    {(guidance?.questions?.length ?? 0) > 0 && <Section title="지금 확인할 것" description="결론에 영향이 큰 질문만 최대 3개씩 보여드립니다."><div className="grid gap-4">{guidance?.questions?.map((question) => <article key={question.id} className="rounded-2xl border border-zinc-200 p-4"><p className="font-semibold">{question.prompt}</p><p className="mt-1 text-xs text-zinc-500">{question.impact}</p><div className="mt-3 flex flex-wrap gap-2">{(question.options?.length ?? 0) > 0 ? <select value={answers[question.id!] ?? ""} onChange={(event) => setAnswers({ ...answers, [question.id!]: event.target.value })} className={inputClass}><option value="">선택</option>{question.options?.map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input type={question.kind === "NUMBER" ? "number" : "text"} value={answers[question.id!] ?? ""} onChange={(event) => setAnswers({ ...answers, [question.id!]: event.target.value })} className={inputClass} />}<button onClick={() => answerQuestion(question.id!)} className={primarySmall}>반영</button></div></article>)}</div></Section>}
 
-      {(message || error) && <div className={`rounded-xl p-4 text-sm ${error ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{error ?? message}</div>}
+    <Section title="후보 비교" description="자동 추출값은 출처와 확인 상태를 함께 표시합니다."><div className="grid gap-4 md:grid-cols-2">{options.map((option) => { const evidence = guidance?.evidence?.find((item) => item.optionId === option.id); return <article key={option.id} className="rounded-2xl border border-zinc-200 p-5"><div className="flex items-start justify-between gap-3"><h3 className="font-semibold text-zinc-950">{option.name}</h3><span className={`text-xs ${evidence?.status === "FAILED" ? "text-red-600" : "text-zinc-500"}`}>{evidence?.status ?? "직접 입력"}</span></div>{option.description && <p className="mt-2 text-sm text-zinc-600">{option.description}</p>}<a href={option.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 block truncate text-xs text-emerald-700">{option.sourceUrl}</a>{evidence?.fetchedAt && <p className="mt-1 text-xs text-zinc-400">조회 {new Date(evidence.fetchedAt).toLocaleString("ko-KR")}{evidence.stale && <button onClick={() => retryEvidence(evidence.id!)} className="ml-2 font-semibold text-amber-700 underline">24시간 경과 · 새로고침</button>}</p>}{evidence?.error && <p className="mt-2 text-xs text-red-700">{evidence.error} <button onClick={() => retryEvidence(evidence.id!)} className="font-semibold underline">다시 시도</button></p>}<ul className="mt-4 space-y-2 text-sm">{criteria.map((criterion) => { const value = values.find((item) => item.optionId === option.id && item.criterionId === criterion.id); return <li key={criterion.id} className="flex items-center justify-between gap-3"><span className="text-zinc-500">{criterion.name}</span><span className="text-right font-medium">{displayValue(value, criterion.unit)}{value?.verificationStatus === "UNREVIEWED" && <button onClick={() => verifyValue(value.id!)} className="ml-2 text-xs text-emerald-700">확인</button>}</span></li>; })}</ul></article>; })}</div><div className="flex gap-2"><input value={newUrl} onChange={(event) => setNewUrl(event.target.value)} placeholder="비교할 후보 URL 추가" className={inputClass} /><button onClick={addSource} className={secondaryButton}>링크 추가</button></div></Section>
 
-      <form id="decision-form" onSubmit={handleSubmit(saveDraft)} className="space-y-8">
-        <Section title="Context" description="목적과 예산은 추천보다 먼저 확인되는 입력입니다.">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="제목"><input {...register("title")} className={inputClass} /></Field>
-            <Field label="예산"><input type="number" {...register("context.budget", numberInput)} className={inputClass} /></Field>
-            <Field label="통화"><input maxLength={3} {...register("context.currency")} className={inputClass} placeholder="KRW" /></Field>
-            <Field label="주요 사용 목적"><input {...register("context.intendedUse")} className={inputClass} /></Field>
-          </div>
-          <Field label="상황과 추가 메모"><textarea {...register("context.notes")} className={`${inputClass} min-h-24`} /></Field>
-        </Section>
+    {(guidance?.candidateSuggestions?.length ?? 0) > 0 && <Section title="놓쳤을 수 있는 대안" description="현재 후보와 다른 선택지를 제안합니다. 승인하기 전에는 비교에 들어가지 않습니다."><div className="grid gap-3">{guidance?.candidateSuggestions?.map((item) => <article key={item.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-zinc-200 p-4"><div className="min-w-0"><p className="font-semibold">{item.name}</p><p className="mt-1 text-sm text-zinc-600">{item.reason}</p><a href={item.url} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs text-emerald-700">{item.url}</a></div><div className="flex gap-2"><button onClick={() => updateSuggestion(item.id!, "ACCEPT")} className={primarySmall}>후보에 추가</button><button onClick={() => updateSuggestion(item.id!, "DISMISS")} className={secondaryButton}>제외</button></div></article>)}</div></Section>}
 
-        <Section title="Options" description="URL은 provenance로만 저장하며 서버가 페이지를 읽지 않습니다." action={<button type="button" onClick={addOption} className={secondaryButton}>Option 추가</button>}>
-          <div className="grid gap-4 md:grid-cols-2">
-            {optionsArray.fields.map((field, index) => (
-              <article key={field.formKey} className="space-y-3 rounded-2xl border border-zinc-200 p-4">
-                <div className="flex gap-2"><input {...register(`options.${index}.name`)} className={`${inputClass} font-semibold`} /><button type="button" onClick={() => removeOption(index)} className="text-sm text-red-600">삭제</button></div>
-                <textarea {...register(`options.${index}.description`)} className={inputClass} placeholder="설명" />
-                <input {...register(`options.${index}.sourceUrl`)} className={inputClass} placeholder="출처 URL" />
-                <textarea {...register(`options.${index}.sourceText`)} className={`${inputClass} min-h-28`} placeholder="제품 페이지에서 직접 확인해 붙여 넣은 설명·스펙" />
-              </article>
-            ))}
-          </div>
-        </Section>
+    <details className="rounded-3xl border border-zinc-200 bg-white shadow-sm"><summary className="cursor-pointer p-6 text-xl font-semibold">검증 입력과 점수 보기</summary><div className="space-y-6 border-t border-zinc-100 p-6"><p className="text-sm text-zinc-500">미확인 칸만 보강하면 재현 가능한 점수 평가를 실행할 수 있습니다. weight와 anchor는 category template와 확인된 성향에서 관리됩니다.</p><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-sm"><thead><tr><th className="p-2 text-left">후보</th>{criteria.map((item) => <th key={item.id} className="p-2 text-left">{item.name}</th>)}</tr></thead><tbody>{options.map((option) => <tr key={option.id} className="border-t border-zinc-100"><th className="p-2 text-left">{option.name}</th>{criteria.map((criterion) => { const value = values.find((item) => item.optionId === option.id && item.criterionId === criterion.id); return <td key={criterion.id} className="p-2">{criterion.kind === "NUMERIC_UTILITY" ? <input type="number" step="any" value={value?.numericValue ?? ""} onChange={(event) => setCell(option.id!, criterion.id!, "numericValue", event.target.value)} className={inputClass} /> : <select value={value?.rating ?? ""} onChange={(event) => setCell(option.id!, criterion.id!, "rating", event.target.value)} className={inputClass}><option value="">미확인</option>{[1,2,3,4,5].map((rating) => <option key={rating}>{rating}</option>)}</select>}</td>; })}</tr>)}</tbody></table></div><div className="flex flex-wrap items-center gap-3"><button onClick={saveComparison} className={secondaryButton}>검증 입력 저장</button><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeLlm} onChange={(event) => setIncludeLlm(event.target.checked)} disabled={!llmAvailable} /> 독립 LLM 관점 포함</label>{guidance && !guidance.aiConsent && <span className="text-xs text-zinc-500">생성 시 AI 처리에 동의하지 않아 Algorithm만 실행합니다.</span>}<button onClick={evaluate} disabled={guidance ? guidance.readiness !== "VERIFIED_READY" : false} className="rounded-full bg-emerald-700 px-5 py-2 text-sm font-semibold text-white disabled:opacity-40">검증된 평가 실행</button></div></div></details>
+    {evaluation && <EvaluationResultView evaluation={evaluation} />}
 
-        <Section title="Criteria" description="Numeric 값은 후보 min-max가 아니라 확인한 worst/best anchor로 utility를 계산합니다." action={<button type="button" onClick={addCriterion} className={secondaryButton}>Criterion 추가</button>}>
-          <div className="space-y-3">
-            {criteriaArray.fields.map((field, index) => {
-              const criterion = criteria[index];
-              return <article key={field.formKey} className="grid gap-3 rounded-2xl border border-zinc-200 p-4 md:grid-cols-8">
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" {...register(`criteria.${index}.active`)} /> 사용</label>
-                <input {...register(`criteria.${index}.name`)} className={`${inputClass} md:col-span-2`} />
-                <select {...register(`criteria.${index}.kind`)} className={inputClass}><option value="NUMERIC_UTILITY">Numeric</option><option value="RATING_1_TO_5">1~5 rating</option></select>
-                <select {...register(`criteria.${index}.direction`)} className={inputClass}><option value="HIGHER_BETTER">높을수록</option><option value="LOWER_BETTER">낮을수록</option><option value="NOT_APPLICABLE">해당 없음</option></select>
-                <input type="number" step="0.1" {...register(`criteria.${index}.weight`, numberInput)} className={inputClass} placeholder="weight" />
-                {criterion?.kind === "NUMERIC_UTILITY" ? <><input type="number" step="any" {...register(`criteria.${index}.worstAnchor`, numberInput)} className={inputClass} placeholder="worst" /><input type="number" step="any" {...register(`criteria.${index}.bestAnchor`, numberInput)} className={inputClass} placeholder="best" /></> : <div className="md:col-span-2" />}
-                <button type="button" onClick={() => removeCriterion(index)} className="text-left text-sm text-red-600 md:col-start-8">삭제</button>
-              </article>;
-            })}
-          </div>
-        </Section>
+    <Section title="실제 선택" description="추천과 별개로 내가 무엇을 선택했고 왜 그랬는지 남깁니다."><div className="grid gap-3 sm:grid-cols-2"><select value={selectedOptionId} onChange={(event) => setSelectedOptionId(event.target.value)} className={inputClass}><option value="">후보 선택</option>{options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select><input value={rationale} onChange={(event) => setRationale(event.target.value)} className={inputClass} placeholder="결정 이유" /></div><div className="flex flex-wrap gap-2"><button onClick={() => resolveDecision("CHOSEN")} className={primarySmall}>선택 기록</button><button onClick={() => resolveDecision("DEFERRED")} className={secondaryButton}>보류</button><button onClick={() => resolveDecision("ABANDONED")} className={secondaryButton}>포기</button></div></Section>
 
-        <Section title="Option values" description="활성 Criterion은 모든 Option에 값이 있어야 평가할 수 있습니다.">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] border-separate border-spacing-2 text-sm">
-              <thead><tr><th className="text-left">Option</th>{criteria.filter((criterion) => criterion.active).map((criterion) => <th key={criterion.id} className="text-left">{criterion.name}</th>)}</tr></thead>
-              <tbody>{options.map((option) => <tr key={option.id}><th className="text-left font-medium">{option.name}</th>{criteria.filter((criterion) => criterion.active).map((criterion) => {
-                const valueIndex = values.findIndex((value) => value.optionId === option.id && value.criterionId === criterion.id);
-                if (valueIndex < 0) return <td key={criterion.id}><button type="button" className={secondaryButton} onClick={() => ensureValue(option.id!, criterion.id!)}>값 추가</button></td>;
-                return <td key={criterion.id} className="align-top"><div className="space-y-1">{criterion.kind === "NUMERIC_UTILITY" ? <input type="number" step="any" {...register(`values.${valueIndex}.numericValue`, numberInput)} className={inputClass} /> : <select {...register(`values.${valueIndex}.rating`, numberInput)} className={inputClass}><option value="">선택</option>{[1,2,3,4,5].map((rating) => <option key={rating} value={rating}>{rating}</option>)}</select>}<select {...register(`values.${valueIndex}.certainty`)} className={inputClass}><option value="CONFIRMED">확정</option><option value="ESTIMATED">추정</option></select></div></td>;
-              })}</tr>)}</tbody>
-            </table>
-          </div>
-        </Section>
-
-        <Section title="Constraints" description="FAIL은 추천 대상에서 제외되고 UNKNOWN은 평가를 차단합니다." action={<button type="button" onClick={addConstraint} className={secondaryButton}>Constraint 추가</button>}>
-          <div className="space-y-3">{constraintsArray.fields.map((field, index) => {
-            const constraint = constraints[index];
-            const activeRegistration = register(`constraints.${index}.active`);
-            return <article key={field.formKey} className="space-y-3 rounded-2xl border border-zinc-200 p-4">
-              <div className="grid gap-3 sm:grid-cols-5">
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" {...activeRegistration} onChange={(event) => { activeRegistration.onChange(event); setConstraintActive(index, event.target.checked); }} /> 사용</label>
-                <input {...register(`constraints.${index}.name`)} className={`${inputClass} sm:col-span-2`} />
-                <select {...register(`constraints.${index}.kind`)} className={inputClass}><option value="NUMERIC_MIN">Numeric min</option><option value="NUMERIC_MAX">Numeric max</option><option value="BOOLEAN_REQUIRED">Boolean</option><option value="MANUAL">Manual</option></select>
-                <button type="button" onClick={() => removeConstraint(index)} className="text-sm text-red-600">삭제</button>
-              </div>
-              {constraint?.kind.startsWith("NUMERIC") ? <div className="grid gap-3 sm:grid-cols-2"><select {...register(`constraints.${index}.criterionId`)} className={inputClass}><option value="">Criterion 선택</option>{criteria.filter((criterion) => criterion.kind === "NUMERIC_UTILITY").map((criterion) => <option key={criterion.id} value={criterion.id}>{criterion.name}</option>)}</select><input type="number" step="any" {...register(`constraints.${index}.threshold`, numberInput)} className={inputClass} placeholder="threshold" /></div> : constraint?.active && <div className="flex flex-wrap gap-3">{options.map((option) => { const resultIndex = constraintResults.findIndex((result) => result.optionId === option.id && result.constraintId === constraint.id); return resultIndex < 0 ? null : <label key={option.id} className="text-sm"><span className="mr-2">{option.name}</span><select {...register(`constraintResults.${resultIndex}.status`)} className={inputClass}><option value="UNKNOWN">Unknown</option><option value="PASS">Pass</option><option value="FAIL">Fail</option></select></label>; })}</div>}
-            </article>;
-          })}</div>
-        </Section>
-      </form>
-
-      <Section title="AI proposal" description={capabilities?.dataNotice ?? "AI 상태를 확인 중입니다."}>
-        <AiConsent enabled={Boolean(capabilities?.enabled)} checked={aiConsent} onChange={setAiConsent} provider={capabilities?.provider} model={capabilities?.model} requiresSensitiveDataAcknowledgement={Boolean(capabilities?.requiresSensitiveDataAcknowledgement)} sensitiveDataAcknowledged={sensitiveDataAcknowledged} onSensitiveDataAcknowledgedChange={setSensitiveDataAcknowledged} />
-        <button type="button" onClick={requestStructure} disabled={!capabilities?.enabled} className={secondaryButton}>구조화 proposal 요청</button>
-        {proposal && <pre className="max-h-96 overflow-auto rounded-2xl bg-zinc-950 p-4 text-xs text-emerald-100">{JSON.stringify(proposal, null, 2)}</pre>}
-      </Section>
-
-      <Section title="Evaluate" description="Algorithm과 LLM은 같은 확정 snapshot을 서로의 결과 없이 평가합니다.">
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeLlm} onChange={(event) => setIncludeLlm(event.target.checked)} disabled={!capabilities?.enabled} /> LLM Assessment 포함</label>
-        {includeLlm && <AiConsent enabled checked={aiConsent} onChange={setAiConsent} provider={capabilities?.provider} model={capabilities?.model} requiresSensitiveDataAcknowledgement={Boolean(capabilities?.requiresSensitiveDataAcknowledgement)} sensitiveDataAcknowledged={sensitiveDataAcknowledged} onSensitiveDataAcknowledgedChange={setSensitiveDataAcknowledged} />}
-        <button type="button" onClick={evaluate} className="rounded-full bg-emerald-700 px-5 py-3 font-semibold text-white hover:bg-emerald-600">평가 실행</button>
-      </Section>
-
-      {evaluation && <EvaluationResultView evaluation={evaluation} />}
-
-      <Section title="Actual choice" description="추천과 별개로 사용자의 실제 선택과 당시 이유를 기록합니다.">
-        <div className="grid gap-3 sm:grid-cols-2"><select value={selectedOptionId} onChange={(event) => setSelectedOptionId(event.target.value)} className={inputClass}><option value="">Option 선택</option>{options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select><input value={rationale} onChange={(event) => setRationale(event.target.value)} className={inputClass} placeholder="선택 이유" /></div>
-        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => resolveDecision("CHOSEN")} className={secondaryButton}>선택 기록</button><button type="button" onClick={() => resolveDecision("DEFERRED")} className={secondaryButton}>보류 기록</button><button type="button" onClick={() => resolveDecision("ABANDONED")} className={secondaryButton}>포기 기록</button></div>
-      </Section>
-
-      {decision.status === "CHOSEN" && <Section title="Outcome check-in" description="시간이 지난 뒤 만족도와 기대 충족 여부를 반복 기록합니다.">
-        <div className="grid gap-3 sm:grid-cols-3"><select value={satisfaction} onChange={(event) => setSatisfaction(Number(event.target.value))} className={inputClass}>{[1,2,3,4,5].map((value) => <option key={value} value={value}>만족도 {value}</option>)}</select><select value={expectationStatus} onChange={(event) => setExpectationStatus(event.target.value as typeof expectationStatus)} className={inputClass}><option value="MET">기대 충족</option><option value="PARTIALLY_MET">일부 충족</option><option value="NOT_MET">미충족</option><option value="TOO_EARLY">판단 이른 시점</option></select><input value={outcomeNotes} onChange={(event) => setOutcomeNotes(event.target.value)} className={inputClass} placeholder="사후 메모" /></div>
-        <button type="button" onClick={addOutcome} className={secondaryButton}>Check-in 저장</button>
-        <ul className="space-y-2 text-sm text-zinc-600">{decision.outcomes?.map((outcome) => <li key={outcome.id}>{outcome.createdAt?.slice(0,10)} · 만족도 {outcome.satisfaction} · {outcome.expectationStatus} · {outcome.notes}</li>)}</ul>
-      </Section>}
-    </div>
-  );
-}
-
-function Section({ title, description, action, children }: { title: string; description: string; action?: React.ReactNode; children: React.ReactNode }) {
-  return <section className="space-y-5 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-xl font-semibold">{title}</h2><p className="mt-1 text-sm text-zinc-500">{description}</p></div>{action}</div>{children}</section>;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block text-sm font-medium text-zinc-700"><span>{label}</span><div className="mt-2">{children}</div></label>;
-}
-
-function AiConsent({ enabled, checked, onChange, provider, model, requiresSensitiveDataAcknowledgement, sensitiveDataAcknowledged, onSensitiveDataAcknowledgedChange }: { enabled: boolean; checked: boolean; onChange: (checked: boolean) => void; provider?: string; model?: string; requiresSensitiveDataAcknowledgement: boolean; sensitiveDataAcknowledged: boolean; onSensitiveDataAcknowledgedChange: (checked: boolean) => void }) {
-  return <div className="space-y-3 rounded-xl bg-amber-50 p-4 text-sm text-amber-950">
-    <label className="flex items-start gap-3"><input type="checkbox" className="mt-1" checked={checked} onChange={(event) => onChange(event.target.checked)} disabled={!enabled} /><span>현재 Decision 내용이 외부 provider({provider ?? "-"}, {model ?? "-"})로 전송됨을 확인했습니다.</span></label>
-    {requiresSensitiveDataAcknowledgement && <label className="flex items-start gap-3"><input type="checkbox" className="mt-1" checked={sensitiveDataAcknowledged} onChange={(event) => onSensitiveDataAcknowledgedChange(event.target.checked)} disabled={!enabled} /><span>제품 정보와 일반 구매 메모만 포함했으며, 개인 식별·금융·건강·비공개 업무 정보는 포함하지 않았음을 확인했습니다.</span></label>}
+    {decision.status === "CHOSEN" && <Section title="사용 후 회고" description="짧은 회고가 다음 결정에서 검토할 개인 성향이 됩니다."><div id="outcome" className="grid gap-3 sm:grid-cols-2"><select value={satisfaction} onChange={(event) => setSatisfaction(Number(event.target.value))} className={inputClass}>{[1,2,3,4,5].map((value) => <option key={value} value={value}>만족도 {value}</option>)}</select><select value={expectationStatus} onChange={(event) => setExpectationStatus(event.target.value as typeof expectationStatus)} className={inputClass}><option value="MET">기대 충족</option><option value="PARTIALLY_MET">일부 충족</option><option value="NOT_MET">미충족</option><option value="TOO_EARLY">아직 판단하기 이른 시점</option></select><select value={wouldChooseAgain === undefined ? "" : String(wouldChooseAgain)} onChange={(event) => setWouldChooseAgain(event.target.value === "" ? undefined : event.target.value === "true")} className={inputClass}><option value="">다시 선택할지</option><option value="true">다시 선택함</option><option value="false">다른 선택을 함</option></select><select value={workedWell} onChange={(event) => setWorkedWell(event.target.value)} className={inputClass}><option value="">실제로 잘 맞은 기준</option>{criteria.map((item) => <option key={item.id}>{item.name}</option>)}</select><select value={disappointedBy} onChange={(event) => setDisappointedBy(event.target.value)} className={inputClass}><option value="">더 엄격히 볼 기준</option>{criteria.map((item) => <option key={item.id}>{item.name}</option>)}</select><input value={outcomeNotes} onChange={(event) => setOutcomeNotes(event.target.value)} className={inputClass} placeholder="예상과 달랐던 점" /></div><button onClick={addOutcome} className={primarySmall}>회고 저장</button>{(guidance?.reminders?.length ?? 0) > 0 && <ul className="space-y-1 text-xs text-zinc-500">{guidance?.reminders?.map((item) => <li key={item.id} className="flex items-center gap-2">{new Date(item.dueAt!).toLocaleDateString("ko-KR")} · {item.channel} · {item.status}{item.status === "PENDING" && <button onClick={() => skipReminder(item.id!)} className="text-red-600 underline">건너뛰기</button>}</li>)}</ul>}{(decision.outcomes?.length ?? 0) > 0 && <ul className="space-y-2 border-t border-zinc-100 pt-4 text-sm text-zinc-600">{decision.outcomes?.map((item) => <li key={item.id}>{item.createdAt?.slice(0,10)} · 만족도 {item.satisfaction} · {item.expectationStatus} {item.notes && `· ${item.notes}`}</li>)}</ul>}</Section>}
   </div>;
 }
 
-const inputClass = "w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 outline-none focus:border-emerald-500";
+function Section({ title, description, children }: { title: string; description: string; children: React.ReactNode }) { return <section className="space-y-5 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm"><div><h2 className="text-xl font-semibold">{title}</h2><p className="mt-1 text-sm text-zinc-500">{description}</p></div>{children}</section>; }
+function displayValue(value: DraftValue | undefined, unit?: string) { if (!value || (value.numericValue == null && value.rating == null)) return <span className="text-zinc-400">미확인</span>; return `${value.numericValue ?? `${value.rating}/5`}${value.numericValue != null && unit ? ` ${unit}` : ""}`; }
+function problemMessage(error: unknown): string { const problem = error as Problem | undefined; return problem?.violations?.join(" · ") ?? problem?.detail ?? "요청을 처리하지 못했습니다."; }
+const inputClass = "min-w-0 flex-1 rounded-xl border border-zinc-300 bg-white px-3 py-2 outline-none focus:border-emerald-500";
 const secondaryButton = "rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:border-zinc-500 disabled:opacity-40";
-const numberInput = { setValueAs: (value: string) => value === "" ? undefined : Number(value) };
-
-function toDraft(decision: DecisionResponse): UpdateDraftRequest {
-  return {
-    expectedVersion: decision.version ?? 0,
-    title: decision.title ?? "",
-    context: decision.context ?? {},
-    options: decision.options ?? [],
-    criteria: decision.criteria ?? [],
-    values: decision.values ?? [],
-    constraints: decision.constraints ?? [],
-    constraintResults: decision.constraintResults ?? [],
-  };
-}
-
-function emptyValue(optionId: string, criterionId: string) {
-  return { id: crypto.randomUUID(), optionId, criterionId, certainty: "CONFIRMED" as const };
-}
-
-function emptyConstraintResult(optionId: string, constraintId: string) {
-  return { id: crypto.randomUUID(), optionId, constraintId, status: "UNKNOWN" as const, note: "" };
-}
-
-function problemMessage(error: unknown): string {
-  const problem = error as Problem | undefined;
-  return problem?.violations?.join(" · ") ?? problem?.detail ?? "요청을 처리하지 못했습니다.";
-}
+const primarySmall = "rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-40";

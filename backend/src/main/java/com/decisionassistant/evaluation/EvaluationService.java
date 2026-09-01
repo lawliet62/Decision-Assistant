@@ -59,6 +59,10 @@ public class EvaluationService {
     public EvaluationResponse create(UUID decisionId, CreateEvaluationRequest request) {
         if (request.includeLlm()) {
             aiDataPolicy.validateSensitiveDataAcknowledgement(Boolean.TRUE.equals(request.sensitiveDataAcknowledged()));
+            var decision = decisions.required(decisionId);
+            if (decision.intentText() != null && !decision.aiConsent()) {
+                throw new ConflictException("이 Decision에는 AI 처리 동의가 없습니다.");
+            }
         }
         var snapshot = snapshots.load(decisionId, request.expectedVersion());
         var algorithmResult = algorithm.evaluate(snapshot);

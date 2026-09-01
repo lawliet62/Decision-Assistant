@@ -18,8 +18,13 @@ public final class DecisionDtos {
     }
 
     public record CreateDecisionRequest(
-            @NotBlank @Size(max = 200) String title,
-            @NotNull DecisionTypes.TemplateKey templateKey
+            @Size(max = 200) String title,
+            DecisionTypes.TemplateKey templateKey,
+            @Size(max = 4000) String intentText,
+            @Size(max = 5) List<@Size(max = 2048) String> sourceUrls,
+            Boolean aiConsent,
+            Boolean webConsent,
+            Boolean sensitiveDataAcknowledged
     ) {
     }
 
@@ -48,6 +53,7 @@ public final class DecisionDtos {
             List<ConstraintResultData> constraintResults,
             List<ResolutionData> resolutions,
             List<OutcomeData> outcomes,
+            GuidanceData guidance,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -103,7 +109,9 @@ public final class DecisionDtos {
             @Min(1) @Max(5) Integer rating,
             @NotNull DecisionTypes.ValueCertainty certainty,
             @Size(max = 2048) String sourceUrl,
-            String sourceNote
+            String sourceNote,
+            DecisionTypes.ValueOrigin origin,
+            DecisionTypes.VerificationStatus verificationStatus
     ) {
     }
 
@@ -147,7 +155,10 @@ public final class DecisionDtos {
     public record CreateOutcomeRequest(
             @Min(1) @Max(5) int satisfaction,
             @NotNull DecisionTypes.ExpectationStatus expectationStatus,
-            String notes
+            String notes,
+            Boolean wouldChooseAgain,
+            String workedWell,
+            String disappointedBy
     ) {
     }
 
@@ -156,7 +167,66 @@ public final class DecisionDtos {
             int satisfaction,
             DecisionTypes.ExpectationStatus expectationStatus,
             String notes,
+            Boolean wouldChooseAgain,
+            String workedWell,
+            String disappointedBy,
             Instant createdAt
+    ) {
+    }
+
+    public record GuidanceData(
+            String intentText,
+            boolean aiConsent,
+            DecisionTypes.ProcessingStatus processingStatus,
+            String readiness,
+            String summary,
+            List<QuestionData> questions,
+            List<EvidenceData> evidence,
+            List<CandidateSuggestionData> candidateSuggestions,
+            List<PreferenceData> appliedPreferences,
+            List<ReminderData> reminders
+    ) {
+    }
+
+    public record QuestionData(
+            UUID id, String kind, String targetKey, String prompt, String impact,
+            List<String> options, String answer, String status
+    ) {
+    }
+
+    public record EvidenceData(
+            UUID id, UUID optionId, String url, String status, String title,
+            String excerpt, String error, Instant fetchedAt, boolean stale
+    ) {
+    }
+
+    public record CandidateSuggestionData(
+            UUID id, String name, String url, String reason, String status
+    ) {
+    }
+
+    public record PreferenceData(
+            UUID id, DecisionTypes.TemplateKey templateKey, String criterionName, String statement,
+            int strength, String status, String confidence, UUID sourceDecisionId
+    ) {
+    }
+
+    public record ReminderData(UUID id, Instant dueAt, String status, String channel) {
+    }
+
+    public record AddSourceRequest(@NotBlank @Size(max = 2048) String url) {
+    }
+
+    public record AnswerQuestionRequest(@NotBlank @Size(max = 2000) String answer) {
+    }
+
+    public record UpdateSuggestionRequest(@NotNull String action) {
+    }
+
+    public record ConfirmValueRequest(
+            BigDecimal numericValue,
+            @Min(1) @Max(5) Integer rating,
+            Boolean disputed
     ) {
     }
 }

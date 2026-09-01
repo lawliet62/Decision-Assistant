@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -42,6 +43,35 @@ public class DecisionController {
     @GetMapping("/{decisionId}")
     public DecisionResponse get(@PathVariable UUID decisionId) {
         return service.get(decisionId);
+    }
+
+    @PostMapping("/{decisionId}/sources")
+    @ResponseStatus(HttpStatus.CREATED)
+    public DecisionResponse addSource(@PathVariable UUID decisionId, @Valid @RequestBody AddSourceRequest request) {
+        return service.addSource(decisionId, request);
+    }
+
+    @PostMapping("/{decisionId}/evidence/{evidenceId}/retry")
+    public DecisionResponse retryEvidence(@PathVariable UUID decisionId, @PathVariable UUID evidenceId) {
+        return service.retryEvidence(decisionId, evidenceId);
+    }
+
+    @PostMapping("/{decisionId}/questions/{questionId}/answer")
+    public DecisionResponse answerQuestion(@PathVariable UUID decisionId, @PathVariable UUID questionId,
+                                           @Valid @RequestBody AnswerQuestionRequest request) {
+        return service.answerQuestion(decisionId, questionId, request);
+    }
+
+    @PatchMapping("/{decisionId}/candidate-suggestions/{suggestionId}")
+    public DecisionResponse updateSuggestion(@PathVariable UUID decisionId, @PathVariable UUID suggestionId,
+                                             @Valid @RequestBody UpdateSuggestionRequest request) {
+        return service.updateSuggestion(decisionId, suggestionId, request);
+    }
+
+    @PatchMapping("/{decisionId}/values/{valueId}/verification")
+    public DecisionResponse confirmValue(@PathVariable UUID decisionId, @PathVariable UUID valueId,
+                                         @Valid @RequestBody ConfirmValueRequest request) {
+        return service.confirmValue(decisionId, valueId, request);
     }
 
     @PutMapping("/{decisionId}/draft")

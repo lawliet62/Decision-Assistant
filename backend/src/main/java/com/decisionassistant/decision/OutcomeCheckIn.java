@@ -32,6 +32,15 @@ public class OutcomeCheckIn {
     @Column(columnDefinition = "text")
     private String notes;
 
+    @Column(name = "would_choose_again")
+    private Boolean wouldChooseAgain;
+
+    @Column(name = "worked_well", columnDefinition = "text")
+    private String workedWell;
+
+    @Column(name = "disappointed_by", columnDefinition = "text")
+    private String disappointedBy;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -39,12 +48,16 @@ public class OutcomeCheckIn {
     }
 
     public OutcomeCheckIn(UUID decisionId, int satisfaction, ExpectationStatus expectationStatus,
-                          String notes, Instant createdAt) {
+                          String notes, Boolean wouldChooseAgain, String workedWell,
+                          String disappointedBy, Instant createdAt) {
         this.id = UUID.randomUUID();
         this.decisionId = decisionId;
         this.satisfaction = satisfaction;
         this.expectationStatus = expectationStatus;
         this.notes = notes;
+        this.wouldChooseAgain = wouldChooseAgain;
+        this.workedWell = workedWell;
+        this.disappointedBy = disappointedBy;
         this.createdAt = createdAt;
     }
 
@@ -53,5 +66,8 @@ public class OutcomeCheckIn {
     public int satisfaction() { return satisfaction; }
     public ExpectationStatus expectationStatus() { return expectationStatus; }
     public String notes() { return notes; }
+    public Boolean wouldChooseAgain() { return wouldChooseAgain; }
+    public String workedWell() { return workedWell; }
+    public String disappointedBy() { return disappointedBy; }
     public Instant createdAt() { return createdAt; }
 }

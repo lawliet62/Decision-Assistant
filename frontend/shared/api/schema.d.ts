@@ -53,6 +53,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["addSource"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/{decisionId}/resolutions": {
         parameters: {
             query?: never;
@@ -69,6 +85,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/questions/{questionId}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["answerQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/{decisionId}/outcome-check-ins": {
         parameters: {
             query?: never;
@@ -79,6 +111,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["addOutcome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/{decisionId}/evidence/{evidenceId}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retryEvidence"];
         delete?: never;
         options?: never;
         head?: never;
@@ -111,6 +159,102 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["retry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/preferences/{preferenceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch: operations["update_1"];
+        trace?: never;
+    };
+    "/api/v1/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["preference"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updatePreference"];
+        trace?: never;
+    };
+    "/api/v1/decisions/{decisionId}/values/{valueId}/verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["confirmValue"];
+        trace?: never;
+    };
+    "/api/v1/decisions/{decisionId}/reminders/{reminderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateReminder"];
+        trace?: never;
+    };
+    "/api/v1/decisions/{decisionId}/candidate-suggestions/{suggestionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["updateSuggestion"];
+        trace?: never;
+    };
+    "/api/v1/preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_1"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -251,6 +395,10 @@ export interface components {
             certainty: "CONFIRMED" | "ESTIMATED";
             sourceUrl?: string;
             sourceNote?: string;
+            /** @enum {string} */
+            origin?: "USER" | "WEB_EXTRACTED" | "AI_INFERRED";
+            /** @enum {string} */
+            verificationStatus?: "UNREVIEWED" | "CONFIRMED" | "DISPUTED";
         };
         UpdateDraftRequest: {
             /** Format: int64 */
@@ -263,6 +411,14 @@ export interface components {
             constraints: components["schemas"]["ConstraintData"][];
             constraintResults: components["schemas"]["ConstraintResultData"][];
         };
+        CandidateSuggestionData: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            url?: string;
+            reason?: string;
+            status?: string;
+        };
         DecisionResponse: {
             /** Format: uuid */
             id?: string;
@@ -270,7 +426,7 @@ export interface components {
             version?: number;
             title?: string;
             /** @enum {string} */
-            templateKey?: "LAPTOP" | "CUSTOM";
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
             templateVersion?: string;
             /** @enum {string} */
             status?: "DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED";
@@ -282,10 +438,38 @@ export interface components {
             constraintResults?: components["schemas"]["ConstraintResultData"][];
             resolutions?: components["schemas"]["ResolutionData"][];
             outcomes?: components["schemas"]["OutcomeData"][];
+            guidance?: components["schemas"]["GuidanceData"];
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        EvidenceData: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            optionId?: string;
+            url?: string;
+            status?: string;
+            title?: string;
+            excerpt?: string;
+            error?: string;
+            /** Format: date-time */
+            fetchedAt?: string;
+            stale?: boolean;
+        };
+        GuidanceData: {
+            intentText?: string;
+            aiConsent?: boolean;
+            /** @enum {string} */
+            processingStatus?: "IMPORTING" | "NEEDS_INPUT" | "READY" | "FAILED";
+            readiness?: string;
+            summary?: string;
+            questions?: components["schemas"]["QuestionData"][];
+            evidence?: components["schemas"]["EvidenceData"][];
+            candidateSuggestions?: components["schemas"]["CandidateSuggestionData"][];
+            appliedPreferences?: components["schemas"]["PreferenceData"][];
+            reminders?: components["schemas"]["ReminderData"][];
         };
         OutcomeData: {
             /** Format: uuid */
@@ -295,8 +479,44 @@ export interface components {
             /** @enum {string} */
             expectationStatus?: "MET" | "PARTIALLY_MET" | "NOT_MET" | "TOO_EARLY";
             notes?: string;
+            wouldChooseAgain?: boolean;
+            workedWell?: string;
+            disappointedBy?: string;
             /** Format: date-time */
             createdAt?: string;
+        };
+        PreferenceData: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
+            criterionName?: string;
+            statement?: string;
+            /** Format: int32 */
+            strength?: number;
+            status?: string;
+            confidence?: string;
+            /** Format: uuid */
+            sourceDecisionId?: string;
+        };
+        QuestionData: {
+            /** Format: uuid */
+            id?: string;
+            kind?: string;
+            targetKey?: string;
+            prompt?: string;
+            impact?: string;
+            options?: string[];
+            answer?: string;
+            status?: string;
+        };
+        ReminderData: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: date-time */
+            dueAt?: string;
+            status?: string;
+            channel?: string;
         };
         ResolutionData: {
             /** Format: uuid */
@@ -310,9 +530,14 @@ export interface components {
             createdAt?: string;
         };
         CreateDecisionRequest: {
-            title: string;
+            title?: string;
             /** @enum {string} */
-            templateKey: "LAPTOP" | "CUSTOM";
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
+            intentText?: string;
+            sourceUrls?: string[];
+            aiConsent?: boolean;
+            webConsent?: boolean;
+            sensitiveDataAcknowledged?: boolean;
         };
         CreateStructureProposalRequest: {
             /** Format: int64 */
@@ -377,6 +602,9 @@ export interface components {
             certainty?: string;
             evidenceNote?: string;
         };
+        AddSourceRequest: {
+            url: string;
+        };
         CreateResolutionRequest: {
             /** @enum {string} */
             kind: "CHOSEN" | "DEFERRED" | "ABANDONED";
@@ -384,12 +612,18 @@ export interface components {
             selectedOptionId?: string;
             rationale?: string;
         };
+        AnswerQuestionRequest: {
+            answer: string;
+        };
         CreateOutcomeRequest: {
             /** Format: int32 */
             satisfaction?: number;
             /** @enum {string} */
             expectationStatus: "MET" | "PARTIALLY_MET" | "NOT_MET" | "TOO_EARLY";
             notes?: string;
+            wouldChooseAgain?: boolean;
+            workedWell?: string;
+            disappointedBy?: string;
         };
         CreateEvaluationRequest: {
             /** Format: int64 */
@@ -459,6 +693,46 @@ export interface components {
             aiConsent?: boolean;
             sensitiveDataAcknowledged?: boolean;
         };
+        UpdatePreferenceRequest: {
+            action: string;
+            statement?: string;
+            /** Format: int32 */
+            strength?: number;
+        };
+        PreferenceResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
+            criterionName?: string;
+            statement?: string;
+            /** Format: int32 */
+            strength?: number;
+            status?: string;
+            confidence?: string;
+            /** Format: uuid */
+            sourceDecisionId?: string;
+        };
+        UpdateNotificationPreferenceRequest: {
+            emailEnabled?: boolean;
+        };
+        NotificationPreferenceResponse: {
+            emailEnabled?: boolean;
+        };
+        ConfirmValueRequest: {
+            numericValue?: number;
+            /** Format: int32 */
+            rating?: number;
+            disputed?: boolean;
+        };
+        UpdateReminderRequest: {
+            action: string;
+            /** Format: date-time */
+            dueAt?: string;
+        };
+        UpdateSuggestionRequest: {
+            action: string;
+        };
         CurrentUserResponse: {
             /** Format: uuid */
             id?: string;
@@ -472,7 +746,7 @@ export interface components {
             version?: number;
             title?: string;
             /** @enum {string} */
-            templateKey?: "LAPTOP" | "CUSTOM";
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
             /** @enum {string} */
             status?: "DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED";
             /** Format: date-time */
@@ -590,6 +864,32 @@ export interface operations {
             };
         };
     };
+    addSource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddSourceRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
     resolve: {
         parameters: {
             query?: never;
@@ -616,6 +916,33 @@ export interface operations {
             };
         };
     };
+    answerQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+                questionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswerQuestionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
     addOutcome: {
         parameters: {
             query?: never;
@@ -638,6 +965,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OutcomeData"];
+                };
+            };
+        };
+    };
+    retryEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+                evidenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
                 };
             };
         };
@@ -691,6 +1041,195 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["EvaluationResponse"];
+                };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                preferenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                preferenceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdatePreferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PreferenceResponse"];
+                };
+            };
+        };
+    };
+    preference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotificationPreferenceResponse"];
+                };
+            };
+        };
+    };
+    updatePreference: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateNotificationPreferenceRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["NotificationPreferenceResponse"];
+                };
+            };
+        };
+    };
+    confirmValue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+                valueId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmValueRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    updateReminder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+                reminderId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateReminderRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    updateSuggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+                suggestionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PreferenceResponse"][];
                 };
             };
         };

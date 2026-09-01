@@ -54,4 +54,12 @@ public class DecisionOption {
     public String description() { return description; }
     public String sourceUrl() { return sourceUrl; }
     public String sourceText() { return sourceText; }
+
+    public void applyImportedSource(String importedName, String importedText) {
+        if (importedName != null && !importedName.isBlank()
+                && (name == null || name.isBlank() || name.startsWith("후보 "))) {
+            name = importedName;
+        }
+        if (sourceText == null || sourceText.isBlank()) sourceText = importedText;
+    }
 }

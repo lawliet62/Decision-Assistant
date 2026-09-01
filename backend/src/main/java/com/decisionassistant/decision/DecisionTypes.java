@@ -5,7 +5,7 @@ public final class DecisionTypes {
     private DecisionTypes() {
     }
 
-    public enum TemplateKey { LAPTOP, CUSTOM }
+    public enum TemplateKey { LAPTOP, PHONE, TABLET, MONITOR, CUSTOM }
 
     public enum DecisionStatus { DRAFT, CHOSEN, DEFERRED, ABANDONED, ARCHIVED }
 
@@ -22,4 +22,10 @@ public final class DecisionTypes {
     public enum ResolutionKind { CHOSEN, DEFERRED, ABANDONED }
 
     public enum ExpectationStatus { MET, PARTIALLY_MET, NOT_MET, TOO_EARLY }
+
+    public enum ProcessingStatus { IMPORTING, NEEDS_INPUT, READY, FAILED }
+
+    public enum ValueOrigin { USER, WEB_EXTRACTED, AI_INFERRED }
+
+    public enum VerificationStatus { UNREVIEWED, CONFIRMED, DISPUTED }
 }

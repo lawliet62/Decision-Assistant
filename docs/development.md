@@ -64,6 +64,7 @@ Agent의 GitHub identity는 human 계정과 분리한다. Bot 계정 또는 GitH
 - `npm run check:quick`: backend unit + frontend lint/typecheck
 - `npm run check`: quick + Testcontainers PostgreSQL integration + OpenAPI drift + frontend production build
 - `npm --prefix frontend run api:generate`: committed OpenAPI에서 TypeScript type 재생성
+- `npm --prefix frontend run test:e2e`: mock backend와 Chromium으로 guided intake 브라우저 흐름 검증
 
 ## Database
 

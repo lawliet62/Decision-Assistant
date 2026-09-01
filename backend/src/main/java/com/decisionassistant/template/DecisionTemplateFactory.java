@@ -19,19 +19,38 @@ import static com.decisionassistant.decision.DecisionTypes.PreferenceDirection.N
 public class DecisionTemplateFactory {
 
     public String version(DecisionTypes.TemplateKey key) {
-        return key == DecisionTypes.TemplateKey.LAPTOP ? "laptop-v1" : "custom-v1";
+        return switch (key) {
+            case LAPTOP -> "laptop-v2";
+            case PHONE -> "phone-v1";
+            case TABLET -> "tablet-v1";
+            case MONITOR -> "monitor-v1";
+            case CUSTOM -> "custom-v1";
+        };
     }
 
     public void apply(Decision decision) {
-        if (decision.templateKey() != DecisionTypes.TemplateKey.LAPTOP) {
+        if (decision.templateKey() == DecisionTypes.TemplateKey.CUSTOM) {
             return;
         }
+        if (decision.templateKey() == DecisionTypes.TemplateKey.LAPTOP) {
+            applyLaptop(decision);
+        } else {
+            applyPersonalDevice(decision);
+        }
+    }
+
+    private void applyLaptop(Decision decision) {
         var one = BigDecimal.ONE;
-        var price = decision.addCriterion(null, "가격", NUMERIC_UTILITY, LOWER_BETTER, one, null, null, null, true);
-        var weight = decision.addCriterion(null, "무게", NUMERIC_UTILITY, LOWER_BETTER, one, null, null, "kg", true);
-        decision.addCriterion(null, "배터리", NUMERIC_UTILITY, HIGHER_BETTER, one, null, null, "hours", true);
-        var memory = decision.addCriterion(null, "메모리", NUMERIC_UTILITY, HIGHER_BETTER, one, null, null, "GB", true);
-        var storage = decision.addCriterion(null, "스토리지", NUMERIC_UTILITY, HIGHER_BETTER, one, null, null, "GB", true);
+        var price = decision.addCriterion(null, "가격", NUMERIC_UTILITY, LOWER_BETTER, one,
+                BigDecimal.valueOf(4_000_000), BigDecimal.valueOf(700_000), "KRW", true);
+        var weight = decision.addCriterion(null, "무게", NUMERIC_UTILITY, LOWER_BETTER, one,
+                BigDecimal.valueOf(3), BigDecimal.valueOf(0.8), "kg", true);
+        decision.addCriterion(null, "배터리", NUMERIC_UTILITY, HIGHER_BETTER, one,
+                BigDecimal.valueOf(4), BigDecimal.valueOf(20), "hours", true);
+        var memory = decision.addCriterion(null, "메모리", NUMERIC_UTILITY, HIGHER_BETTER, one,
+                BigDecimal.valueOf(8), BigDecimal.valueOf(64), "GB", true);
+        var storage = decision.addCriterion(null, "스토리지", NUMERIC_UTILITY, HIGHER_BETTER, one,
+                BigDecimal.valueOf(256), BigDecimal.valueOf(2048), "GB", true);
         decision.addCriterion(null, "성능 적합도", RATING_1_TO_5, NOT_APPLICABLE, one, null, null, null, true);
         decision.addCriterion(null, "디스플레이 적합도", RATING_1_TO_5, NOT_APPLICABLE, one, null, null, null, true);
 
@@ -41,5 +60,19 @@ public class DecisionTemplateFactory {
         decision.addConstraint(null, "최대 무게", NUMERIC_MAX, weight.id(), null, "kg", null, false);
         decision.addConstraint(null, "필수 OS·포트·호환성", MANUAL, null, null, null,
                 "각 Option이 필수 요구사항을 충족하는지 확인합니다.", false);
+    }
+
+    private void applyPersonalDevice(Decision decision) {
+        var one = BigDecimal.ONE;
+        var price = decision.addCriterion(null, "가격", NUMERIC_UTILITY, LOWER_BETTER, one,
+                BigDecimal.valueOf(3_000_000), BigDecimal.valueOf(300_000), "KRW", true);
+        decision.addCriterion(null, "성능 적합도", RATING_1_TO_5, NOT_APPLICABLE, one, null, null, null, true);
+        decision.addCriterion(null, "휴대성", RATING_1_TO_5, NOT_APPLICABLE, one, null, null, null, true);
+        decision.addCriterion(null, "배터리 적합도", RATING_1_TO_5, NOT_APPLICABLE, one, null, null, null, true);
+        decision.addCriterion(null, "디스플레이 적합도", RATING_1_TO_5, NOT_APPLICABLE, one, null, null, null, true);
+        decision.addCriterion(null, "생태계·호환성", RATING_1_TO_5, NOT_APPLICABLE, one, null, null, null, true);
+        decision.addConstraint(null, "최대 예산", NUMERIC_MAX, price.id(), null, "KRW", null, false);
+        decision.addConstraint(null, "필수 호환성", MANUAL, null, null, null,
+                "기존 기기·앱·포트와 반드시 호환되어야 하는지 확인합니다.", false);
     }
 }

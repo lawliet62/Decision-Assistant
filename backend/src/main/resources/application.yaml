@@ -42,6 +42,16 @@ decision-assistant:
     provider: ${DECISION_ASSISTANT_AI_PROVIDER:gemini}
     model: ${DECISION_ASSISTANT_AI_MODEL:${GEMINI_MODEL:gemini-3.5-flash-lite}}
     timeout: 30s
+  web:
+    enabled: ${DECISION_ASSISTANT_WEB_ENABLED:false}
+    base-url: ${FIRECRAWL_BASE_URL:https://api.firecrawl.dev/v2}
+    api-key: ${FIRECRAWL_API_KEY:disabled}
+    timeout: 45s
+  reminders:
+    enabled: ${DECISION_ASSISTANT_REMINDERS_ENABLED:false}
+    resend-base-url: ${RESEND_BASE_URL:https://api.resend.com}
+    resend-api-key: ${RESEND_API_KEY:disabled}
+    from-address: ${DECISION_ASSISTANT_FROM_EMAIL:Decision Assistant <reminders@example.com>}
 
 springdoc:
   api-docs:

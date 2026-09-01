@@ -14,6 +14,8 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import static com.decisionassistant.decision.DecisionTypes.ValueCertainty;
+import static com.decisionassistant.decision.DecisionTypes.ValueOrigin;
+import static com.decisionassistant.decision.DecisionTypes.VerificationStatus;
 
 @Entity
 @Table(name = "option_values")
@@ -47,6 +49,14 @@ public class OptionValue {
     @Column(name = "source_note", columnDefinition = "text")
     private String sourceNote;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private ValueOrigin origin;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", nullable = false, length = 30)
+    private VerificationStatus verificationStatus;
+
     protected OptionValue() {
     }
 
@@ -55,6 +65,8 @@ public class OptionValue {
         this.id = id == null ? UUID.randomUUID() : id;
         this.decision = decision;
         update(optionId, criterionId, numericValue, rating, certainty, sourceUrl, sourceNote);
+        this.origin = ValueOrigin.USER;
+        this.verificationStatus = VerificationStatus.CONFIRMED;
     }
 
     void update(UUID optionId, UUID criterionId, BigDecimal numericValue, Integer rating,
@@ -76,4 +88,11 @@ public class OptionValue {
     public ValueCertainty certainty() { return certainty; }
     public String sourceUrl() { return sourceUrl; }
     public String sourceNote() { return sourceNote; }
+    public ValueOrigin origin() { return origin; }
+    public VerificationStatus verificationStatus() { return verificationStatus; }
+
+    public void markGenerated(ValueOrigin origin, VerificationStatus verificationStatus) {
+        this.origin = origin;
+        this.verificationStatus = verificationStatus;
+    }
 }

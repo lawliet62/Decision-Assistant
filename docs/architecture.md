@@ -8,8 +8,10 @@ Browser
     → Spring Boot BFF (Auth0 OIDC client, CSRF, authorization)
       → Auth0 Universal Login (Google + email OTP)
       → PostgreSQL (user ownership + JDBC session + domain data)
+      → Firecrawl API (public URL scrape/search, optional, explicit consent)
       → Gemini Developer API (dogfooding default, optional, explicit consent)
       → OpenAI API (optional alternative)
+      → Resend API (outcome reminder email, optional)
 ```
 
 단일 backend 배포 단위 안에서 `decision`, `template`, `evaluation`, `ai` feature package를 사용한다. message broker, cache, vector database, microservice는 현재 문제에 필요하지 않다.
@@ -36,8 +38,9 @@ Browser
 - Auth0의 verified email이 exact allowlist에 있을 때만 로컬 사용자를 provision한다. 동일 이메일의 다른 identity는 자동 연결하지 않는다.
 - 모든 사용자 resource 조회는 현재 local user UUID로 scope한다. Decision 하위 데이터는 Decision ownership을 상속하며 타인 resource는 `404`로 응답한다.
 - `local` profile만 고정 개발 사용자를 제공하고 loopback에 bind한다. 기본/production 실행에는 인증 우회가 없다.
-- source URL은 문자열로만 저장하며 backend가 접근하지 않아 SSRF 경로를 만들지 않는다.
+- source URL은 공개 HTTP(S)만 허용하고 managed provider adapter에 전달한다. 인증 정보, cookie, screenshot, private/local host는 허용하지 않으며 원문 전체는 DB에 저장하지 않는다.
 - AI request storage는 provider 설정에서 끄고 timeout/retry를 제한한다. Gemini 무료 티어 dogfooding에는 저민감 구매 정보만 허용하며, 서버와 UI가 민감 정보 비포함 확인을 요구한다.
+- evidence import와 reminder는 PostgreSQL status row를 scheduled worker가 처리한다. broker를 추가하지 않고 실패·재시작 후 수동 retry와 idempotent email 전송을 지원한다.
 - Actuator는 health/info만 노출한다. secret은 환경 변수로만 주입한다.
 
 관련 결정은 [ADR 목록](decisions/)을 참고한다.

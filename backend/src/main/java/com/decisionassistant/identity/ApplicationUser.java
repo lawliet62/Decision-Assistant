@@ -30,6 +30,9 @@ public class ApplicationUser {
     @Column(name = "last_login_at", nullable = false)
     private Instant lastLoginAt;
 
+    @Column(name = "reminder_emails_enabled", nullable = false)
+    private boolean reminderEmailsEnabled;
+
     protected ApplicationUser() {
     }
 
@@ -40,6 +43,7 @@ public class ApplicationUser {
         this.displayName = displayName;
         this.createdAt = now;
         this.lastLoginAt = now;
+        this.reminderEmailsEnabled = true;
     }
 
     public void login(String email, String emailNormalized, String displayName, Instant now) {
@@ -55,4 +59,6 @@ public class ApplicationUser {
     public String displayName() { return displayName; }
     public Instant createdAt() { return createdAt; }
     public Instant lastLoginAt() { return lastLoginAt; }
+    public boolean reminderEmailsEnabled() { return reminderEmailsEnabled; }
+    public void reminderEmailsEnabled(boolean enabled) { this.reminderEmailsEnabled = enabled; }
 }

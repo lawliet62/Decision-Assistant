@@ -47,6 +47,11 @@
 - **동작:** outcome check-in은 `CHOSEN` 상태의 Decision에만 추가할 수 있으며, 여러 번의 check-in을 시간순 기록으로 보존한다.
 - **이유:** 실제 선택과 사후 결과를 연결하면서, 아직 선택되지 않은 후보에 대한 임의의 outcome 기록을 막는다.
 
+### BR-DEC-06: 선택 후 회고 기회를 만들고 사용자가 통제한다
+
+- **동작:** `CHOSEN` 기록 시 기본 14일·60일 in-app/email reminder를 만든다. 사용자는 개별 reminder를 건너뛰거나 전체 reminder email을 해제할 수 있다. email 재시도는 reminder identifier로 중복 전송을 막는다.
+- **이유:** 사용자의 자발적 재방문에만 의존하지 않고 outcome loop를 닫되 알림 통제권을 보장한다.
+
 ## 평가와 constraint
 
 ### BR-EVAL-01: 평가에는 완전한 비교 입력이 필요하다
@@ -54,6 +59,7 @@
 - **동작:** 평가는 Option이 2~5개이고, 활성 Criterion이 하나 이상이며, 모든 Option에 모든 활성 Criterion의 값이 있을 때만 실행한다. 활성 Criterion의 weight는 양수여야 한다.
 - **동작:** numeric Criterion에는 서로 다른 worst/best anchor가 필요하다. `HIGHER_BETTER`에서는 best가 worst보다 크고, `LOWER_BETTER`에서는 best가 worst보다 작아야 한다. numeric 값과 1~5 rating은 Criterion 종류에 맞게 제공해야 한다.
 - **이유:** 모르는 값을 중립값으로 치환하지 않고, 비교 가능한 입력만 평가한다.
+- **동작:** 완전하지 않은 draft에는 각 missing utility를 0~1 범위로 둔 score range와 `PROVISIONAL` 조언을 제공할 수 있다. 이는 Evaluation이나 확정 점수가 아니며 미확인 정보와 함께 표시한다.
 
 ### BR-EVAL-02: Constraint는 점수와 별개의 통과 조건이다
 
@@ -79,10 +85,10 @@
 - **동작:** structure proposal, LLM assessment, assessment retry는 명시적 AI 전송 동의가 있어야 한다. AI 실행 시 전송되는 현재 Decision 정보와 source text를 사용자에게 고지한다. Gemini Developer API를 사용할 때는 개인 식별·금융·건강·비공개 업무 정보가 없음을 추가로 확인해야 한다.
 - **이유:** 사용자가 외부 provider 전송 여부와 무료 티어의 데이터 사용 위험을 통제해야 한다.
 
-### BR-AI-02: Structure proposal은 draft를 자동으로 바꾸지 않는다
+### BR-AI-02: AI 초안은 사용자 확인 사실과 구분한다
 
-- **동작:** AI는 Criterion·value·constraint 제안과 누락 정보·가정을 반환할 수 있지만, Decision draft를 자동 저장하거나 변경하지 않는다. 사용자가 제안을 검토·수정해 draft에 반영한다.
-- **이유:** LLM의 추론과 추측이 사용자의 사실 입력 또는 의사결정을 덮어쓰지 않게 한다.
+- **동작:** AI와 web extraction은 origin과 `UNREVIEWED` 상태, 출처를 가진 값을 draft에 저장할 수 있다. `USER` 또는 `CONFIRMED` 값, Resolution, Outcome, 확인된 PreferenceMemory는 자동 변경하지 않는다.
+- **이유:** 반복 입력은 줄이되 LLM의 추론과 추측이 사용자의 사실 또는 의사결정을 가장하지 않게 한다.
 
 ### BR-AI-03: LLM assessment는 algorithm과 독립적이다
 
@@ -96,15 +102,25 @@
 
 ## Evidence와 MVP 경계
 
-### BR-EVD-01: 사용자 제공 URL은 근거 참조일 뿐이다
+### BR-EVD-01: 사용자 동의로 공개 URL만 통제해 수집한다
 
-- **동작:** Option과 value의 URL·source text는 사용자가 제공한 evidence reference로 저장한다. 서버는 URL을 자동으로 fetch하거나 가격·재고 등 외부 정보를 갱신하지 않는다.
-- **이유:** 근거의 출처를 보존하면서도 자동 수집, 최신성 보장, SSRF 경로를 MVP 범위에 포함하지 않는다.
+- **동작:** 사용자가 제공하거나 후보 제안에서 승인한 공개 HTTP(S) URL만 managed provider가 수집한다. 인증 정보·cookie·private/local host·지속 crawling을 허용하지 않으며 원문 전체를 장기 저장하지 않는다. 값에는 URL과 조회 시점을 표시하고 수집 실패는 다른 후보를 훼손하지 않는다.
+- **이유:** 입력 부담을 줄이면서 SSRF, 비공개 데이터 수집, 최신성 오인을 제한한다.
 
-### BR-SCP-01: preference model과 자동 agent는 MVP 범위 밖이다
+### BR-EVD-02: 발견된 후보는 사용자가 승인해야 한다
 
-- **동작:** pairwise comparison, 확률 모델, 자동 preference learning, 범용 대화형 agent, LLM의 자동 draft 변경을 제공하지 않는다. outcome 데이터가 쌓인 뒤 학습 또는 Algorithm/LLM 결합을 검토할 때는 별도 제품 결정과 ADR가 필요하다.
-- **이유:** 현재 MVP는 사용자의 명시적 비교와 실제 outcome 기록을 축적·검증하는 단계다.
+- **동작:** 후보가 하나 이상 있을 때 현재 범주의 대안을 최대 3개 제안할 수 있다. 발견 결과는 사용자가 승인하기 전에는 Option이나 Evaluation input이 아니다.
+- **이유:** 검색 누락·광고성 결과·지역별 판매 차이가 사용자의 후보군을 몰래 바꾸지 않게 한다.
+
+### BR-PREF-01: 성향 기억은 검토 가능한 projection이다
+
+- **동작:** outcome은 category·criterion·근거 Decision을 가진 `PROPOSED` PreferenceMemory를 만들 수 있다. 사용자가 확인한 기억만 같은 category의 다음 Decision 기본 weight에 적용하고 적용 내역을 표시한다. category를 넘는 자동 전이, vector retrieval, 숨은 weight 변경은 하지 않는다.
+- **이유:** 개인화의 근거와 통제권을 사용자에게 남기면서 실제 outcome을 다음 선택에 재사용한다.
+
+### BR-SCP-01: 범용 agent와 자동 학습 모델은 범위 밖이다
+
+- **동작:** pairwise comparison, 확률 모델, 자동 학습 모델, 범용 대화형 agent, 인증 페이지 수집, 지속적 가격 감시를 제공하지 않는다. Algorithm/LLM 결합은 outcome 데이터로 검증한 뒤 별도 ADR로 결정한다.
+- **이유:** guided 구매 결정과 inspectable memory의 품질을 먼저 검증한다.
 
 ### BR-SCP-02: Gemini 무료 티어는 저민감 dogfooding에만 사용한다
 
@@ -123,7 +139,8 @@
 | BR-EVAL-02, BR-EVAL-03 | `AlgorithmEvaluatorTest.appliesConstraintsAnchorsWeightsAndEstimatedFlag`, `AlgorithmEvaluatorTest.clampsNumericUtilityOutsideAnchors` |
 | BR-EVAL-04 | `DecisionApiIntegrationTest.savesCompleteDraftAndCreatesReproducibleAlgorithmEvaluation` |
 | BR-AI-01, BR-SCP-02 | `AiDataPolicyTest`, `DecisionApiIntegrationTest.bootsMigratesDatabaseAndCreatesLaptopDecision` |
-| BR-DEC-01~05, BR-AI-02~04, BR-EVD-01, BR-SCP-01 | 명시적 규칙 단위 테스트 연결이 아직 없다. 해당 동작을 변경할 때 추가한다. |
+| BR-DEC-01~05, BR-AI-03~04, BR-SCP-01 | 명시적 규칙 단위 테스트 연결이 아직 없다. 해당 동작을 변경할 때 추가한다. |
+| BR-DEC-06, BR-AI-02, BR-EVD-01~02, BR-PREF-01 | `DecisionApiIntegrationTest.createsGuidedDecisionAnswersCriticalQuestionsAndBuildsPreferenceMemory` |
 
 ## 아직 정하지 않은 동작
 
