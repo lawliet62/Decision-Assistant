@@ -26,6 +26,11 @@
 - CI는 우회하거나 test·quality gate를 약화하지 않는다. 자기 변경으로 인한 실패는 원인을 분석하고 정상적인 수정으로 해결한다.
 - branch, commit, push, Pull Request, CI 대응의 상세 절차는 [Development workflow](docs/development.md)를 따른다.
 
+## 구현 전 Human Decision Gate
+
+- 현재 human 요청, 승인된 spec 또는 Accepted ADR이 아직 결정하지 않은 선택이 제품·핵심 domain 정책, 데이터 의미·수명, 인증·보안·개인정보·외부 전송 경계, runtime·provider·배포 architecture 또는 Accepted ADR을 변경한다면 구현 전에 human의 명시적 결정을 받는다. 세부 기준과 요청 형식은 [Development workflow](docs/development.md#human-decision-gate)를 따른다.
+- 기존 경계 안에서 검증 가능하고 쉽게 되돌릴 수 있는 구현 선택은 재확인을 요청하지 않고 agent가 자율적으로 결정하며, 가장 단순하고 가역적인 선택을 우선한다.
+
 ## 공통 규칙
 
 - 현재 구조는 modular monolith다. 배포 단위나 module을 근거 없이 추가하지 않는다.
