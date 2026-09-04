@@ -24,6 +24,7 @@
 - repository를 변경하는 구현 작업은 별도 요청이 없어도 검증된 변경의 commit, 작업 branch push, Pull Request 생성, CI 확인까지를 기본 완료 조건으로 한다. 분석·진단·review처럼 변경이 요청되지 않은 작업은 제외한다.
 - agent는 자신의 PR을 merge하거나 auto-merge하지 않는다. 최종 수용과 squash merge는 human이 수행한다.
 - CI는 우회하거나 test·quality gate를 약화하지 않는다. 자기 변경으로 인한 실패는 원인을 분석하고 정상적인 수정으로 해결한다.
+- PR을 준비할 때 승인된 경계 안에서 자율적으로 구현한 선택 중 향후 기술 리뷰 가치가 높은 비자명한 선택만 `Technical review candidates`로 선별한다. 이는 non-blocking review pointer이며 Human Decision Gate나 ADR을 대체하지 않는다. 0개면 생략하고 보통 최대 3개만 남기며, 상세 기준과 형식은 [Development workflow](docs/development.md#technical-review-candidates)를 따른다.
 - branch, commit, push, Pull Request, CI 대응의 상세 절차는 [Development workflow](docs/development.md)를 따른다.
 
 ## 구현 전 Human Decision Gate

@@ -42,6 +42,36 @@
 
 ADR은 human이 내린 장기 결정을 기록하지만 승인 자체를 대신하지 않는다.
 
+## Technical Review Candidates
+
+Technical Review Candidate는 agent가 승인된 경계 안에서 자율적으로 구현한 선택 중, 현실적인 대안과 의미 있는 trade-off 때문에 향후 기술 리뷰에서 실제 코드와 검증을 다시 볼 가치가 있는 소수의 PR-local pointer다.
+
+이 mechanism은 non-blocking이다. Human 승인 필요 여부를 판단하거나 기존 자율 구현 범위를 줄이지 않으며, candidate에 포함되었다는 이유만으로 별도 답변이나 merge 전 처리를 요구하지 않는다. 구현 중 Human Decision Gate 대상이 발견되면 candidate로 대신 기록하지 않고 해당 선택을 구현하기 전에 결정을 요청한다.
+
+PR을 준비할 때 최종 diff와 검증 결과를 기준으로 다음 조건을 모두 충족하는 선택만 선별한다.
+
+- 이번 PR에서 실제로 선택하고 구현했다.
+- 현재 제약 안에서 현실적인 대안이 둘 이상 있었다.
+- correctness, consistency·concurrency, security·privacy, failure behavior, performance·cost·scalability, system boundary 또는 변경 비용에 의미 있는 영향을 준다.
+- 선택 이유가 diff, test 또는 기존 source of truth만으로 쉽게 복원되지 않는다.
+- 기술 리뷰가 구현이나 위험 판단을 실질적으로 바꿀 수 있다.
+
+boilerplate, formatting, generated code, 명백하거나 기계적인 선택, repository convention을 그대로 따른 구현, 완료된 작업의 요약, 미해결 TODO·제약, 구현하지 않은 아이디어는 제외한다. 승인된 spec·business rule·Accepted ADR이 이미 결정한 내용을 반복하지 않으며, 장기간 유지할 architecture 선택은 기존 기준에 따라 ADR로 남긴다.
+
+기본값은 0개이며 개수를 채우지 않는다. 보통 최대 3개로 제한하고, 더 많으면 밀접한 항목을 합친 뒤 review 결과에 가장 큰 영향을 줄 수 있는 선택만 남긴다. 0개이면 PR section을 생략한다.
+
+기록 형식은 다음과 같다.
+
+```md
+## Technical review candidates
+
+- **Decision:** <이번 PR에서 실제로 구현한 선택>
+  - **Why review-worthy:** <주요 현실적 대안과 핵심 trade-off 또는 위험>
+  - **Where:** `<관련 path/symbol>`, `<관련 test>`
+```
+
+review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 갱신하거나 제거한다. Merge 후에는 PR history에 보존하며 별도 문서로 자동 집계하지 않는다. 이후 장기 규칙이나 architecture decision이 되면 그 시점에 관련 source of truth 또는 ADR로 승격한다.
+
 ## Git workflow details
 
 ### Working tree and branch safety
