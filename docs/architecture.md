@@ -18,9 +18,12 @@ Browser
 
 ## 데이터 경계
 
+웹 페이지 수집은 `WebEvidenceProvider`, 검색은 `WebSearchProvider`로 분리한다. 두 port는 현재 Firecrawl adapter가 구현한다. 기존 guided intake의 자동 대안 검색은 Firecrawl에 고정하며, 이후 제품명 lookup provider 설정이 기존 동의의 전송 대상을 바꾸지 않도록 한다. interface 분리는 독립된 검색 adapter를 연결하기 위한 국소 변경이며 배포 단위·DB lifecycle을 추가하지 않는다.
+
 - Decision aggregate: 사용자가 계속 수정하는 current state. Option, Criterion, value, Constraint를 관계형 table로 저장한다.
 - Evaluation: 특정 `decisionVersion`의 immutable input snapshot, hash, algorithm result, optional LLM result를 저장한다.
 - StructureRun: LLM에 실제 전달한 input과 proposal, 실행 metadata를 저장한다. proposal은 Decision을 자동 변경하지 않는다.
+- 구조화 AI에는 현재 활성 비교 기준의 이름·타입·단위를 전달한다. 기존 `StructureRun` input snapshot에 기준 목록이 없어도 읽을 수 있으며 과거 snapshot을 재작성하지 않는다.
 - Resolution/OutcomeCheckIn: 선택과 사후 회고를 append한다.
 
 ## 요청 흐름

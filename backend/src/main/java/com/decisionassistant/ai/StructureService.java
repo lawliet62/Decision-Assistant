@@ -16,7 +16,7 @@ import static com.decisionassistant.ai.AiDtos.*;
 @Service
 public class StructureService {
 
-    static final String PROMPT_VERSION = "structure-v1";
+    static final String PROMPT_VERSION = "structure-v2";
     static final String SCHEMA_VERSION = "structure-proposal-v1";
 
     private final DecisionService decisions;
@@ -77,7 +77,10 @@ public class StructureService {
         return new AiContracts.StructureInput(
                 decision.title(), decision.context().intendedUse(), decision.context().notes(),
                 decision.options().stream().map(option -> new AiContracts.OptionInput(
-                        option.id(), option.name(), option.description(), option.sourceText())).toList());
+                        option.id(), option.name(), option.description(), option.sourceText())).toList(),
+                decision.criteria().stream().filter(DecisionDtos.CriterionData::active)
+                        .map(criterion -> new AiContracts.CriterionInput(
+                                criterion.name(), criterion.kind(), criterion.unit())).toList());
     }
 
     private StructureRunResponse response(StructureRun run) {

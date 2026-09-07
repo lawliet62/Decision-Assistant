@@ -31,6 +31,9 @@ public class OpenAiDecisionAdapter implements DecisionStructurer, DecisionAssess
                         input. Use NUMERIC_UTILITY or RATING_1_TO_5 criterion kinds, HIGHER_BETTER, LOWER_BETTER,
                         or NOT_APPLICABLE directions, and NUMERIC_MIN, NUMERIC_MAX, BOOLEAN_REQUIRED, or MANUAL
                         constraint kinds. Mark uncertain extracted values as ESTIMATED. Do not fetch URLs.
+                        When criteria are supplied, extract values for those criteria using their exact names,
+                        kinds, and units. Do not replace them or invent values for missing evidence. Return
+                        missingInformation for gaps. Subjective satisfaction is not a product specification.
                         """)
                 .user("Create a reviewable structure proposal for this draft:\n" + json(input))
                 .call()

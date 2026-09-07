@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class FirecrawlWebEvidenceProvider implements WebEvidenceProvider {
+public class FirecrawlWebEvidenceProvider implements WebEvidenceProvider, WebSearchProvider {
     private final WebProperties properties;
     private final RestClient client;
 

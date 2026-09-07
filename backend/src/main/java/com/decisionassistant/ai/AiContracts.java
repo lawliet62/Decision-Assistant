@@ -1,6 +1,7 @@
 package com.decisionassistant.ai;
 
 import com.decisionassistant.evaluation.DecisionSnapshot;
+import com.decisionassistant.decision.DecisionTypes;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,8 +16,16 @@ public final class AiContracts {
             String title,
             String intendedUse,
             String notes,
-            List<OptionInput> options
+            List<OptionInput> options,
+            List<CriterionInput> criteria
     ) {
+        public StructureInput {
+            // Older persisted StructureRun snapshots do not contain criteria.
+            criteria = criteria == null ? List.of() : List.copyOf(criteria);
+        }
+    }
+
+    public record CriterionInput(String name, DecisionTypes.CriterionKind kind, String unit) {
     }
 
     public record OptionInput(UUID id, String name, String description, String sourceText) {
