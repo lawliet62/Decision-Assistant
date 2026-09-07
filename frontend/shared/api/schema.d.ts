@@ -20,6 +20,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/product-lookups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["lookup"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions": {
         parameters: {
             query?: never;
@@ -245,6 +261,22 @@ export interface paths {
         patch: operations["updateSuggestion"];
         trace?: never;
     };
+    "/api/v1/product-lookups/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["lookupCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/preferences": {
         parameters: {
             query?: never;
@@ -426,7 +458,7 @@ export interface components {
             version?: number;
             title?: string;
             /** @enum {string} */
-            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "EARBUDS" | "CUSTOM";
             templateVersion?: string;
             /** @enum {string} */
             status?: "DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED";
@@ -461,6 +493,7 @@ export interface components {
         GuidanceData: {
             intentText?: string;
             aiConsent?: boolean;
+            webConsent?: boolean;
             /** @enum {string} */
             processingStatus?: "IMPORTING" | "NEEDS_INPUT" | "READY" | "FAILED";
             readiness?: string;
@@ -489,7 +522,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             /** @enum {string} */
-            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "EARBUDS" | "CUSTOM";
             criterionName?: string;
             statement?: string;
             /** Format: int32 */
@@ -529,15 +562,32 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
         };
+        LookupRequest: {
+            query: string;
+            searchConsent: boolean;
+        };
+        LookupResponse: {
+            results?: components["schemas"]["SearchResult"][];
+        };
+        SearchResult: {
+            title?: string;
+            url?: string;
+            description?: string;
+        };
+        AddSourceRequest: {
+            url: string;
+            name?: string;
+        };
         CreateDecisionRequest: {
             title?: string;
             /** @enum {string} */
-            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "EARBUDS" | "CUSTOM";
             intentText?: string;
             sourceUrls?: string[];
             aiConsent?: boolean;
             webConsent?: boolean;
             sensitiveDataAcknowledged?: boolean;
+            selectedSources?: components["schemas"]["AddSourceRequest"][];
         };
         CreateStructureProposalRequest: {
             /** Format: int64 */
@@ -601,9 +651,6 @@ export interface components {
             rating?: number;
             certainty?: string;
             evidenceNote?: string;
-        };
-        AddSourceRequest: {
-            url: string;
         };
         CreateResolutionRequest: {
             /** @enum {string} */
@@ -703,7 +750,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             /** @enum {string} */
-            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "EARBUDS" | "CUSTOM";
             criterionName?: string;
             statement?: string;
             /** Format: int32 */
@@ -733,6 +780,14 @@ export interface components {
         UpdateSuggestionRequest: {
             action: string;
         };
+        LookupCapabilities: {
+            searchEnabled?: boolean;
+            searchProvider?: string;
+            searchNotice?: string;
+            importEnabled?: boolean;
+            importProvider?: string;
+            importNotice?: string;
+        };
         CurrentUserResponse: {
             /** Format: uuid */
             id?: string;
@@ -746,7 +801,7 @@ export interface components {
             version?: number;
             title?: string;
             /** @enum {string} */
-            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "CUSTOM";
+            templateKey?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "EARBUDS" | "CUSTOM";
             /** @enum {string} */
             status?: "DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED";
             /** Format: date-time */
@@ -790,6 +845,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    lookup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LookupRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LookupResponse"];
                 };
             };
         };
@@ -1210,6 +1289,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    lookupCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["LookupCapabilities"];
                 };
             };
         };

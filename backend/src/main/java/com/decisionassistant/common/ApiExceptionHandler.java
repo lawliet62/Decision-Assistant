@@ -11,9 +11,21 @@ import java.net.URI;
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
+    @ExceptionHandler(com.decisionassistant.lookup.LookupException.class)
+    ProblemDetail lookup(com.decisionassistant.lookup.LookupException exception) {
+        var detail = problem(HttpStatus.valueOf(exception.status()), "Product search unavailable", exception.getMessage());
+        detail.setProperty("code", exception.code());
+        return detail;
+    }
+
     @ExceptionHandler(NotFoundException.class)
     ProblemDetail notFound(NotFoundException exception) {
         return problem(HttpStatus.NOT_FOUND, "Resource not found", exception.getMessage());
+    }
+
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    ProblemDetail staleDraft(org.springframework.orm.ObjectOptimisticLockingFailureException exception) {
+        return problem(HttpStatus.CONFLICT, "Conflict", "비교 내용이 변경되었습니다. 최신 내용을 다시 불러오세요.");
     }
 
     @ExceptionHandler(ConflictException.class)

@@ -24,6 +24,7 @@ public class DecisionTemplateFactory {
             case PHONE -> "phone-v1";
             case TABLET -> "tablet-v1";
             case MONITOR -> "monitor-v1";
+            case EARBUDS -> "earbuds-v1";
             case CUSTOM -> "custom-v1";
         };
     }
@@ -34,6 +35,8 @@ public class DecisionTemplateFactory {
         }
         if (decision.templateKey() == DecisionTypes.TemplateKey.LAPTOP) {
             applyLaptop(decision);
+        } else if (decision.templateKey() == DecisionTypes.TemplateKey.EARBUDS) {
+            applyEarbuds(decision);
         } else {
             applyPersonalDevice(decision);
         }
@@ -60,6 +63,18 @@ public class DecisionTemplateFactory {
         decision.addConstraint(null, "최대 무게", NUMERIC_MAX, weight.id(), null, "kg", null, false);
         decision.addConstraint(null, "필수 OS·포트·호환성", MANUAL, null, null, null,
                 "각 Option이 필수 요구사항을 충족하는지 확인합니다.", false);
+    }
+
+    private void applyEarbuds(Decision decision) {
+        var price = decision.addCriterion(null, "가격", NUMERIC_UTILITY, LOWER_BETTER, BigDecimal.ONE,
+                BigDecimal.valueOf(500_000), BigDecimal.valueOf(50_000), "KRW", true);
+        for (var name : java.util.List.of("음질", "착용감", "노이즈 캔슬링", "배터리 적합도")) {
+            decision.addCriterion(null, name, RATING_1_TO_5, NOT_APPLICABLE, BigDecimal.ONE,
+                    null, null, null, true);
+        }
+        decision.addConstraint(null, "최대 예산", NUMERIC_MAX, price.id(), null, "KRW", null, false);
+        decision.addConstraint(null, "필수 호환성", MANUAL, null, null, null,
+                "사용할 휴대폰·앱·기능과의 호환성을 직접 확인합니다.", false);
     }
 
     private void applyPersonalDevice(Decision decision) {

@@ -5,7 +5,7 @@ public final class DecisionTypes {
     private DecisionTypes() {
     }
 
-    public enum TemplateKey { LAPTOP, PHONE, TABLET, MONITOR, CUSTOM }
+    public enum TemplateKey { LAPTOP, PHONE, TABLET, MONITOR, EARBUDS, CUSTOM }
 
     public enum DecisionStatus { DRAFT, CHOSEN, DEFERRED, ABANDONED, ARCHIVED }
 

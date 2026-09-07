@@ -46,6 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Import(DecisionApiIntegrationTest.TestSecurityConfiguration.class)
 class DecisionApiIntegrationTest {
 
@@ -69,6 +70,53 @@ class DecisionApiIntegrationTest {
     void createTestUser() {
         users.findById(TEST_USER_ID).orElseGet(() -> users.save(new ApplicationUser(
                 TEST_USER_ID, TEST_USER.email(), TEST_USER.email().toLowerCase(), TEST_USER.displayName(), Instant.now())));
+    }
+
+    @Test
+    void earbudsAndSelectedSourcesReuseExistingLifecycle() throws Exception {
+        var json = mvc.perform(post("/api/v1/decisions").with(signedIn()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"intentText":"출퇴근용 무선 이어폰", "templateKey":"EARBUDS", "webConsent":false,
+                         "selectedSources":[{"url":"https://example.com/buds", "name":"Buds Pro"}]}
+                        """))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.templateVersion").value("earbuds-v1"))
+                .andExpect(jsonPath("$.criteria.length()").value(5)).andExpect(jsonPath("$.criteria[0].bestAnchor").value(50000))
+                .andExpect(jsonPath("$.criteria[0].worstAnchor").value(500000))
+                .andExpect(jsonPath("$.options[0].name").value("Buds Pro"))
+                .andExpect(jsonPath("$.constraints.length()").value(2))
+                .andExpect(jsonPath("$.guidance.evidence.length()").value(0))
+                .andReturn().getResponse().getContentAsString();
+        var id = mapper.readTree(json).path("id").asText();
+        mvc.perform(post("/api/v1/decisions/{id}/sources", id).with(signedIn()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"url":"https://example.com/buds", "name":"Duplicate"}
+                        """))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.options.length()").value(1));
+        mvc.perform(post("/api/v1/decisions/{id}/sources", id).with(signedIn()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"url":"https://example.com/other", "name":"Other Buds"}
+                        """))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.options.length()").value(2))
+                .andExpect(jsonPath("$.version").value(1));
+    }
+
+    @Test
+    void lookupRequiresAuthenticationCsrfAndExplicitConsentEvenWhenDisabled() throws Exception {
+        mvc.perform(post("/api/v1/product-lookups").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"query\":\"Buds\",\"searchConsent\":true}")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/product-lookups").with(signedIn()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"query\":\"Buds\",\"searchConsent\":true}")).andExpect(status().isForbidden());
+        for (var body : List.of("{\"query\":\"Buds\"}", "{\"query\":\"Buds\",\"searchConsent\":false}",
+                "{\"query\":\" \",\"searchConsent\":true}")) {
+            mvc.perform(post("/api/v1/product-lookups").with(signedIn()).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
+        }
+        mvc.perform(post("/api/v1/product-lookups").with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"query\":\"Buds\",\"searchConsent\":true}"))
+                .andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.code").value("SEARCH_DISABLED"));
+        mvc.perform(get("/api/v1/product-lookups/capabilities").with(signedIn()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.searchEnabled").value(false))
+                .andExpect(jsonPath("$.searchProvider").value("Serper"));
     }
 
     @Test

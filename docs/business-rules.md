@@ -31,6 +31,7 @@
 
 - **동작:** draft 갱신은 `expectedVersion`이 현재 version과 일치할 때만 허용한다. `DRAFT`와 `DEFERRED` 상태만 수정할 수 있으며, `CHOSEN`과 `ABANDONED` 상태의 draft는 수정하지 않는다.
 - **이유:** 동시 편집으로 인한 덮어쓰기와, 이미 기록된 결정의 사후 변경을 막는다.
+- **동작:** 비교 값을 편집하는 동안 화면의 자동 갱신은 저장 전 입력을 덮어쓰지 않는다. 저장 충돌 시 입력을 보존하고 사용자가 최신 내용을 다시 불러올 수 있다.
 
 ### BR-DEC-03: Decision 내부 참조와 조합은 일관돼야 한다
 
@@ -113,6 +114,22 @@
 - **동작:** 후보가 하나 이상 있을 때 현재 범주의 대안을 최대 3개 제안할 수 있다. 발견 결과는 사용자가 승인하기 전에는 Option이나 Evaluation input이 아니다.
 - **이유:** 검색 누락·광고성 결과·지역별 판매 차이가 사용자의 후보군을 몰래 바꾸지 않게 한다.
 
+### BR-EVD-03: 제품명 검색은 사용자 선택을 돕는 URL lookup이다
+
+- **동작:** 인증된 사용자가 제품명 전송에 동의한 요청만 Serper로 보낸다. 요청마다 최대 200자의 query 하나만 전달하며 Decision의 의도·메모·사용자 identity를 보내지 않는다. 응답은 공개 HTTP(S) 페이지 최대 5개이며 부적절한 URL과 중복 URL을 제외하므로 3개 미만일 수도 있다.
+- **동작:** 검색 결과는 서버에 저장하지 않는다. 사용자가 선택한 이름·URL만 기존 Option에 연결하고 검색 발췌를 검증 값으로 저장하지 않는다. 동일 URL 추가는 중복 후보를 만들지 않는다. 5개 한도, ownership, 수정 가능한 상태, 별도 웹 수집 동의를 그대로 적용한다. URL 직접 입력은 검색 장애·비활성·한도 초과 시에도 동작한다.
+- **이유:** 별도 catalog/상품 식별 시스템 없이 사용자의 검색·복사 부담만 제거한다. 검색 순서는 추천 순위가 아니며 세대·옵션·유통·가격 정확성을 자동 확정하지 않는다.
+
+### BR-COST-01: 제품 검색은 월 상한 안에서만 호출한다
+
+- **동작:** 배포 DB를 공유하는 서버 전체에서 UTC 월 1,000회까지 Serper 호출을 허용한다. 운영 설정은 1~1,000 사이로 낮출 수 있다. 호출 전에 사용량을 원자적으로 예약하고 provider 실패·timeout도 소비한다. 자동 재시도·자동 충전하지 않는다. 단일 instance의 사용자별 5회/분과 동시 2건 제한으로 burst를 제어한다.
+- **이유:** 불확실한 응답에도 과금 가능성이 있으므로 상한을 보수적으로 보장한다. 이 한도는 별도 Firecrawl·AI·Resend 호출이나 앱 밖의 API key 사용량을 제한하지 않는다.
+
+### BR-TPL-01: 이어폰은 기존 evaluator와 명시적인 초기 가정을 쓴다
+
+- **동작:** `earbuds-v1`은 가격 최선 50,000원·최악 500,000원, 음질·착용감·노이즈 캔슬링·배터리 적합도 각 1~5점, 기본 중요도 모두 1이다. rating은 사용자 입력이며 evidence worker는 AI가 제안한 이어폰 rating을 자동 적용하지 않는다. 최대 예산·필수 호환성은 선택적으로 활성화한다.
+- **이유:** anchor와 선형 utility는 검증된 인간 만족도 모델이 아닌 MVP 초기 가정이다. 새로운 evaluator·preference model을 만들지 않는다.
+
 ### BR-PREF-01: 성향 기억은 검토 가능한 projection이다
 
 - **동작:** outcome은 category·criterion·근거 Decision을 가진 `PROPOSED` PreferenceMemory를 만들 수 있다. 사용자가 확인한 기억만 같은 category의 다음 Decision 기본 weight에 적용하고 적용 내역을 표시한다. category를 넘는 자동 전이, vector retrieval, 숨은 weight 변경은 하지 않는다.
@@ -143,6 +160,9 @@
 | BR-DEC-01~05, BR-AI-03~04, BR-SCP-01 | 명시적 규칙 단위 테스트 연결이 아직 없다. 해당 동작을 변경할 때 추가한다. |
 | BR-DEC-06, BR-AI-02, BR-EVD-01~02, BR-PREF-01 | `DecisionApiIntegrationTest.createsGuidedDecisionAnswersCriticalQuestionsAndBuildsPreferenceMemory` |
 | BR-EVD-01~02 | `EvidenceWorkflowWorkerTest` (부분 실패·빈 페이지·재시도 종료·AI 실패 격리·후보 승인 경계) |
+| BR-EVD-03, BR-COST-01 | `ProductLookupServiceTest`, `SerperSearchProviderTest`, `SearchQuotaIntegrationTest`, `ProductLookupApiIntegrationTest`, `DecisionApiIntegrationTest.lookupRequiresAuthenticationCsrfAndExplicitConsentEvenWhenDisabled` |
+| BR-TPL-01 | `DecisionApiIntegrationTest.earbudsAndSelectedSourcesReuseExistingLifecycle`, `EvidenceWorkflowWorkerTest.earbudsNeverAutoFillSubjectiveRatings` |
+| BR-DEC-02, BR-EVD-03 | `frontend/e2e/guided-decision.spec.ts` (선택→평가→회고·한도 fallback·polling/충돌 입력 보존·수집 재시도) |
 
 ## 아직 정하지 않은 동작
 

@@ -47,6 +47,10 @@ decision-assistant:
     base-url: ${FIRECRAWL_BASE_URL:https://api.firecrawl.dev/v2}
     api-key: ${FIRECRAWL_API_KEY:disabled}
     timeout: 45s
+  search:
+    enabled: ${DECISION_ASSISTANT_SEARCH_ENABLED:false}
+    api-key: ${SERPER_API_KEY:disabled}
+    monthly-limit: ${DECISION_ASSISTANT_SEARCH_MONTHLY_LIMIT:1000}
   reminders:
     enabled: ${DECISION_ASSISTANT_REMINDERS_ENABLED:false}
     resend-base-url: ${RESEND_BASE_URL:https://api.resend.com}

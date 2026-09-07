@@ -11,6 +11,10 @@ class PublicUrlPolicyTest {
 
     @Test
     void acceptsPublicHttpUrlsAndRejectsLocalOrCredentialedTargets() {
+        assertThat(policy.validate("https://fdesign.example/product")).isEqualTo("https://fdesign.example/product");
+        for (var url : java.util.List.of("http://[::1]/", "http://[fd00::1]/", "http://[fe80::1]/", "http://localhost./", "http://2130706433/")) {
+            assertThatThrownBy(() -> policy.validate(url)).isInstanceOf(InvalidDecisionException.class);
+        }
         assertThat(policy.validate("https://example.com/product?q=1")).isEqualTo("https://example.com/product?q=1");
         assertThatThrownBy(() -> policy.validate("http://localhost:8080/admin"))
                 .isInstanceOf(InvalidDecisionException.class);
