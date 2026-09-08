@@ -2,7 +2,6 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, master]
   push:
     branches: [main, master]
 
@@ -42,3 +41,10 @@ jobs:
 
       - name: Run repository checks
         run: npm run check
+
+      - name: Install Chromium for browser tests
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify product lookup and decision lifecycle in browser
+        run: npm --prefix frontend run test:e2e

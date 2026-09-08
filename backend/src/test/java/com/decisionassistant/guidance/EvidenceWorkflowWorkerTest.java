@@ -155,6 +155,36 @@ class EvidenceWorkflowWorkerTest {
         assertThat(fixture.decision.processingStatus()).isEqualTo(DecisionTypes.ProcessingStatus.NEEDS_INPUT);
     }
 
+    @Test
+    void finishingImportDoesNotEditAnAlreadyChosenDecision() throws Exception {
+        var fixture = new Fixture();
+        fixture.decision.resolve(DecisionTypes.DecisionStatus.CHOSEN, Instant.now());
+        when(fixture.web.scrape(fixture.run.url())).thenReturn(new WebEvidenceProvider.Page("New name", "New specs"));
+        fixture.worker().processNext();
+        assertThat(fixture.run.status()).isEqualTo(EvidenceImport.Status.SUCCEEDED);
+        assertThat(fixture.decision.options().getFirst().sourceText()).isNull();
+        assertThat(fixture.decision.status()).isEqualTo(DecisionTypes.DecisionStatus.CHOSEN);
+        verifyNoInteractions(fixture.structurer, fixture.search);
+    }
+
+    @Test
+    void earbudsNeverAutoFillSubjectiveRatings() throws Exception {
+        var fixture = new Fixture(DecisionTypes.TemplateKey.EARBUDS);
+        new com.decisionassistant.template.DecisionTemplateFactory().apply(fixture.decision);
+        when(fixture.web.scrape(fixture.run.url())).thenReturn(new WebEvidenceProvider.Page("Buds", "Price 100000; ANC supported"));
+        var optionId = fixture.run.optionId().toString();
+        when(fixture.structurer.structure(any())).thenReturn(new AiContracts.AiResult<>(new AiContracts.StructureProposal(
+                List.of(), List.of(
+                new AiContracts.ValueSuggestion(optionId, "가격", BigDecimal.valueOf(100000), null, "CONFIRMED", "Price"),
+                new AiContracts.ValueSuggestion(optionId, "음질", null, 5, "CONFIRMED", "Invented rating")),
+                List.of(), List.of(), List.of()), 1, 1));
+        fixture.worker().processNext();
+        assertThat(fixture.decision.values()).singleElement().satisfies(value -> {
+            assertThat(value.numericValue()).isEqualByComparingTo("100000");
+            assertThat(value.verificationStatus()).isEqualTo(DecisionTypes.VerificationStatus.UNREVIEWED);
+        });
+    }
+
     private static final class Fixture {
         final EvidenceImportRepository imports = mock(EvidenceImportRepository.class);
         final CandidateSuggestionRepository suggestions = mock(CandidateSuggestionRepository.class);
@@ -164,11 +194,16 @@ class EvidenceWorkflowWorkerTest {
         final WebSearchProvider search = mock(WebSearchProvider.class);
         final AiContracts.DecisionStructurer structurer = mock(AiContracts.DecisionStructurer.class);
         final AiCallExecutor executor = mock(AiCallExecutor.class);
-        final Decision decision = new Decision(UUID.randomUUID(), "Comparison", DecisionTypes.TemplateKey.CUSTOM,
-                "custom-v1", Instant.now());
+        final Decision decision;
         final EvidenceImport run;
 
         Fixture() throws Exception {
+            this(DecisionTypes.TemplateKey.CUSTOM);
+        }
+
+        Fixture(DecisionTypes.TemplateKey template) throws Exception {
+            decision = new Decision(UUID.randomUUID(), "Comparison", template,
+                    new com.decisionassistant.template.DecisionTemplateFactory().version(template), Instant.now());
             decision.startGuidedIntake("Comparison", true, true, "guided-v1", Instant.now());
             var option = decision.addOption(null, "후보 · example.com", null, "https://example.com/pending", null);
             run = new EvidenceImport(decision.id(), option.id(), option.sourceUrl(), Instant.now());

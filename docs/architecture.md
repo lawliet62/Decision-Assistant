@@ -9,6 +9,7 @@ Browser
       → Auth0 Universal Login (Google + email OTP)
       → PostgreSQL (user ownership + JDBC session + domain data)
       → Firecrawl API (public URL scrape/search, optional, explicit consent)
+      → Serper API (product-name lookup only, optional, per-request consent)
       → Gemini Developer API (dogfooding default, optional, explicit consent)
       → OpenAI API (optional alternative)
       → Resend API (outcome reminder email, optional)
@@ -18,7 +19,9 @@ Browser
 
 ## 데이터 경계
 
-웹 페이지 수집은 `WebEvidenceProvider`, 검색은 `WebSearchProvider`로 분리한다. 두 port는 현재 Firecrawl adapter가 구현한다. 기존 guided intake의 자동 대안 검색은 Firecrawl에 고정하며, 이후 제품명 lookup provider 설정이 기존 동의의 전송 대상을 바꾸지 않도록 한다. interface 분리는 독립된 검색 adapter를 연결하기 위한 국소 변경이며 배포 단위·DB lifecycle을 추가하지 않는다.
+웹 페이지 수집은 `WebEvidenceProvider`, 검색은 `WebSearchProvider`로 분리한다. Firecrawl adapter는 두 port를, Serper adapter는 검색 port만 구현한다. 기존 guided intake의 자동 대안 검색은 Firecrawl에 고정하며 제품명 lookup 설정이 기존 동의의 전송 대상을 바꾸지 않는다. 제품명 lookup은 인증·CSRF·별도 동의 후 동기 실행한다. 사용자 선택 전에는 Decision/Option/Evidence를 만들지 않는다. 선택 후 기존 create/addSource API와 비동기 evidence worker를 사용한다.
+
+V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert를 독립 transaction에서 commit한 뒤 외부 호출한다. timeout도 사용량을 소비하며 자동 재시도·환불은 없다. 월 1,000회 이하의 durable cap과 단일 instance의 사용자별 5회/분·동시 2건 제한을 적용한다. query/result는 서버에 저장하지 않으며 로그와 metric label에도 넣지 않는다. 자세한 운영 경계는 [배포 runbook](deployment.md), 결정 이유는 [ADR 0007](decisions/0007-final-mvp-product-lookup.md)을 따른다.
 
 - Decision aggregate: 사용자가 계속 수정하는 current state. Option, Criterion, value, Constraint를 관계형 table로 저장한다.
 - Evaluation: 특정 `decisionVersion`의 immutable input snapshot, hash, algorithm result, optional LLM result를 저장한다.

@@ -13,7 +13,7 @@ public class PublicUrlPolicy {
         try {
             var uri = URI.create(input == null ? "" : input.trim());
             var scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(Locale.ROOT);
-            var host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+            var host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT).replaceFirst("\\.$", "");
             if (!(scheme.equals("http") || scheme.equals("https")) || host.isBlank() || uri.getUserInfo() != null
                     || host.equals("localhost") || host.endsWith(".localhost") || host.endsWith(".local")
                     || privateLiteral(host)) {
@@ -26,7 +26,17 @@ public class PublicUrlPolicy {
     }
 
     private boolean privateLiteral(String host) {
-        if (host.equals("::1") || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:")) return true;
+        if (host.contains(":")) {
+            try {
+                // Only IPv6 literals: never resolve a user-provided DNS name on the server.
+                var address = java.net.InetAddress.getByName(host);
+                var bytes = address.getAddress();
+                return address.isAnyLocalAddress() || address.isLoopbackAddress() || address.isLinkLocalAddress()
+                        || address.isSiteLocalAddress() || address.isMulticastAddress()
+                        || (bytes.length == 16 && (bytes[0] & 0xfe) == 0xfc);
+            } catch (java.net.UnknownHostException exception) { return true; }
+        }
+        if (host.matches("[0-9.]+") && !host.matches("[0-9]{1,3}(\\.[0-9]{1,3}){3}")) return true;
         if (host.startsWith("0.") || host.startsWith("10.") || host.startsWith("127.")
                 || host.startsWith("169.254.") || host.startsWith("192.168.")) return true;
         if (!host.startsWith("172.")) return false;

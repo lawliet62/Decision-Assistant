@@ -120,6 +120,7 @@ Agent의 GitHub identity는 human 계정과 분리한다. Bot 계정 또는 GitH
 - `npm run check`: quick + Testcontainers PostgreSQL integration + OpenAPI drift + frontend production build
 - `npm --prefix frontend run api:generate`: committed OpenAPI에서 TypeScript type 재생성
 - `npm --prefix frontend run test:e2e`: mock backend와 Chromium으로 guided intake 브라우저 흐름 검증
+- CI는 stacked PR도 검증하도록 모든 PR base branch에서 실행하며, full check 후 Chromium 제품 검색→선택→회고와 실패 복구 E2E를 별도로 실행한다. 외부 API key는 CI에 필요하지 않다.
 
 ## Database
 

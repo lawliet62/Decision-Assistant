@@ -45,6 +45,34 @@
         }
       }
     },
+    "/api/v1/product-lookups" : {
+      "post" : {
+        "tags" : [ "product-lookup-controller" ],
+        "operationId" : "lookup",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LookupRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LookupResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/decisions" : {
       "get" : {
         "tags" : [ "decision-controller" ],
@@ -630,6 +658,24 @@
         }
       }
     },
+    "/api/v1/product-lookups/capabilities" : {
+      "get" : {
+        "tags" : [ "product-lookup-controller" ],
+        "operationId" : "lookupCapabilities",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LookupCapabilities"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/preferences" : {
       "get" : {
         "tags" : [ "preference-controller" ],
@@ -1035,7 +1081,7 @@
           },
           "templateKey" : {
             "type" : "string",
-            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "EARBUDS", "CUSTOM" ]
           },
           "templateVersion" : {
             "type" : "string"
@@ -1146,6 +1192,9 @@
           "aiConsent" : {
             "type" : "boolean"
           },
+          "webConsent" : {
+            "type" : "boolean"
+          },
           "processingStatus" : {
             "type" : "string",
             "enum" : [ "IMPORTING", "NEEDS_INPUT", "READY", "FAILED" ]
@@ -1230,7 +1279,7 @@
           },
           "templateKey" : {
             "type" : "string",
-            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "EARBUDS", "CUSTOM" ]
           },
           "criterionName" : {
             "type" : "string"
@@ -1330,6 +1379,61 @@
           }
         }
       },
+      "LookupRequest" : {
+        "type" : "object",
+        "properties" : {
+          "query" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          },
+          "searchConsent" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "query", "searchConsent" ]
+      },
+      "LookupResponse" : {
+        "type" : "object",
+        "properties" : {
+          "results" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/SearchResult"
+            }
+          }
+        }
+      },
+      "SearchResult" : {
+        "type" : "object",
+        "properties" : {
+          "title" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          }
+        }
+      },
+      "AddSourceRequest" : {
+        "type" : "object",
+        "properties" : {
+          "url" : {
+            "type" : "string",
+            "maxLength" : 2048,
+            "minLength" : 0
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "url" ]
+      },
       "CreateDecisionRequest" : {
         "type" : "object",
         "properties" : {
@@ -1340,7 +1444,7 @@
           },
           "templateKey" : {
             "type" : "string",
-            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "EARBUDS", "CUSTOM" ]
           },
           "intentText" : {
             "type" : "string",
@@ -1365,6 +1469,14 @@
           },
           "sensitiveDataAcknowledged" : {
             "type" : "boolean"
+          },
+          "selectedSources" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AddSourceRequest"
+            },
+            "maxItems" : 5,
+            "minItems" : 0
           }
         }
       },
@@ -1545,17 +1657,6 @@
             "type" : "string"
           }
         }
-      },
-      "AddSourceRequest" : {
-        "type" : "object",
-        "properties" : {
-          "url" : {
-            "type" : "string",
-            "maxLength" : 2048,
-            "minLength" : 0
-          }
-        },
-        "required" : [ "url" ]
       },
       "CreateResolutionRequest" : {
         "type" : "object",
@@ -1835,7 +1936,7 @@
           },
           "templateKey" : {
             "type" : "string",
-            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "EARBUDS", "CUSTOM" ]
           },
           "criterionName" : {
             "type" : "string"
@@ -1915,6 +2016,29 @@
         },
         "required" : [ "action" ]
       },
+      "LookupCapabilities" : {
+        "type" : "object",
+        "properties" : {
+          "searchEnabled" : {
+            "type" : "boolean"
+          },
+          "searchProvider" : {
+            "type" : "string"
+          },
+          "searchNotice" : {
+            "type" : "string"
+          },
+          "importEnabled" : {
+            "type" : "boolean"
+          },
+          "importProvider" : {
+            "type" : "string"
+          },
+          "importNotice" : {
+            "type" : "string"
+          }
+        }
+      },
       "CurrentUserResponse" : {
         "type" : "object",
         "properties" : {
@@ -1946,7 +2070,7 @@
           },
           "templateKey" : {
             "type" : "string",
-            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "CUSTOM" ]
+            "enum" : [ "LAPTOP", "PHONE", "TABLET", "MONITOR", "EARBUDS", "CUSTOM" ]
           },
           "status" : {
             "type" : "string",

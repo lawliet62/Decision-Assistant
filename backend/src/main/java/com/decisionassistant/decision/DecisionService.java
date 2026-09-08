@@ -103,8 +103,13 @@ public class DecisionService {
         if (Boolean.TRUE.equals(request.aiConsent())) {
             aiDataPolicy.validateSensitiveDataAcknowledgement(Boolean.TRUE.equals(request.sensitiveDataAcknowledged()));
         }
-        var urls = request.sourceUrls() == null ? List.<String>of() : request.sourceUrls().stream()
-                .filter(value -> value != null && !value.isBlank()).map(urlPolicy::validate).distinct().toList();
+        if (request.selectedSources() != null && request.sourceUrls() != null && !request.sourceUrls().isEmpty()) {
+            throw new InvalidDecisionException(List.of("selectedSources와 sourceUrls 중 하나만 제공하세요."));
+        }
+        var sources = request.selectedSources() != null ? request.selectedSources()
+                : request.sourceUrls() == null ? List.<AddSourceRequest>of() : request.sourceUrls().stream()
+                .filter(value -> value != null && !value.isBlank()).map(url -> new AddSourceRequest(url, null)).toList();
+        var urls = sources.stream().map(source -> urlPolicy.validate(source.url())).distinct().toList();
         if (urls.isEmpty()) throw new InvalidDecisionException(List.of("비교를 시작할 공개 후보 URL을 하나 이상 추가하세요."));
         var now = Instant.now(clock);
         var template = request.templateKey() == null ? inferTemplate(request.intentText(), urls) : request.templateKey();
@@ -118,7 +123,9 @@ public class DecisionService {
         decision.updateDraft(title, new DecisionContext(request.intentText().trim(), null, "KRW", null), now);
         templates.apply(decision);
         applyConfirmedPreferences(decision);
-        urls.forEach(url -> decision.addOption(null, optionName(url), null, url, null));
+        urls.forEach(url -> decision.addOption(null, sourceName(sources.stream()
+                .filter(source -> url.equals(urlPolicy.validate(source.url()))).findFirst().orElseThrow().name(), url),
+                null, url, null));
         decisions.saveAndFlush(decision);
         if (decision.webConsent() && webProperties.configured()) decision.options().forEach(option ->
                 evidenceImports.save(new EvidenceImport(decision.id(), option.id(), option.sourceUrl(), now)));
@@ -146,11 +153,12 @@ public class DecisionService {
     public DecisionResponse addSource(UUID id, AddSourceRequest request) {
         var decision = required(id);
         ensureEditable(decision);
-        if (decision.options().size() >= 5) throw new InvalidDecisionException(List.of("Option은 최대 5개까지 추가할 수 있습니다."));
         var url = urlPolicy.validate(request.url());
         if (decision.options().stream().anyMatch(option -> url.equals(option.sourceUrl()))) return response(decision);
+        if (decision.options().size() >= 5) throw new InvalidDecisionException(List.of("후보는 최대 5개까지 추가할 수 있습니다."));
         var now = Instant.now(clock);
-        var option = decision.addOption(null, optionName(url), null, url, null);
+        var option = decision.addOption(null, sourceName(request.name(), url), null, url, null);
+        decision.updateDraft(decision.title(), decision.context(), now);
         if (decision.webConsent() && webProperties.configured()) {
             evidenceImports.save(new EvidenceImport(decision.id(), option.id(), url, now));
             decision.processingStatus(DecisionTypes.ProcessingStatus.IMPORTING, now);
@@ -196,6 +204,7 @@ public class DecisionService {
                     context.currency(), notes), Instant.now(clock));
         }
         question.answer(answer, Instant.now(clock));
+        decision.updateDraft(decision.title(), decision.context(), Instant.now(clock));
         log.info("product_event=decision_question_answered decision_id={} question_id={} target={}",
                 decision.id(), question.id(), question.targetKey());
         decisions.flush();
@@ -452,6 +461,8 @@ public class DecisionService {
 
     private DecisionTypes.TemplateKey inferTemplate(String intent, List<String> urls) {
         var text = (intent + " " + String.join(" ", urls)).toLowerCase(java.util.Locale.ROOT);
+        if (text.contains("이어폰") || text.contains("earbud") || text.contains("earphone")
+                || text.contains("airpods") || text.contains("버즈")) return DecisionTypes.TemplateKey.EARBUDS;
         if (text.contains("monitor") || text.contains("모니터") || text.contains("display")) return DecisionTypes.TemplateKey.MONITOR;
         if (text.contains("tablet") || text.contains("태블릿") || text.contains("ipad")) return DecisionTypes.TemplateKey.TABLET;
         if (text.contains("phone") || text.contains("스마트폰") || text.contains("휴대폰") || text.contains("iphone")) return DecisionTypes.TemplateKey.PHONE;
@@ -461,6 +472,10 @@ public class DecisionService {
     private String conciseTitle(String intent) {
         var normalized = intent.strip().replaceAll("\\s+", " ");
         return normalized.length() <= 80 ? normalized : normalized.substring(0, 80);
+    }
+
+    private String sourceName(String name, String url) {
+        return name == null || name.isBlank() ? optionName(url) : name.strip();
     }
 
     private String optionName(String url) {
@@ -474,12 +489,12 @@ public class DecisionService {
 
     private void seedQuestions(Decision decision, Instant now) {
         questions.save(new DecisionQuestion(decision.id(), DecisionQuestion.Kind.NUMBER, "context.budget",
-                "이번 구매의 최대 예산은 얼마인가요?", "예산을 넘는 후보를 먼저 걸러냅니다.", List.of(), 1, now));
+                "이번 구매의 최대 예산은 얼마인가요?", "비교 참고용 예산으로 기록합니다. 자동 제외 조건은 별도 설정합니다.", List.of(), 1, now));
         questions.save(new DecisionQuestion(decision.id(), DecisionQuestion.Kind.SINGLE_CHOICE, "priority",
-                "이번 결정에서 가장 중요한 기준은 무엇인가요?", "가장 중요한 기준은 다른 기준보다 세 배의 weight로 시작합니다.",
+                "이번 결정에서 가장 중요한 기준은 무엇인가요?", "선택한 기준의 중요도를 3으로 설정합니다. 초기 기본값은 모두 1입니다.",
                 decision.criteria().stream().filter(Criterion::active).map(Criterion::name).limit(6).toList(), 2, now));
         questions.save(new DecisionQuestion(decision.id(), DecisionQuestion.Kind.TEXT, "context.avoid",
-                "반드시 피하고 싶은 단점이나 조건이 있나요?", "숨은 hard constraint를 확인해 잘못된 추천을 막습니다.", List.of(), 3, now));
+                "반드시 피하고 싶은 단점이나 조건이 있나요?", "비교할 때 확인할 메모로 남깁니다. 자동 제외되지는 않습니다.", List.of(), 3, now));
     }
 
     private void applyConfirmedPreferences(Decision decision) {
@@ -515,7 +530,7 @@ public class DecisionService {
 
     private String categoryLabel(DecisionTypes.TemplateKey key) {
         return switch (key) { case LAPTOP -> "노트북"; case PHONE -> "휴대폰"; case TABLET -> "태블릿";
-            case MONITOR -> "모니터"; case CUSTOM -> "구매"; };
+            case MONITOR -> "모니터"; case EARBUDS -> "무선 이어폰"; case CUSTOM -> "구매"; };
     }
 
     private DecisionResponse response(Decision decision) {
@@ -562,7 +577,7 @@ public class DecisionService {
                 ? "후보 링크에서 제품 정보와 근거를 가져오는 중입니다." : analyzed.summary();
         var applied = preferences.findByOwnerUserIdAndStatusAndTemplateKey(decision.ownerUserId(),
                 PreferenceMemory.Status.CONFIRMED, decision.templateKey()).stream().map(this::preferenceData).toList();
-        return new GuidanceData(decision.intentText(), decision.aiConsent(), processing, analyzed.readiness(), summary,
+        return new GuidanceData(decision.intentText(), decision.aiConsent(), decision.webConsent(), processing, analyzed.readiness(), summary,
                 questions.findTop3ByDecisionIdAndStatusOrderByPriorityAscCreatedAtAsc(
                         decision.id(), DecisionQuestion.Status.OPEN).stream().map(question -> new QuestionData(
                         question.id(), question.kind().name(), question.targetKey(), question.prompt(), question.impact(),

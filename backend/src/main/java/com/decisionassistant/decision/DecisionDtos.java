@@ -24,7 +24,8 @@ public final class DecisionDtos {
             @Size(max = 5) List<@Size(max = 2048) String> sourceUrls,
             Boolean aiConsent,
             Boolean webConsent,
-            Boolean sensitiveDataAcknowledged
+            Boolean sensitiveDataAcknowledged,
+            @Size(max = 5) List<@NotNull @Valid AddSourceRequest> selectedSources
     ) {
     }
 
@@ -177,6 +178,7 @@ public final class DecisionDtos {
     public record GuidanceData(
             String intentText,
             boolean aiConsent,
+            boolean webConsent,
             DecisionTypes.ProcessingStatus processingStatus,
             String readiness,
             String summary,
@@ -214,7 +216,7 @@ public final class DecisionDtos {
     public record ReminderData(UUID id, Instant dueAt, String status, String channel) {
     }
 
-    public record AddSourceRequest(@NotBlank @Size(max = 2048) String url) {
+    public record AddSourceRequest(@NotBlank @Size(max = 2048) String url, @Size(max = 200) String name) {
     }
 
     public record AnswerQuestionRequest(@NotBlank @Size(max = 2000) String answer) {

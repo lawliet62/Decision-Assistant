@@ -74,11 +74,13 @@ public class EvidenceWorkflowWorker {
         run.succeeded(page.title(), hash(page.markdown()), excerpt, web.name(), Instant.now(clock));
         log.info("product_event=evidence_import_succeeded decision_id={} import_id={}", run.decisionId(), run.id());
         var decision = decisions.findById(run.decisionId()).orElseThrow();
+        if (!editable(decision)) return;
         decision.applyImportedOption(run.optionId(), page.title(), excerpt, Instant.now(clock));
         completeIfSettled(decision);
     }
 
     private void completeIfSettled(Decision decision) {
+        if (!editable(decision)) return;
         if (imports.countByDecisionIdAndStatusIn(decision.id(),
                 List.of(EvidenceImport.Status.PENDING, EvidenceImport.Status.RUNNING)) > 0) {
             decision.processingStatus(DecisionTypes.ProcessingStatus.IMPORTING, Instant.now(clock));
@@ -90,6 +92,11 @@ public class EvidenceWorkflowWorker {
             decision.processingStatus(DecisionTypes.ProcessingStatus.NEEDS_INPUT, Instant.now(clock));
         }
         decisions.save(decision);
+    }
+
+    private boolean editable(Decision decision) {
+        return decision.status() == DecisionTypes.DecisionStatus.DRAFT
+                || decision.status() == DecisionTypes.DecisionStatus.DEFERRED;
     }
 
     private void finish(Decision decision) {
@@ -118,6 +125,9 @@ public class EvidenceWorkflowWorker {
                 var criterion = decision.criteria().stream()
                         .filter(item -> item.name().equalsIgnoreCase(value.criterionName())).findFirst().orElse(null);
                 if (criterion == null || decision.options().stream().noneMatch(option -> option.id().equals(optionId))) continue;
+                // Earbud satisfaction ratings are explicitly user assessments, never inferred from specifications.
+                if (decision.templateKey() == DecisionTypes.TemplateKey.EARBUDS
+                        && criterion.kind() == DecisionTypes.CriterionKind.RATING_1_TO_5) continue;
                 var certainty = "CONFIRMED".equalsIgnoreCase(value.certainty())
                         ? DecisionTypes.ValueCertainty.CONFIRMED : DecisionTypes.ValueCertainty.ESTIMATED;
                 var sourceUrl = decision.options().stream().filter(option -> option.id().equals(optionId))
@@ -157,7 +167,7 @@ public class EvidenceWorkflowWorker {
 
     private String categoryName(DecisionTypes.TemplateKey key) {
         return switch (key) { case LAPTOP -> "노트북"; case PHONE -> "스마트폰"; case TABLET -> "태블릿";
-            case MONITOR -> "모니터"; case CUSTOM -> "전자기기"; };
+            case MONITOR -> "모니터"; case EARBUDS -> "무선 이어폰"; case CUSTOM -> "전자기기"; };
     }
     private String excerpt(String text, int max) { if (text == null) return ""; return text.length() <= max ? text : text.substring(0, max); }
     private String hash(String value) {

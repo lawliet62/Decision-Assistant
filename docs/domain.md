@@ -23,6 +23,7 @@ Decision draft ──evaluate──> Evaluation(snapshot + results)
 - EvidenceImport: 사용자가 승인한 공개 URL의 비동기 수집 상태와 조회 시점·hash·짧은 excerpt를 보존한다. 원문 전체는 장기 저장하지 않는다.
 - DecisionQuestion: 미확인 정보 중 결론에 영향이 큰 질문과 답변 상태다.
 - CandidateSuggestion: 검색으로 찾은 대안이며 사용자가 승인하기 전에는 Option이 아니다.
+- Product lookup result: 제품명에 대한 일시적인 웹 검색 결과. 저장된 CandidateSuggestion이나 제품 catalog가 아니며 선택한 이름·URL만 기존 Option으로 연결한다. 검색 발췌는 확인된 OptionValue가 아니다.
 - Evaluation: 특정 Decision version의 재현 가능한 run. 현재 draft를 참조해 재계산하지 않는다.
 - Resolution: 사용자가 선택·보류·포기한 사실과 이유.
 - OutcomeCheckIn: 시간이 지난 뒤 만족도와 기대 충족 여부를 여러 번 기록한다.
@@ -32,6 +33,8 @@ Decision draft ──evaluate──> Evaluation(snapshot + results)
 - ExternalIdentity: Auth0 issuer와 subject의 유일한 조합. 같은 이메일만으로 다른 identity를 자동 연결하지 않는다.
 
 ## Invariants
+
+`EARBUDS/earbuds-v1`은 가격(KRW, 최선 50,000 / 최악 500,000)과 음질·착용감·노이즈 캔슬링·배터리 적합도(각 1~5점)를 기본 중요도 1로 시작한다. 네 rating은 사용자 만족 예상이며 사양에서 자동 확정하지 않는다. 최대 예산과 필수 호환성 constraint는 기본 비활성이고 사용자가 켠다. 기존 template/평가 snapshot은 변경하지 않는다.
 
 - 평가에는 2~5개 Option, 하나 이상의 활성 Criterion, 모든 활성 cell 값이 필요하다.
 - numeric Criterion에는 서로 다른 worst/best anchor가 필요하다.

@@ -6,6 +6,7 @@
 - [System architecture](architecture.md): runtime/data/security 경계
 - [API contract](api-contract.md): OpenAPI 생성·소비 workflow
 - [Development workflow](development.md): golden commands와 변경 절차
+- [Deployment runbook](deployment.md): MVP 설정·검색 비용 한도·장애 대응·staging smoke
 - [Known limitations](known-limitations.md): 배포 blocker와 deferred decision
 - [ADR](decisions/): 장기간 유지할 architecture decision과 trade-off
 
