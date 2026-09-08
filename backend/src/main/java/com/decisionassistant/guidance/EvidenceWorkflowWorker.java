@@ -6,6 +6,7 @@ import com.decisionassistant.decision.Decision;
 import com.decisionassistant.decision.DecisionRepository;
 import com.decisionassistant.decision.DecisionTypes;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +19,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.Locale;
 import java.util.UUID;
 
 @Component
@@ -29,6 +29,7 @@ public class EvidenceWorkflowWorker {
     private final DecisionQuestionRepository questions;
     private final DecisionRepository decisions;
     private final WebEvidenceProvider web;
+    private final WebSearchProvider search;
     private final WebProperties webProperties;
     private final AiContracts.DecisionStructurer structurer;
     private final AiCallExecutor aiExecutor;
@@ -37,10 +38,13 @@ public class EvidenceWorkflowWorker {
     public EvidenceWorkflowWorker(EvidenceImportRepository imports, CandidateSuggestionRepository suggestions,
                                   DecisionQuestionRepository questions, DecisionRepository decisions,
                                   WebEvidenceProvider web, WebProperties webProperties,
+                                  @Qualifier("firecrawlWebEvidenceProvider") WebSearchProvider search,
                                   ObjectProvider<AiContracts.DecisionStructurer> structurer,
                                   AiCallExecutor aiExecutor) {
         this.imports = imports; this.suggestions = suggestions; this.questions = questions;
         this.decisions = decisions; this.web = web; this.webProperties = webProperties;
+        // Existing guided consent covers Firecrawl, not a future lookup provider.
+        this.search = search;
         this.structurer = structurer.getIfAvailable(); this.aiExecutor = aiExecutor;
     }
 
@@ -53,29 +57,39 @@ public class EvidenceWorkflowWorker {
         var now = Instant.now(clock);
         run.running(now);
         imports.flush();
+        WebEvidenceProvider.Page page;
         try {
-            var page = web.scrape(run.url());
-            var excerpt = excerpt(page.markdown(), 6000);
-            run.succeeded(page.title(), hash(page.markdown()), excerpt, web.name(), Instant.now(clock));
-            log.info("product_event=evidence_import_succeeded decision_id={} import_id={}", run.decisionId(), run.id());
-            var decision = decisions.findById(run.decisionId()).orElseThrow();
-            decision.applyImportedOption(run.optionId(), page.title(), excerpt, Instant.now(clock));
-            if (imports.countByDecisionIdAndStatusIn(decision.id(),
-                    List.of(EvidenceImport.Status.PENDING, EvidenceImport.Status.RUNNING)) == 0) {
-                finish(decision);
+            page = web.scrape(run.url());
+            if (page == null || page.markdown() == null || page.markdown().isBlank()) {
+                throw new IllegalStateException("수집한 페이지에 제품 정보가 없습니다.");
             }
-            decisions.save(decision);
         } catch (RuntimeException exception) {
-            run.failed(safeMessage(exception), web.name(), Instant.now(clock));
+            run.failed("제품 정보를 가져오지 못했습니다. 다시 시도하거나 직접 입력하세요.", web.name(), Instant.now(clock));
             log.warn("product_event=evidence_import_failed decision_id={} import_id={} reason={}",
                     run.decisionId(), run.id(), exception.getClass().getSimpleName());
-            decisions.findById(run.decisionId()).ifPresent(decision -> {
-                decision.processingStatus(run.status() == EvidenceImport.Status.PENDING
-                        ? DecisionTypes.ProcessingStatus.IMPORTING : DecisionTypes.ProcessingStatus.NEEDS_INPUT,
-                        Instant.now(clock));
-                decisions.save(decision);
-            });
+            decisions.findById(run.decisionId()).ifPresent(this::completeIfSettled);
+            return;
         }
+        var excerpt = excerpt(page.markdown(), 6000);
+        run.succeeded(page.title(), hash(page.markdown()), excerpt, web.name(), Instant.now(clock));
+        log.info("product_event=evidence_import_succeeded decision_id={} import_id={}", run.decisionId(), run.id());
+        var decision = decisions.findById(run.decisionId()).orElseThrow();
+        decision.applyImportedOption(run.optionId(), page.title(), excerpt, Instant.now(clock));
+        completeIfSettled(decision);
+    }
+
+    private void completeIfSettled(Decision decision) {
+        if (imports.countByDecisionIdAndStatusIn(decision.id(),
+                List.of(EvidenceImport.Status.PENDING, EvidenceImport.Status.RUNNING)) > 0) {
+            decision.processingStatus(DecisionTypes.ProcessingStatus.IMPORTING, Instant.now(clock));
+        } else if (imports.findByDecisionIdOrderByCreatedAtAsc(decision.id()).stream()
+                .anyMatch(item -> item.status() == EvidenceImport.Status.SUCCEEDED)) {
+            // A final failed URL must not prevent earlier successful sources from being structured.
+            finish(decision);
+        } else {
+            decision.processingStatus(DecisionTypes.ProcessingStatus.NEEDS_INPUT, Instant.now(clock));
+        }
+        decisions.save(decision);
     }
 
     private void finish(Decision decision) {
@@ -83,10 +97,13 @@ public class EvidenceWorkflowWorker {
             try {
                 var input = new AiContracts.StructureInput(decision.title(), decision.context().intendedUse(),
                         decision.intentText(), decision.options().stream().map(option -> new AiContracts.OptionInput(
-                        option.id(), option.name(), option.description(), option.sourceText())).toList());
+                        option.id(), option.name(), option.description(), option.sourceText())).toList(),
+                        decision.criteria().stream().filter(item -> item.active())
+                                .map(item -> new AiContracts.CriterionInput(item.name(), item.kind(), item.unit())).toList());
                 applyProposal(decision, aiExecutor.call(() -> structurer.structure(input)).value());
-            } catch (RuntimeException ignored) {
-                // Imported evidence remains useful when the optional AI proposal fails.
+            } catch (RuntimeException exception) {
+                log.warn("product_event=evidence_structure_failed decision_id={} reason={}",
+                        decision.id(), exception.getClass().getSimpleName());
             }
         }
         discoverCandidates(decision);
@@ -126,14 +143,15 @@ public class EvidenceWorkflowWorker {
         var query = categoryName(decision.templateKey()) + " 비교 추천 대안 "
                 + decision.options().stream().map(option -> option.name()).limit(2).reduce("", (a, b) -> a + " " + b);
         try {
-            web.search(query.trim(), 5).stream()
+            search.search(query.trim(), 5).stream()
                     .filter(item -> item.url() != null && !item.url().isBlank() && !existingUrls.contains(item.url()))
                     .filter(item -> !suggestions.existsByDecisionIdAndUrl(decision.id(), item.url()))
                     .limit(3)
                     .forEach(item -> suggestions.save(new CandidateSuggestion(decision.id(), item.title(), item.url(),
-                            excerpt(item.description(), 500), web.name(), Instant.now(clock))));
-        } catch (RuntimeException ignored) {
-            // Candidate discovery is optional and must not invalidate imported evidence.
+                            excerpt(item.description(), 500), search.name(), Instant.now(clock))));
+        } catch (RuntimeException exception) {
+            log.warn("product_event=candidate_discovery_failed decision_id={} reason={}",
+                    decision.id(), exception.getClass().getSimpleName());
         }
     }
 
@@ -142,7 +160,6 @@ public class EvidenceWorkflowWorker {
             case MONITOR -> "모니터"; case CUSTOM -> "전자기기"; };
     }
     private String excerpt(String text, int max) { if (text == null) return ""; return text.length() <= max ? text : text.substring(0, max); }
-    private String safeMessage(RuntimeException exception) { var message = exception.getMessage(); return message == null ? "외부 수집에 실패했습니다." : excerpt(message, 1000); }
     private String hash(String value) {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))); }
         catch (java.security.NoSuchAlgorithmException exception) { throw new IllegalStateException(exception); }

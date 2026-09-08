@@ -106,6 +106,7 @@
 
 - **동작:** 사용자가 제공하거나 후보 제안에서 승인한 공개 HTTP(S) URL만 managed provider가 수집한다. 인증 정보·cookie·private/local host·지속 crawling을 허용하지 않으며 원문 전체를 장기 저장하지 않는다. 값에는 URL과 조회 시점을 표시하고 수집 실패는 다른 후보를 훼손하지 않는다.
 - **이유:** 입력 부담을 줄이면서 SSRF, 비공개 데이터 수집, 최신성 오인을 제한한다.
+- **동작:** 일부 URL 수집이 재시도 후 실패해도 다른 URL의 성공한 근거는 구조화할 수 있다. 대기 중인 수집이 남아 있으면 수집 상태를 유지하고, 모두 실패하면 AI로 빈 근거를 채우지 않고 입력 보강으로 돌아간다.
 
 ### BR-EVD-02: 발견된 후보는 사용자가 승인해야 한다
 
@@ -141,6 +142,7 @@
 | BR-AI-01, BR-SCP-02 | `AiDataPolicyTest`, `DecisionApiIntegrationTest.bootsMigratesDatabaseAndCreatesLaptopDecision` |
 | BR-DEC-01~05, BR-AI-03~04, BR-SCP-01 | 명시적 규칙 단위 테스트 연결이 아직 없다. 해당 동작을 변경할 때 추가한다. |
 | BR-DEC-06, BR-AI-02, BR-EVD-01~02, BR-PREF-01 | `DecisionApiIntegrationTest.createsGuidedDecisionAnswersCriticalQuestionsAndBuildsPreferenceMemory` |
+| BR-EVD-01~02 | `EvidenceWorkflowWorkerTest` (부분 실패·빈 페이지·재시도 종료·AI 실패 격리·후보 승인 경계) |
 
 ## 아직 정하지 않은 동작
 
