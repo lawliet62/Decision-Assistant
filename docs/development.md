@@ -122,6 +122,42 @@ Agent의 GitHub identity는 human 계정과 분리한다. Bot 계정 또는 GitH
 - `npm --prefix frontend run test:e2e`: mock backend와 Chromium으로 guided intake 브라우저 흐름 검증
 - CI는 stacked PR도 검증하도록 모든 PR base branch에서 실행하며, full check 후 Chromium 제품 검색→선택→회고와 실패 복구 E2E를 별도로 실행한다. 외부 API key는 CI에 필요하지 않다.
 
+## 로컬 provider 설정을 파일로 관리하기
+
+`backend/.env.example`은 설정 참고용이며 실제 `backend/.env`는 저장소에 포함하지 않는다. 현재 `npm run dev`, `npm run backend:dev`, 직접 `bootRun`은 `.env`를 자동으로 읽지 않는다. IDE 환경 변수 입력만이 유일한 방법은 아니다. Node.js의 [공식 `--env-file` 옵션](https://nodejs.org/api/cli.html#--env-filefile)으로 기존 backend 실행 스크립트에 명시적으로 주입할 수 있다. 별도 dotenv 의존성이나 runtime 설정 변경은 필요 없다.
+
+저장소 루트 기준 `backend/.env`를 직접 만들고 필요한 항목만 넣는다. 실제 key는 공유하거나 commit하지 않는다. 아래 `replace-with-...`는 실제 발급 key로 바꾸며, 사용하지 않는 provider는 활성화하지 않는다.
+
+```dotenv
+SPRING_PROFILES_ACTIVE=local
+DECISION_ASSISTANT_PUBLIC_BASE_URL=http://localhost:3000
+DECISION_ASSISTANT_SEARCH_ENABLED=true
+SERPER_API_KEY=replace-with-serper-key
+DECISION_ASSISTANT_SEARCH_MONTHLY_LIMIT=1000
+DECISION_ASSISTANT_WEB_ENABLED=true
+FIRECRAWL_API_KEY=replace-with-firecrawl-key
+DECISION_ASSISTANT_AI_ENABLED=false
+```
+
+Serper는 제품명 검색, Firecrawl은 선택한 페이지 수집과 기존 대안 검색을 담당한다. 비교 값의 AI 구조화까지 쓰려면 별도로 `DECISION_ASSISTANT_AI_ENABLED=true`와 `GEMINI_API_KEY`를 구성하고 화면에서 AI 전송에 동의한다. Firecrawl만 켜면 출처·발췌는 수집하지만 AI 기반 비교 값 구조화는 수행하지 않는다. Firecrawl/AI 비용은 Serper 월 1,000회 cap에 포함되지 않는다.
+
+첫 번째 터미널에서, 저장소 루트 기준:
+
+```powershell
+docker compose -f backend/compose.yaml up -d
+node --env-file=backend/.env scripts/gradle.mjs bootRun
+```
+
+두 번째 터미널에서:
+
+```powershell
+npm.cmd --prefix frontend run dev
+```
+
+이 방법은 backend에만 파일을 로드하므로 frontend 실행 프로세스에 backend key를 불필요하게 상속시키지 않는다. 기존 통합 `scripts/dev.mjs`는 자식 프로세스 모두에 환경을 상속하므로 여기서는 backend/frontend를 분리 실행한다. IntelliJ에서 직접 Spring/Gradle을 실행하는 구성에는 위 명령의 환경이 자동 적용되지 않는다.
+
+이미 부모 프로세스에 설정된 환경 변수가 `.env`보다 우선한다. 파일을 수정했는데 반영되지 않으면 기존 IDE/터미널 환경 변수의 중복을 확인하고 backend를 재시작한 뒤 브라우저를 새로고침한다. `.env.example`의 `oidc`와 production origin을 로컬 파일에 그대로 복사하지 않는다. `git check-ignore backend/.env`로 Git 제외 여부를 확인할 수 있다. `.env`는 평문 파일이며 Git 제외는 암호화가 아니다. production에서는 배포 환경의 secret 주입을 사용한다.
+
 ## Database
 
 `docker compose -f backend/compose.yaml up -d`로 개발 DB를 시작한다. JPA `ddl-auto=validate`이며 schema source of truth는 Flyway다. 적용된 migration을 수정하지 않는다.
