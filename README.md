@@ -52,9 +52,9 @@ npm ci
 npm run dev
 ```
 
-`http://localhost:3000`에서 사용한다. AI는 기본 비활성화다. Gemini Developer API는 dogfooding 기본 provider이며, 사용하려면 `backend/.env.example`을 참고해 환경 변수를 설정한다. Gemini 무료 티어에는 제품 정보와 일반 구매 메모만 보내고 민감한 개인정보·금융·비공개 업무 정보는 입력하지 않는다.
+`http://localhost:3000`에서 사용한다. AI/외부 provider는 기본 비활성화이며 로컬 실행과 테스트에 클라우드 계정은 필요 없다. 실제 API 호출은 [Developer Identity 온보딩](docs/development.md#로컬-설정과-developer-identity)을 따라 Dev Secret Manager를 연결한다. `backend/.env.example`에는 비밀 아닌 설정만 넣고 실제 API key는 넣지 않는다. Gemini 무료 티어에는 제품 정보와 일반 구매 메모만 보내고 민감한 개인정보·금융·비공개 업무 정보는 입력하지 않는다.
 
-Production은 `oidc` profile과 Auth0 Regular Web Application을 사용한다. Auth0 callback은 `{PUBLIC_BASE_URL}/login/oauth2/code/auth0`, logout URL은 `{PUBLIC_BASE_URL}/login`으로 등록하고 `backend/.env.example`의 issuer/client/allowlist 값을 secret manager에서 주입한다. Google connection과 passwordless email OTP를 Auth0 Universal Login에 활성화한다.
+Production은 `oidc` profile과 Auth0 Regular Web Application을 사용한다. Auth0 callback은 `{PUBLIC_BASE_URL}/login/oauth2/code/auth0`, logout URL은 `{PUBLIC_BASE_URL}/login`으로 등록한다. issuer/client ID/allowlist는 운영 설정, client secret/DB 비밀번호/API key는 Prod Secret Manager에서 읽는다. Google connection과 passwordless email OTP를 Auth0 Universal Login에 활성화한다. 운영 호스팅과 서비스 Identity 연결은 [배포 runbook](docs/deployment.md)에 따라 별도 검증해야 한다.
 
 ## Validate
 

@@ -4,7 +4,6 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/decision_assistant}
     username: ${DB_USERNAME:decision_assistant}
-    password: ${DB_PASSWORD:decision_assistant}
   jpa:
     open-in-view: false
     hibernate:
@@ -15,15 +14,15 @@ spring:
       initialize-schema: never
   ai:
     model:
-      chat: ${AI_CHAT_PROVIDER:google-genai}
+      chat: none # Selected by the secret bootstrap only when AI is enabled.
     openai:
-      api-key: ${OPENAI_API_KEY:disabled}
+      api-key: disabled
       chat:
         model: ${OPENAI_MODEL:gpt-5.4-nano}
         store: false
     google:
       genai:
-        api-key: ${GEMINI_API_KEY:disabled}
+        api-key: disabled
         chat:
           model: ${GEMINI_MODEL:gemini-3.5-flash-lite}
     retry:
@@ -34,27 +33,39 @@ spring:
         max-interval: 2s
 
 decision-assistant:
+  secrets:
+    mode: ${DECISION_ASSISTANT_SECRETS_MODE:gcp}
+    dev-project-id: ${DECISION_ASSISTANT_SECRETS_DEV_PROJECT_ID:}
+    prod-project-id: ${DECISION_ASSISTANT_SECRETS_PROD_PROJECT_ID:}
+    versions:
+      gemini-api-key: ${GEMINI_SECRET_VERSION:}
+      openai-api-key: ${OPENAI_SECRET_VERSION:}
+      serper-api-key: ${SERPER_SECRET_VERSION:}
+      firecrawl-api-key: ${FIRECRAWL_SECRET_VERSION:}
+      resend-api-key: ${RESEND_SECRET_VERSION:}
+      auth0-client-secret: ${AUTH0_SECRET_VERSION:}
+      db-password: ${DB_SECRET_VERSION:}
   auth:
     allowed-emails: ${DECISION_ASSISTANT_ALLOWED_EMAILS:}
     public-base-url: ${DECISION_ASSISTANT_PUBLIC_BASE_URL:http://localhost:3000}
   ai:
-    enabled: ${DECISION_ASSISTANT_AI_ENABLED:true}
+    enabled: ${DECISION_ASSISTANT_AI_ENABLED:false}
     provider: ${DECISION_ASSISTANT_AI_PROVIDER:gemini}
     model: ${DECISION_ASSISTANT_AI_MODEL:${GEMINI_MODEL:gemini-3.5-flash-lite}}
     timeout: 30s
   web:
     enabled: ${DECISION_ASSISTANT_WEB_ENABLED:false}
     base-url: ${FIRECRAWL_BASE_URL:https://api.firecrawl.dev/v2}
-    api-key: ${FIRECRAWL_API_KEY:disabled}
+    api-key: disabled
     timeout: 45s
   search:
     enabled: ${DECISION_ASSISTANT_SEARCH_ENABLED:false}
-    api-key: ${SERPER_API_KEY:disabled}
+    api-key: disabled
     monthly-limit: ${DECISION_ASSISTANT_SEARCH_MONTHLY_LIMIT:1000}
   reminders:
     enabled: ${DECISION_ASSISTANT_REMINDERS_ENABLED:false}
     resend-base-url: ${RESEND_BASE_URL:https://api.resend.com}
-    resend-api-key: ${RESEND_API_KEY:disabled}
+    resend-api-key: disabled
     from-address: ${DECISION_ASSISTANT_FROM_EMAIL:Decision Assistant <reminders@example.com>}
 
 springdoc:

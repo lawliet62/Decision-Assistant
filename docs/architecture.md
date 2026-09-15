@@ -47,6 +47,6 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 - source URL은 공개 HTTP(S)만 허용하고 managed provider adapter에 전달한다. 인증 정보, cookie, screenshot, private/local host는 허용하지 않으며 원문 전체는 DB에 저장하지 않는다.
 - AI request storage는 provider 설정에서 끄고 timeout/retry를 제한한다. Gemini 무료 티어 dogfooding에는 저민감 구매 정보만 허용하며, 서버와 UI가 민감 정보 비포함 확인을 요구한다.
 - evidence import와 reminder는 PostgreSQL status row를 scheduled worker가 처리한다. broker를 추가하지 않고 실패·재시작 후 수동 retry와 idempotent email 전송을 지원한다.
-- Actuator는 health/info만 노출한다. secret은 환경 변수로만 주입한다.
+- Actuator는 health/info만 노출한다. 실제 Secret은 backend 초기 설정 단계에서 GCP Secret Manager를 직접 조회해 JVM 메모리에 바인딩한다. local은 Developer ADC로 Dev 프로젝트, 운영은 서비스 Identity로 Prod 프로젝트만 접근한다. 평문 파일/환경 변수 fallback과 일반 CI의 Secret 접근은 없다. 비밀 아닌 설정은 기존 YAML/환경 변수를 사용한다. 상세 전략은 [ADR 0008](decisions/0008-identity-based-secret-management.md), 절차는 [runbook](deployment.md#secret-management)을 따른다.
 
 관련 결정은 [ADR 목록](decisions/)을 참고한다.

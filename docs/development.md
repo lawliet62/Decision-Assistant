@@ -122,41 +122,58 @@ Agent의 GitHub identity는 human 계정과 분리한다. Bot 계정 또는 GitH
 - `npm --prefix frontend run test:e2e`: mock backend와 Chromium으로 guided intake 브라우저 흐름 검증
 - CI는 stacked PR도 검증하도록 모든 PR base branch에서 실행하며, full check 후 Chromium 제품 검색→선택→회고와 실패 복구 E2E를 별도로 실행한다. 외부 API key는 CI에 필요하지 않다.
 
-## 로컬 provider 설정을 파일로 관리하기
+## 로컬 설정과 Developer Identity
 
-`backend/.env.example`은 설정 참고용이며 실제 `backend/.env`는 저장소에 포함하지 않는다. 현재 `npm run dev`, `npm run backend:dev`, 직접 `bootRun`은 `.env`를 자동으로 읽지 않는다. IDE 환경 변수 입력만이 유일한 방법은 아니다. Node.js의 [공식 `--env-file` 옵션](https://nodejs.org/api/cli.html#--env-filefile)으로 기존 backend 실행 스크립트에 명시적으로 주입할 수 있다. 별도 dotenv 의존성이나 runtime 설정 변경은 필요 없다.
+실제 API key는 파일/환경 변수에 넣지 않는다. [ADR 0008](decisions/0008-identity-based-secret-management.md)에 따라 backend가 GCP Secret Manager에서 기동 시 직접 조회한다. `backend/.env.example`은 **비밀 아닌 설정** 예시이며 `.env` 자동 로딩은 없다.
 
-저장소 루트 기준 `backend/.env`를 직접 만들고 필요한 항목만 넣는다. 실제 key는 공유하거나 commit하지 않는다. 아래 `replace-with-...`는 실제 발급 key로 바꾸며, 사용하지 않는 provider는 활성화하지 않는다.
+### Cloud-free 기본 경로
+
+`npm run dev`는 `local` + `offline`으로 실행한다. 로컬 Compose DB의 disposable 비밀번호만 사용하고 AI/검색/수집/메일은 기본 비활성이다. Google Cloud 계정과 ADC 없이 직접 입력·비교를 개발할 수 있다. 외부 기능을 켜면서 offline을 유지하면 조용히 무시하지 않고 기동을 거부한다.
+
+`npm run check`와 일반 CI는 Production/Dev Secret을 읽지 않는다. `test` profile은 Secret 로딩과 AI/메일을 강제로 끄고 provider key에 fixture만 공급한다. 검색/수집 활성화는 `@SpringBootTest(properties=...)`의 명시적 fixture에 한정하며 이 경우 외부 provider/worker를 mock한다. 개발자 shell의 managed mode, API key, feature flag는 이 경로를 활성화하지 못한다. 실제 cloud smoke를 일반 test task에 추가하지 않는다.
+
+### 실제 Dev provider 사용
+
+1. 운영자가 [Secret management runbook](deployment.md#secret-management)에 따라 Dev 프로젝트의 필요한 Secret과 읽기 권한을 준비한다. Prod 읽기 권한은 주지 않는다. 두 프로젝트 ID는 비밀이 아니며 Dev/Prod에서 공유하는 환경별 설정 목록으로 관리한다.
+2. Google Cloud CLI를 설치하고 개발자 계정으로 ADC를 설정한다. `gcloud auth login`만으로 애플리케이션 ADC가 설정되는 것은 아니다.
+
+```powershell
+gcloud auth application-default login
+gcloud auth application-default set-quota-project YOUR_DEV_PROJECT_ID
+```
+
+quota project 사용 권한이 없으면 운영자에게 해당 Dev 프로젝트의 `serviceusage.services.use`에 필요한 최소 권한을 요청한다. 이를 해결하려고 프로젝트 Editor/Owner를 부여하지 않는다. ADC는 로컬 인증 파일을 만들 수 있으므로 OS 계정과 파일 접근을 보호하고 저장소에 복사하지 않는다. 앱 API key나 서비스 계정 JSON private key를 내려받는 방식은 사용하지 않는다. 직접 사용자 ADC가 기본이며 개발자 impersonation은 필요할 때만 사용한다.
+
+3. `backend/.env`에는 다음과 같이 비밀 아닌 값만 기록한다. 실제 프로젝트 ID와 등록된 숫자 버전을 사용한다.
 
 ```dotenv
 SPRING_PROFILES_ACTIVE=local
-DECISION_ASSISTANT_PUBLIC_BASE_URL=http://localhost:3000
+DECISION_ASSISTANT_SECRETS_MODE=gcp
+DECISION_ASSISTANT_SECRETS_DEV_PROJECT_ID=your-decision-dev
+DECISION_ASSISTANT_SECRETS_PROD_PROJECT_ID=your-decision-prod
 DECISION_ASSISTANT_SEARCH_ENABLED=true
-SERPER_API_KEY=replace-with-serper-key
-DECISION_ASSISTANT_SEARCH_MONTHLY_LIMIT=1000
+SERPER_SECRET_VERSION=1
 DECISION_ASSISTANT_WEB_ENABLED=true
-FIRECRAWL_API_KEY=replace-with-firecrawl-key
+FIRECRAWL_SECRET_VERSION=1
 DECISION_ASSISTANT_AI_ENABLED=false
 ```
 
-Serper는 제품명 검색, Firecrawl은 선택한 페이지 수집과 기존 대안 검색을 담당한다. 비교 값의 AI 구조화까지 쓰려면 별도로 `DECISION_ASSISTANT_AI_ENABLED=true`와 `GEMINI_API_KEY`를 구성하고 화면에서 AI 전송에 동의한다. Firecrawl만 켜면 출처·발췌는 수집하지만 AI 기반 비교 값 구조화는 수행하지 않는다. Firecrawl/AI 비용은 Serper 월 1,000회 cap에 포함되지 않는다.
+Prod 프로젝트가 아직 준비되지 않았다면 계획된 별도 ID를 기록할 수 있지만 Prod 설정 완료로 취급하지 않는다. 앱은 local에서 Dev 프로젝트만 조회한다. 프로젝트 ID 설정 자체는 IAM 격리의 대체물이 아니다.
 
-첫 번째 터미널에서, 저장소 루트 기준:
+4. 저장소 루트의 첫 터미널에서 실행한다.
 
 ```powershell
 docker compose -f backend/compose.yaml up -d
 node --env-file=backend/.env scripts/gradle.mjs bootRun
 ```
 
-두 번째 터미널에서:
+별도 터미널에서 `npm.cmd --prefix frontend run dev`를 실행한다. IntelliJ 직접 실행에는 같은 **비밀 아닌 설정**을 전달한다. 조회된 키는 JVM 안에만 들어가며 Node/Frontend의 환경으로 export하지 않는다. 기존 shell에 남은 `*_API_KEY`, `AUTH0_CLIENT_SECRET`, `DB_PASSWORD`는 제거해야 한다. 평문 입력이 남으면 기동이 거부된다. 설정 변경 후 backend를 재시작한다.
 
-```powershell
-npm.cmd --prefix frontend run dev
-```
+Serper는 제품명 검색, Firecrawl은 페이지 수집과 기존 대안 검색이다. AI 구조화는 `DECISION_ASSISTANT_AI_ENABLED=true`, `GEMINI_SECRET_VERSION`과 Dev의 `gemini-api-key`가 추가로 필요하다. OpenAI를 선택하면 `DECISION_ASSISTANT_AI_PROVIDER=openai`, `DECISION_ASSISTANT_AI_MODEL`/`OPENAI_MODEL`, `OPENAI_SECRET_VERSION`을 설정한다. `AI_CHAT_PROVIDER`는 더 이상 사용하지 않고 선택한 provider에 맞춰 Spring AI client를 설정한다. 기존 사용자 전송 동의와 provider별 비용 정책은 변하지 않는다.
 
-이 방법은 backend에만 파일을 로드하므로 frontend 실행 프로세스에 backend key를 불필요하게 상속시키지 않는다. 기존 통합 `scripts/dev.mjs`는 자식 프로세스 모두에 환경을 상속하므로 여기서는 backend/frontend를 분리 실행한다. IntelliJ에서 직접 Spring/Gradle을 실행하는 구성에는 위 명령의 환경이 자동 적용되지 않는다.
+공유 Dev DB는 `DB_URL`, `DB_USERNAME`, `DB_SECRET_VERSION`과 `SPRING_DOCKER_COMPOSE_ENABLED=false`를 사용한다. 비밀번호는 Dev의 `db-password`에서 읽는다. Compose의 connection details가 공유 DB 설정을 덮어쓰지 않도록 통합 `npm run dev` 대신 backend를 개별 실행한다.
 
-이미 부모 프로세스에 설정된 환경 변수가 `.env`보다 우선한다. 파일을 수정했는데 반영되지 않으면 기존 IDE/터미널 환경 변수의 중복을 확인하고 backend를 재시작한 뒤 브라우저를 새로고침한다. `.env.example`의 `oidc`와 production origin을 로컬 파일에 그대로 복사하지 않는다. `git check-ignore backend/.env`로 Git 제외 여부를 확인할 수 있다. `.env`는 평문 파일이며 Git 제외는 암호화가 아니다. production에서는 배포 환경의 secret 주입을 사용한다.
+문제 해결: `IDENTITY_TYPE_NOT_ALLOWED`는 잘못된 ADC 종류, `GCP_PERMISSION_DENIED`는 IAM/API/quota project, `VERSION_REQUIRED_*`는 버전 누락, `PLAINTEXT_INPUT_*`는 예전 실행 설정을 먼저 확인한다. 오류 해결을 위해 Secret 값·ADC 파일·전체 환경을 로그나 PR에 붙이지 않는다. [ADC 공식 문서](https://docs.cloud.google.com/docs/authentication/application-default-credentials)를 참고한다.
 
 ## Database
 

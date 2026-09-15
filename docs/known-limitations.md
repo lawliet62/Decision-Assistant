@@ -7,7 +7,8 @@
 
 ## 배포 전 반드시 해결
 
-- production secret 관리, TLS, CORS/host 정책, backup/restore
+- GCP Secret Manager 초기 로더는 구현했지만 실제 Dev/Prod 프로젝트·IAM·Secret 등록·Data Access 로그와 smoke는 운영자가 검증해야 한다. 운영 호스팅과 Workload Identity 연결은 아직 미정이다. SDK/오프라인 테스트 통과를 production 연결 완료로 취급하지 않는다.
+- TLS, CORS/host 정책, backup/restore
 - 개인정보/AI provider 고지와 retention/delete 정책
 - rate limit과 AI 비용 한도
 
