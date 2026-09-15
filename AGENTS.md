@@ -34,6 +34,7 @@
 
 ## 공통 규칙
 
+- PR 제목·본문을 포함한 모든 문서화 작업은 한국어로 작성한다. 기술 용어, 고유명사, 코드 식별자, 명령어와 경로 등은 정확성과 가독성을 위해 원문을 사용할 수 있으며, 모든 단어를 한글로 옮길 필요는 없다.
 - 현재 구조는 modular monolith다. 배포 단위나 module을 근거 없이 추가하지 않는다.
 - API 변경 시 backend OpenAPI, `docs/api/openapi.json`, generated frontend types를 함께 갱신한다.
 - schema 변경은 기존 Flyway migration을 수정하지 않고 새 migration으로 추가한다.
