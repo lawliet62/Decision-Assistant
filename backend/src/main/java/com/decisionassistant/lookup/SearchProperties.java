@@ -8,6 +8,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties("decision-assistant.search")
 public record SearchProperties(boolean enabled, String apiKey, @Min(1) @Max(1000) int monthlyLimit) {
+    @Override public String toString() { return "SearchProperties[enabled=" + enabled + ", apiKey=[REDACTED], monthlyLimit=" + monthlyLimit + "]"; }
     public boolean configured() {
         return enabled && apiKey != null && !apiKey.isBlank() && !"disabled".equals(apiKey);
     }

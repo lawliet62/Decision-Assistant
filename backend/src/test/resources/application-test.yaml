@@ -1,0 +1,16 @@
+# No cloud account, ADC or production secret is required by the test suite.
+decision-assistant:
+  secrets:
+    mode: offline
+  ai:
+    enabled: false
+  web:
+    enabled: false
+  search:
+    enabled: false
+  reminders:
+    enabled: false
+spring:
+  ai:
+    model:
+      chat: none

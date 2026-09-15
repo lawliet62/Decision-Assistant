@@ -9,5 +9,6 @@
 - [Deployment runbook](deployment.md): MVP 설정·검색 비용 한도·장애 대응·staging smoke
 - [Known limitations](known-limitations.md): 배포 blocker와 deferred decision
 - [ADR](decisions/): 장기간 유지할 architecture decision과 trade-off
+- [Identity-based secrets](decisions/0008-identity-based-secret-management.md): Dev/Prod 격리, runtime 조회와 cloud-free 테스트 전략
 
 AGENTS.md는 작업 시 반드시 필요한 짧은 지침과 링크만 담는다. 설계의 이유와 상세 설명은 이곳에서 관리한다.

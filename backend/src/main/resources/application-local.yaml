@@ -6,5 +6,11 @@ server:
         secure: false
 
 decision-assistant:
+  secrets:
+    mode: ${DECISION_ASSISTANT_SECRETS_MODE:offline}
   auth:
     public-base-url: http://localhost:3000
+
+spring:
+  datasource:
+    password: decision_assistant # Disposable Compose database only; not a provider secret.
