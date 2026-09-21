@@ -45,6 +45,7 @@ class DiscoveryApiIntegrationTest {
     @Autowired ApplicationUserRepository users;
     @Autowired DiscoveryWorker worker;
     @Autowired ProductDiscoveryRepository runs;
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer discoverer;
@@ -78,10 +79,54 @@ class DiscoveryApiIntegrationTest {
         return authentication(UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
     private String create() throws Exception {
-        var json = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY))
+        return create(BODY);
+    }
+    private String create(String body) throws Exception {
+        var json = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.options.length()").value(0))
                 .andExpect(jsonPath("$.discovery.status").value("PENDING")).andReturn().getResponse().getContentAsString();
         return mapper.readTree(json).get("id").asText();
+    }
+
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> selectedUses() {
+        return java.util.stream.Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of("\"uses\":[]", List.of()),
+                org.junit.jupiter.params.provider.Arguments.of("\"uses\":[\"운동\"]", List.of("운동")),
+                org.junit.jupiter.params.provider.Arguments.of("\"uses\":[\"운동\",\"출퇴근\",\"운동\"]", List.of("출퇴근", "운동")),
+                org.junit.jupiter.params.provider.Arguments.of("\"uses\":[\"음악\",\"통화\",\"운동\",\"출퇴근\"]", List.of("출퇴근", "운동", "통화", "음악")),
+                org.junit.jupiter.params.provider.Arguments.of("\"use\":\"출퇴근\",\"uses\":[]", List.of()),
+                org.junit.jupiter.params.provider.Arguments.of("\"use\":\"출퇴근\",\"uses\":[\"운동\"]", List.of("운동")));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("selectedUses")
+    void multipleUsesArePersistedAndConsideredInOneRequest(String fields, List<String> expected) throws Exception {
+        var id = create(BODY.replace("\"use\":\"출퇴근\"", fields));
+        var conditions = runs.findById(UUID.fromString(id)).orElseThrow().conditions();
+        assertThat(conditions.uses()).containsExactlyElementsOf(expected);
+        assertThat(conditions.use()).isNull();
+        var response = mapper.readTree(mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertThat(response.path("context").path("intendedUse").asText())
+                .contains(expected.isEmpty() ? "용도 미정" : String.join(" · ", expected));
+        worker.processNext();
+        assertThat(runs.findById(UUID.fromString(id)).orElseThrow().status()).isEqualTo(ProductDiscovery.Status.SUCCEEDED);
+        verify(search, times(1)).search(argThat(query -> expected.stream().allMatch(query::contains)), eq(5));
+        verify(discoverer, times(1)).discover(argThat(input -> input.uses().equals(expected)));
+    }
+
+    @Test void rejectsUnknownBlankNullAndTooManyUsesBeforeExternalCalls() throws Exception {
+        for (var values : List.of("[\"게임\"]", "[\"출퇴근\",\"게임\"]")) {
+            mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content(BODY.replace("\"use\":\"출퇴근\"", "\"uses\":" + values)))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        for (var values : List.of("[null]", "[\"\"]", "[\"출퇴근\",\"운동\",\"통화\",\"음악\",\"출퇴근\"]")) {
+            mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content(BODY.replace("\"use\":\"출퇴근\"", "\"uses\":" + values)))
+                    .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(search, web, discoverer);
     }
 
     @Test void discoveryPersistsSourcesRequiresApprovalAndCanChooseWithoutEvaluation() throws Exception {
@@ -129,6 +174,9 @@ class DiscoveryApiIntegrationTest {
 
     @Test void failureRequiresExplicitVersionedRetryAndRetainsExistingResults() throws Exception {
         var id = create();
+        // 기존 JSONB에는 uses 없이 단일 use만 저장돼 있다.
+        jdbc.update("UPDATE product_discoveries SET conditions = (conditions - 'uses') || '{\"use\":\"출퇴근\"}'::jsonb WHERE decision_id = ?", UUID.fromString(id));
+        assertThat(runs.findById(UUID.fromString(id)).orElseThrow().conditions().uses()).isNull();
         when(web.scrape(anyString())).thenThrow(new IllegalStateException("provider failure"));
         worker.processNext(); worker.processNext();
         var run = runs.findById(UUID.fromString(id)).orElseThrow();
@@ -142,6 +190,7 @@ class DiscoveryApiIntegrationTest {
         doReturn(new WebEvidenceProvider.Page("비교", "Buds A 가격 100,000 KRW. Buds B 가격 150,000 KRW.")).when(web).scrape(anyString());
         worker.processNext();
         assertThat(runs.findById(UUID.fromString(id)).orElseThrow().status()).isEqualTo(ProductDiscovery.Status.SUCCEEDED);
+        verify(discoverer).discover(argThat(input -> input.uses().equals(List.of("출퇴근"))));
     }
 
     @Test void concurrentWorkersClaimOnceAndPartialRetryKeepsAcceptedFacts() throws Exception {

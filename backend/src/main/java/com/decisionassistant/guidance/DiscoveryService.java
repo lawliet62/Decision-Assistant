@@ -24,7 +24,8 @@ public class DiscoveryService {
                                                   DiscoveryContracts.DiscoveryRequest request) {
         var template = templates.required(key);
         if (!template.version().equals(request.templateVersion())
-                || (request.use() != null && !template.uses().contains(request.use()))
+                || request.selectedUses().size() > 4
+                || request.selectedUses().stream().anyMatch(use -> use == null || !template.uses().contains(use))
                 || (request.compatibility() != null && !template.compatibility().contains(request.compatibility()))) {
             throw new InvalidDecisionException(List.of("최신 템플릿의 선택 항목을 사용하세요."));
         }

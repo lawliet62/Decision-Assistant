@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import process from "node:process";
+import { backendEnvironment } from "./backend-env.mjs";
 
 const isWindows = process.platform === "win32";
 const root = process.cwd();
@@ -65,10 +66,7 @@ async function main() {
   const backendProcess = run(backend.command, backend.args, {
     cwd: `${root}/backend`,
     keepAlive: true,
-    env: {
-      ...process.env,
-      SPRING_PROFILES_ACTIVE: process.env.SPRING_PROFILES_ACTIVE ?? "local",
-    },
+    env: backendEnvironment(["bootRun"]),
   });
   const frontend = frontendCommand();
   const frontendProcess = run(frontend.command, frontend.args, {

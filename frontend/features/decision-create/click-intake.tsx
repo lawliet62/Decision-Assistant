@@ -16,7 +16,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
   const router = useRouter();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [category, setCategory] = useState(initialCategory ?? "EARBUDS");
-  const [use, setUse] = useState<string>();
+  const [uses, setUses] = useState<string[]>([]);
   const [budget, setBudget] = useState<number>();
   const [compatibility, setCompatibility] = useState<string>();
   const [note, setNote] = useState("");
@@ -47,7 +47,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
     try {
       const { data, error } = await api.POST("/api/v1/decisions", { body: {
         templateKey: template.key, intentText: note || undefined,
-        discovery: { templateVersion: template.version!, use, maxBudget: budget, compatibility,
+        discovery: { templateVersion: template.version!, uses: (template.uses ?? []).filter(value => uses.includes(value)), maxBudget: budget, compatibility,
           searchConsent: consents.search, collectionConsent: consents.collection,
           aiConsent: consents.ai, sensitiveDataAcknowledged: consents.sensitive },
       } });
@@ -64,9 +64,9 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
     </div>
     {manual ? <DecisionCreateForm /> : <form onSubmit={submit} className="space-y-7 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
       <fieldset disabled={pending} className="space-y-7">
-        <ChoiceGroup title="제품군" options={templates.map(item => ({ value: item.key!, label: item.label! }))} selected={template?.key} onSelect={value => { setCategory(value!); setUse(undefined); setBudget(undefined); setCompatibility(undefined); }} />
+        <ChoiceGroup title="제품군" options={templates.map(item => ({ value: item.key!, label: item.label! }))} selected={template?.key} onSelect={value => { setCategory(value!); setUses([]); setBudget(undefined); setCompatibility(undefined); }} />
         {template && <>
-          <ChoiceGroup title="주로 어떻게 쓰나요?" options={[{ label: "아직 모르겠어요" }, ...(template.uses ?? []).map(value => ({ value, label: value }))]} selected={use} onSelect={setUse} />
+          <ChoiceGroup title="주로 어떻게 쓰나요? (복수 선택)" options={[{ label: "아직 모르겠어요" }, ...(template.uses ?? []).map(value => ({ value, label: value }))]} selected={uses} onSelect={value => setUses(current => value === undefined ? [] : current.includes(value) ? current.filter(item => item !== value) : [...current, value])} />
           <ChoiceGroup title="최대 예산" options={[{ label: "제한 없음" }, ...(template.budgets ?? []).map(value => ({ value: String(value), label: `${value / 10000}만원` }))]} selected={budget === undefined ? undefined : String(budget)} onSelect={value => setBudget(value ? Number(value) : undefined)} />
           <ChoiceGroup title="필요한 호환성" options={[{ label: "상관없음" }, ...(template.compatibility ?? []).map(value => ({ value, label: value }))]} selected={compatibility} onSelect={setCompatibility} />
           <details className="text-sm"><summary className="cursor-pointer text-zinc-600">상세 조건 (선택)</summary><div className="mt-3 space-y-3">
@@ -92,6 +92,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
   </div>;
 }
 
-function ChoiceGroup({ title, options, selected, onSelect }: { title: string; options: { value?: string; label: string }[]; selected?: string; onSelect: (value?: string) => void }) {
-  return <fieldset><legend className="mb-3 font-semibold">{title}</legend><div className="flex flex-wrap gap-2">{options.map(option => <button key={option.label} type="button" aria-pressed={selected === option.value} onClick={() => onSelect(option.value)} className={chip + (selected === option.value ? "border-emerald-700 bg-emerald-50 text-emerald-950" : "border-zinc-200 hover:border-zinc-400")}>{option.label}</button>)}</div></fieldset>;
+function ChoiceGroup({ title, options, selected, onSelect }: { title: string; options: { value?: string; label: string }[]; selected?: string | string[]; onSelect: (value?: string) => void }) {
+  const isSelected = (value?: string) => Array.isArray(selected) ? value === undefined ? selected.length === 0 : selected.includes(value) : selected === value;
+  return <fieldset><legend className="mb-3 font-semibold">{title}</legend><div className="flex flex-wrap gap-2">{options.map(option => <button key={option.label} type="button" aria-pressed={isSelected(option.value)} onClick={() => onSelect(option.value)} className={chip + (isSelected(option.value) ? "border-emerald-700 bg-emerald-50 text-emerald-950" : "border-zinc-200 hover:border-zinc-400")}>{option.label}</button>)}</div></fieldset>;
 }

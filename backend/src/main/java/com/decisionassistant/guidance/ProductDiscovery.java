@@ -22,7 +22,7 @@ public class ProductDiscovery {
     @Column(name = "input_tokens") private Long inputTokens;
     @Column(name = "output_tokens") private Long outputTokens;
     @Column(name = "latency_ms") private Long latencyMs;
-    @Column(name = "prompt_version", nullable = false, length = 50) private String promptVersion = "discovery-v1";
+    @Column(name = "prompt_version", nullable = false, length = 50) private String promptVersion = DiscoveryContracts.PROMPT_VERSION;
     @Column(name = "schema_version", nullable = false, length = 50) private String schemaVersion = "discovery-v1";
     protected ProductDiscovery() {}
     public ProductDiscovery(UUID decisionId, DiscoveryContracts.DiscoveryRequest conditions) {
@@ -32,6 +32,7 @@ public class ProductDiscovery {
     public void running() { status = Status.RUNNING; updatedAt = Instant.now(); }
     public void finish(Status status, String error) { this.status = status; this.error = error; updatedAt = Instant.now(); }
     public void usage(String provider, String model, long input, long output, long latency) {
+        promptVersion = DiscoveryContracts.PROMPT_VERSION;
         this.provider = provider; this.model = model; inputTokens = input; outputTokens = output; latencyMs = latency;
     }
     public UUID decisionId() { return decisionId; }

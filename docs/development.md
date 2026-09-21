@@ -116,7 +116,7 @@ Agent의 GitHub identity는 human 계정과 분리한다. Bot 계정 또는 GitH
 ## Commands
 
 - `npm run dev`: Docker PostgreSQL과 backend `local` 인증 프로필/frontend 개발 서버를 함께 시작한다. 종료해도 PostgreSQL 컨테이너는 유지한다.
-- `npm run check:quick`: backend unit + frontend lint/typecheck
+- `npm run check:quick`: 개발 설정 로더 테스트 + backend unit + frontend lint/typecheck
 - `npm run check`: quick + Testcontainers PostgreSQL integration + OpenAPI drift + frontend production build
 - `npm --prefix frontend run api:generate`: committed OpenAPI에서 TypeScript type 재생성
 - `npm --prefix frontend run test:e2e`: mock backend와 Chromium으로 guided intake 브라우저 흐름 검증
@@ -124,11 +124,11 @@ Agent의 GitHub identity는 human 계정과 분리한다. Bot 계정 또는 GitH
 
 ## 로컬 설정과 Developer Identity
 
-실제 API key는 파일/환경 변수에 넣지 않는다. [ADR 0008](decisions/0008-identity-based-secret-management.md)에 따라 backend가 GCP Secret Manager에서 기동 시 직접 조회한다. `backend/.env.example`은 **비밀 아닌 설정** 예시이며 `.env` 자동 로딩은 없다.
+실제 API key는 파일/환경 변수에 넣지 않는다. [ADR 0008](decisions/0008-identity-based-secret-management.md)에 따라 backend가 GCP Secret Manager에서 기동 시 직접 조회한다. `backend/.env.example`은 **비밀 아닌 설정** 예시다. `npm run dev`와 `npm run backend:dev`는 `backend/.env`를 자동으로 읽어 backend 자식 프로세스에만 전달한다. IntelliJ의 npm 실행도 동일하다. 파일에 작성한 활성화 설정이 실제 개발 실행에 반영되도록 공통 로더를 사용하며, frontend나 테스트·빌드 실행에는 파일 설정을 주입하지 않는다. 우선순위는 실행 환경변수 → 파일 → 기본값이다. 파일이 없으면 기본값을 사용하며 읽기 오류는 실패로 표시한다.
 
 ### Cloud-free 기본 경로
 
-`npm run dev`는 `local` + `offline`으로 실행한다. 로컬 Compose DB의 disposable 비밀번호만 사용하고 AI/검색/수집/메일은 기본 비활성이다. Google Cloud 계정과 ADC 없이 직접 입력·비교를 개발할 수 있다. 외부 기능을 켜면서 offline을 유지하면 조용히 무시하지 않고 기동을 거부한다.
+파일·실행 환경에 별도 설정이 없으면 `npm run dev`는 `local` + `offline`으로 실행한다. 로컬 Compose DB의 disposable 비밀번호만 사용하고 AI/검색/수집/메일은 기본 비활성이다. Google Cloud 계정과 ADC 없이 직접 입력·비교를 개발할 수 있다. 외부 기능을 켜면서 offline을 유지하면 조용히 무시하지 않고 기동을 거부한다.
 
 `npm run check`와 일반 CI는 Production/Dev Secret을 읽지 않는다. `test` profile은 Secret 로딩과 AI/메일을 강제로 끄고 provider key에 fixture만 공급한다. 검색/수집 활성화는 `@SpringBootTest(properties=...)`의 명시적 fixture에 한정하며 이 경우 외부 provider/worker를 mock한다. 개발자 shell의 managed mode, API key, feature flag는 이 경로를 활성화하지 못한다. 실제 cloud smoke를 일반 test task에 추가하지 않는다.
 
@@ -163,11 +163,10 @@ Prod 프로젝트가 아직 준비되지 않았다면 계획된 별도 ID를 기
 4. 저장소 루트의 첫 터미널에서 실행한다.
 
 ```powershell
-docker compose -f backend/compose.yaml up -d
-node --env-file=backend/.env scripts/gradle.mjs bootRun
+npm run dev
 ```
 
-별도 터미널에서 `npm.cmd --prefix frontend run dev`를 실행한다. IntelliJ 직접 실행에는 같은 **비밀 아닌 설정**을 전달한다. 조회된 키는 JVM 안에만 들어가며 Node/Frontend의 환경으로 export하지 않는다. 기존 shell에 남은 `*_API_KEY`, `AUTH0_CLIENT_SECRET`, `DB_PASSWORD`는 제거해야 한다. 평문 입력이 남으면 기동이 거부된다. 설정 변경 후 backend를 재시작한다.
+backend만 실행하려면 DB를 준비한 뒤 `npm run backend:dev`를 사용한다. Gradle 또는 IntelliJ JVM 직접 실행에는 같은 **비밀 아닌 설정**을 명시적으로 전달한다. 조회된 키는 JVM 안에만 들어가며 Node/Frontend의 환경으로 export하지 않는다. 기존 shell에 남은 `*_API_KEY`, `AUTH0_CLIENT_SECRET`, `DB_PASSWORD`는 제거해야 한다. 평문 입력이 남으면 기동이 거부된다. 설정 변경 후 backend를 재시작한다.
 
 Serper는 제품명 검색, Firecrawl은 페이지 수집과 기존 대안 검색이다. AI 구조화는 `DECISION_ASSISTANT_AI_ENABLED=true`, `GEMINI_SECRET_VERSION`과 Dev의 `gemini-api-key`가 추가로 필요하다. OpenAI를 선택하면 `DECISION_ASSISTANT_AI_PROVIDER=openai`, `DECISION_ASSISTANT_AI_MODEL`/`OPENAI_MODEL`, `OPENAI_SECRET_VERSION`을 설정한다. `AI_CHAT_PROVIDER`는 더 이상 사용하지 않고 선택한 provider에 맞춰 Spring AI client를 설정한다. 기존 사용자 전송 동의와 provider별 비용 정책은 변하지 않는다.
 

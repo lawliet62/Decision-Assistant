@@ -21,3 +21,7 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 - 기존 Decision 생성에 `selectedSources: [{url, name?}]`를 추가한다. 과거 `sourceUrls`와 동시에 제공하지 않는다. 기존 `POST /decisions/{id}/sources`도 optional `name`을 받는다. 선택한 이름은 표시용이며 상품 동일성이나 검색 snippet을 검증하지 않는다.
 - `GuidanceData.webConsent`는 해당 비교의 기존 수집 동의를 화면에 설명하기 위한 값이다. Serper 검색 동의로 재사용하지 않는다. 기존 enum에 `EARBUDS`가 추가되며 기존 template 값의 의미는 바뀌지 않는다.
 - 검색 장애는 ProblemDetail의 `code`와 안전한 `detail`을 반환한다. 429/502/503/504별 의미는 [운영 문서](deployment.md)를 따른다. client는 실패를 자동 재시도하지 않는다.
+
+## 추천 용도 선택
+
+`DiscoveryRequest.uses`는 카테고리에서 제공하는 용도 배열(최대 4개)이다. 빈 배열은 용도 미정이며 중복은 제거하고 템플릿 순서로 정규화한다. 새 화면은 `uses`만 보낸다. 기존 `use`는 deprecated 호환 필드로, `uses`가 없거나 null일 때만 사용한다. 두 필드가 함께 있으면 빈 배열을 포함해 `uses`가 우선한다. 기존 JSONB 데이터도 같은 규칙으로 조회·재시도하며 일괄 재작성이나 템플릿 버전 변경은 하지 않는다.

@@ -57,8 +57,8 @@ public class DiscoveryWorker {
             service.validate(work.category(), work.conditions());
             if (ai == null) throw new IllegalStateException("AI unavailable");
             var template = templates.required(work.category());
-            var condition = work.conditions();
-            var query = template.label() + " 제품 비교 한국 " + Objects.toString(condition.use(), "")
+            var condition = work.conditions().normalized(template);
+            var query = template.label() + " 제품 비교 한국 " + String.join(" ", condition.uses())
                     + (condition.maxBudget() == null ? "" : " " + condition.maxBudget().toPlainString() + "원 이하")
                     + " " + Objects.toString(condition.compatibility(), "");
             var pages = new ArrayList<SourcePage>();
@@ -72,7 +72,7 @@ public class DiscoveryWorker {
                 } catch (RuntimeException ex) { failed = true; }
             }
             if (pages.isEmpty()) throw new IllegalStateException("No usable source pages");
-            var input = new DiscoveryInput(template.label(), condition.use(), condition.maxBudget(),
+            var input = new DiscoveryInput(template.label(), condition.uses(), condition.maxBudget(),
                     condition.compatibility(), template.facts(), pages);
             var result = executor.call(() -> ai.discover(input));
             var verified = validateProducts(work.id(), result.value(), input);
@@ -134,7 +134,7 @@ public class DiscoveryWorker {
                         fact.quote(), page.fetchedAt(), "UNREVIEWED"));
             }
             var candidate = new CandidateSuggestion(decisionId, product.name().strip(), source.url(),
-                    truncate(Objects.toString(product.reason(), "조건과 주요 정보를 확인해 보세요."), 500), "discovery-v1", Instant.now());
+                    truncate(Objects.toString(product.reason(), "조건과 주요 정보를 확인해 보세요."), 500), PROMPT_VERSION, Instant.now());
             candidate.discovered(new ArrayList<>(facts.values()));
             candidate.sourceEvidence(product.modelQuote(), source.fetchedAt()); result.add(candidate);
             if (result.size() == 5) break;

@@ -8,7 +8,7 @@ const templates = [
   ["TABLET", "태블릿", "필기", 300000, "iPadOS", ["가격", "화면", "펜 지원", "무게"]],
   ["MONITOR", "모니터", "사무", 200000, "HDMI", ["가격", "크기", "해상도", "주사율"]],
   ["EARBUDS", "무선 이어폰", "출퇴근", 100000, "iOS", ["가격", "형태", "ANC 지원", "무게"]],
-].map(([key, label, use, budget, compatibility, facts]) => ({ key, label, version: "intake-v1", uses: [use], budgets: [budget], compatibility: [compatibility], facts }));
+].map(([key, label, use, budget, compatibility, facts]) => ({ key, label, version: "intake-v1", uses: [use, key === "EARBUDS" ? "운동" : key === "TABLET" ? "그림" : "게임"], budgets: [budget], compatibility: [compatibility], facts }));
 const criteria = ["가격", "음질", "착용감", "노이즈 캔슬링", "배터리 적합도"].map((name, index) => ({
   id: `33333333-3333-3333-3333-33333333333${index}`, name,
   kind: index === 0 ? "NUMERIC_UTILITY" : "RATING_1_TO_5",

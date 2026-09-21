@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.*;
 class DiscoveryWorkerTest {
     private final SourcePage page = new SourcePage("https://example.com/review", "비교",
             "Buds A 가격 100,000 KRW. Buds B 무게 5 g.", Instant.now());
-    private final DiscoveryInput input = new DiscoveryInput("무선 이어폰", "출퇴근", null, null,
+    private final DiscoveryInput input = new DiscoveryInput("무선 이어폰", List.of("출퇴근"), null, null,
             List.of("가격", "무게"), List.of(page));
 
     @Test void rejectsInventedProductsSourcesValuesAndSubjectiveRatings() {

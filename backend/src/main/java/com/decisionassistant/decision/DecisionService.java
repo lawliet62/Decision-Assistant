@@ -109,9 +109,9 @@ public class DecisionService {
         if ((request.selectedSources() != null && !request.selectedSources().isEmpty())
                 || (request.sourceUrls() != null && !request.sourceUrls().isEmpty()))
             throw new InvalidDecisionException(List.of("추천 시작과 직접 후보 추가는 별도로 요청하세요."));
-        var conditions = request.discovery();
-        var template = discoveryService.validate(request.templateKey(), conditions);
-        var intent = template.label() + " · " + java.util.Objects.toString(conditions.use(), "용도 미정")
+        var template = discoveryService.validate(request.templateKey(), request.discovery());
+        var conditions = request.discovery().normalized(template);
+        var intent = template.label() + " · " + (conditions.uses().isEmpty() ? "용도 미정" : String.join(" · ", conditions.uses()))
                 + (conditions.maxBudget() == null ? "" : " · 최대 " + conditions.maxBudget().toPlainString() + "원")
                 + (conditions.compatibility() == null ? "" : " · " + conditions.compatibility());
         var now = Instant.now(clock);

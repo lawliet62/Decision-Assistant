@@ -525,7 +525,12 @@ export interface components {
         };
         DiscoveryRequest: {
             templateVersion: string;
+            /**
+             * @deprecated
+             * @description uses가 없을 때 사용하는 기존 단일 용도
+             */
             use?: string;
+            uses?: string[];
             maxBudget?: number;
             compatibility?: string;
             searchConsent: boolean;
