@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import process from "node:process";
+import { backendEnvironment } from "./backend-env.mjs";
 
 const tasks = process.argv.slice(2);
 if (tasks.length === 0) {
@@ -13,9 +14,7 @@ const executable = isWindows ? (process.env.ComSpec ?? "cmd.exe") : wrapper;
 const args = isWindows
   ? ["/d", "/s", "/c", wrapper, "-p", "backend", ...tasks]
   : ["-p", "backend", ...tasks];
-const env = tasks.includes("bootRun")
-  ? { ...process.env, SPRING_PROFILES_ACTIVE: process.env.SPRING_PROFILES_ACTIVE ?? "local" }
-  : process.env;
+const env = backendEnvironment(tasks);
 const result = spawnSync(executable, args, { stdio: "inherit", shell: false, env });
 
 if (result.error) {

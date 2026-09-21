@@ -15,11 +15,14 @@ for (const [key, name, use] of [["LAPTOP", "노트북", "학업"], ["PHONE", "�
     await page.getByRole("navigation", { name: "제품군 선택" }).getByRole("link", { name, exact: false }).click();
     await expect(page.getByRole("button", { name, exact: true })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: use, exact: true }).click();
+    const secondUse = key === "EARBUDS" ? "운동" : key === "TABLET" ? "그림" : "게임";
+    await page.getByRole("button", { name: secondUse, exact: true }).click();
+    await expect(page.getByRole("button", { name: use, exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("button", { name: "추천 제품 보기", exact: true })).toBeDisabled();
     await consent(page);
     const sent = page.waitForRequest(request => request.method() === "POST" && request.url().endsWith("/api/v1/decisions"));
     await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
-    expect((await sent).postDataJSON()).toMatchObject({ templateKey: key, discovery: { use, searchConsent: true } });
+    expect((await sent).postDataJSON()).toMatchObject({ templateKey: key, discovery: { uses: [use, secondUse], searchConsent: true } });
     await expect(page.getByRole("heading", { name: "추천 제품", exact: true })).toBeVisible();
     await page.reload();
     for (let index = 0; index < 2; index++) await page.getByRole("button", { name: "비교에 추가", exact: true }).first().click();
@@ -39,6 +42,29 @@ for (const [key, name, use] of [["LAPTOP", "노트북", "학업"], ["PHONE", "�
     await expect(page.getByRole("heading", { name: "사용 후 회고", exact: true })).toBeVisible();
   });
 }
+
+test("복수 용도 해제와 미정 선택 및 제품군 변경", async ({ page }) => {
+  await page.goto("/decisions/new");
+  const unknown = page.getByRole("button", { name: "아직 모르겠어요", exact: true });
+  const commute = page.getByRole("button", { name: "출퇴근", exact: true });
+  const exercise = page.getByRole("button", { name: "운동", exact: true });
+  await expect(unknown).toHaveAttribute("aria-pressed", "true");
+  await commute.click(); await exercise.click(); await commute.click();
+  await expect(commute).toHaveAttribute("aria-pressed", "false");
+  await expect(exercise).toHaveAttribute("aria-pressed", "true");
+  await expect(unknown).toHaveAttribute("aria-pressed", "false");
+  await unknown.click();
+  await expect(exercise).toHaveAttribute("aria-pressed", "false");
+  await commute.click(); await commute.click();
+  await expect(unknown).toHaveAttribute("aria-pressed", "true");
+  await commute.click();
+  await page.getByRole("button", { name: "노트북", exact: true }).click();
+  await expect(unknown).toHaveAttribute("aria-pressed", "true");
+  await consent(page);
+  const sent = page.waitForRequest(request => request.method() === "POST" && request.url().endsWith("/api/v1/decisions"));
+  await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
+  expect((await sent).postDataJSON()).toMatchObject({ templateKey: "LAPTOP", discovery: { uses: [] } });
+});
 
 test("추천 비활성화여도 직접 추가 가능", async ({ page }) => {
   await page.route("**/api/v1/ai/capabilities", route => route.fulfill({ json: { enabled: false, provider: "gemini" } }));
