@@ -8,6 +8,7 @@
 - [Development workflow](development.md): golden commands와 변경 절차
 - [Deployment runbook](deployment.md): MVP 설정·검색 비용 한도·장애 대응·staging smoke
 - [Known limitations](known-limitations.md): 배포 blocker와 deferred decision
+- [클릭 중심 추천](decisions/0009-click-first-product-discovery.md): 템플릿 진입·외부 동의·표시용 사양 경계
 - [ADR](decisions/): 장기간 유지할 architecture decision과 trade-off
 - [Identity-based secrets](decisions/0008-identity-based-secret-management.md): Dev/Prod 격리, runtime 조회와 cloud-free 테스트 전략
 

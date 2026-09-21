@@ -18,7 +18,7 @@ export default async function DecisionPage({ params }: { params: Promise<{ decis
   }
   return (
     <main className="mx-auto min-h-screen w-full max-w-6xl px-5 py-10">
-      <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-900">← Decision 목록</Link>
+      <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-900">← 비교 목록</Link>
       {decision.guidance
         ? <DecisionEditor initialDecision={decision} />
         : <LegacyDecisionEditor initialDecision={decision} />}

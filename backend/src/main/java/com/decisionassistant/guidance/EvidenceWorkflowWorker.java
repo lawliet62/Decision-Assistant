@@ -148,6 +148,7 @@ public class EvidenceWorkflowWorker {
     }
 
     private void discoverCandidates(Decision decision) {
+        if ("discovery-v1".equals(decision.consentPolicyVersion())) return;
         if (!suggestions.findByDecisionIdOrderByCreatedAtAsc(decision.id()).isEmpty()) return;
         var existingUrls = decision.options().stream().map(option -> option.sourceUrl()).filter(java.util.Objects::nonNull).toList();
         var query = categoryName(decision.templateKey()) + " 비교 추천 대안 "

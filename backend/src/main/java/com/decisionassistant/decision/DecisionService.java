@@ -59,6 +59,8 @@ public class DecisionService {
     private final ReadinessAnalyzer readiness;
     private final WebProperties webProperties;
     private final AiDataPolicy aiDataPolicy;
+    private final com.decisionassistant.guidance.DiscoveryService discoveryService;
+    private final com.decisionassistant.guidance.ProductDiscoveryRepository discoveries;
     private final Clock clock;
 
     public DecisionService(DecisionRepository decisions, ResolutionRepository resolutions,
@@ -67,7 +69,9 @@ public class DecisionService {
                            DecisionQuestionRepository questions, CandidateSuggestionRepository candidateSuggestions,
                            PreferenceMemoryRepository preferences, OutcomeReminderRepository reminders,
                            PublicUrlPolicy urlPolicy, ReadinessAnalyzer readiness, WebProperties webProperties,
-                           AiDataPolicy aiDataPolicy) {
+                           AiDataPolicy aiDataPolicy,
+                           com.decisionassistant.guidance.DiscoveryService discoveryService,
+                           com.decisionassistant.guidance.ProductDiscoveryRepository discoveries) {
         this.decisions = decisions;
         this.resolutions = resolutions;
         this.outcomes = outcomes;
@@ -83,10 +87,12 @@ public class DecisionService {
         this.webProperties = webProperties;
         this.aiDataPolicy = aiDataPolicy;
         this.clock = Clock.systemUTC();
+        this.discoveryService = discoveryService; this.discoveries = discoveries;
     }
 
     @Transactional
     public DecisionResponse create(CreateDecisionRequest request) {
+        if (request.discovery() != null) return createDiscovery(request);
         if (request.intentText() != null && !request.intentText().isBlank()) return createGuided(request);
         if (request.title() == null || request.title().isBlank() || request.templateKey() == null) {
             throw new InvalidDecisionException(List.of("결정 설명과 후보 링크 또는 title/templateKey가 필요합니다."));
@@ -96,6 +102,36 @@ public class DecisionService {
                 templates.version(request.templateKey()), now);
         templates.apply(decision);
         decisions.saveAndFlush(decision);
+        return response(decision);
+    }
+
+    private DecisionResponse createDiscovery(CreateDecisionRequest request) {
+        if ((request.selectedSources() != null && !request.selectedSources().isEmpty())
+                || (request.sourceUrls() != null && !request.sourceUrls().isEmpty()))
+            throw new InvalidDecisionException(List.of("추천 시작과 직접 후보 추가는 별도로 요청하세요."));
+        var conditions = request.discovery();
+        var template = discoveryService.validate(request.templateKey(), conditions);
+        var intent = template.label() + " · " + java.util.Objects.toString(conditions.use(), "용도 미정")
+                + (conditions.maxBudget() == null ? "" : " · 최대 " + conditions.maxBudget().toPlainString() + "원")
+                + (conditions.compatibility() == null ? "" : " · " + conditions.compatibility());
+        var now = Instant.now(clock);
+        var decision = new Decision(currentUser.current().id(), template.label() + " 비교", template.key(), templates.version(template.key()), now);
+        decision.startGuidedIntake(intent, true, true, "discovery-v1", now);
+        decision.processingStatus(DecisionTypes.ProcessingStatus.NEEDS_INPUT, now);
+        decision.updateDraft(decision.title(), new DecisionContext(intent, conditions.maxBudget(), "KRW", request.intentText()), now);
+        templates.apply(decision);
+        applyConfirmedPreferences(decision);
+        if (conditions.maxBudget() != null) decision.constraints().stream().filter(item -> item.name().equals("최대 예산"))
+                .forEach(item -> item.update(item.name(), item.kind(), item.criterionId(), conditions.maxBudget(), "KRW", item.description(), true));
+        decisions.saveAndFlush(decision);
+        discoveryService.start(decision, conditions);
+        return response(decision);
+    }
+
+    @Transactional
+    public DecisionResponse retryDiscovery(UUID id, RetryDiscoveryRequest request) {
+        var decision = required(id); ensureEditable(decision);
+        discoveryService.retry(decision, request.expectedVersion());
         return response(decision);
     }
 
@@ -213,10 +249,12 @@ public class DecisionService {
 
     @Transactional
     public DecisionResponse updateSuggestion(UUID id, UUID suggestionId, UpdateSuggestionRequest request) {
-        var decision = required(id);
+        var ownerId = currentUser.current().id();
+        var decision = decisions.lockByIdAndOwner(id, ownerId).orElseThrow(() -> new NotFoundException("비교를 찾을 수 없습니다."));
         ensureEditable(decision);
         var suggestion = candidateSuggestions.findByIdAndDecisionId(suggestionId, id)
                 .orElseThrow(() -> new NotFoundException("대안 후보를 찾을 수 없습니다."));
+        if (suggestion.status() != CandidateSuggestion.Status.PROPOSED) return response(decision);
         if ("DISMISS".equalsIgnoreCase(request.action())) {
             suggestion.dismiss();
             return response(decision);
@@ -224,12 +262,16 @@ public class DecisionService {
         if (!"ACCEPT".equalsIgnoreCase(request.action())) {
             throw new InvalidDecisionException(List.of("action은 ACCEPT 또는 DISMISS여야 합니다."));
         }
+        var existing = decision.options().stream().filter(option -> suggestion.discovered()
+                ? option.name().equalsIgnoreCase(suggestion.name()) : suggestion.url().equals(option.sourceUrl())).findFirst();
+        if (existing.isPresent()) { suggestion.accept(existing.get().id()); return response(decision); }
         if (decision.options().size() >= 5) throw new InvalidDecisionException(List.of("Option은 최대 5개까지 추가할 수 있습니다."));
         var url = urlPolicy.validate(suggestion.url());
         var now = Instant.now(clock);
-        var option = decision.addOption(null, suggestion.name(), suggestion.reason(), url, null);
-        suggestion.accept();
-        if (decision.webConsent() && webProperties.configured()) {
+        var option = decision.addOption(null, suggestion.name(), suggestion.reason(), url, suggestion.sourceExcerpt());
+        suggestion.accept(option.id());
+        decision.updateDraft(decision.title(), decision.context(), now);
+        if (!suggestion.discovered() && decision.webConsent() && webProperties.configured()) {
             evidenceImports.save(new EvidenceImport(id, option.id(), url, now));
             decision.processingStatus(DecisionTypes.ProcessingStatus.IMPORTING, now);
         }
@@ -555,7 +597,12 @@ public class DecisionService {
                 resolutions.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().map(this::resolutionData).toList(),
                 outcomes.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().map(this::outcomeData).toList(),
                 guidance(decision),
-                decision.createdAt(), decision.updatedAt());
+                decision.createdAt(), decision.updatedAt(),
+                discoveries.findById(decision.id()).map(run -> new DiscoveryData(run.version(), run.status().name(),
+                        run.error(), run.conditions(), run.updatedAt())).orElse(null),
+                candidateSuggestions.findByDecisionIdOrderByCreatedAtAsc(decision.id()).stream()
+                        .filter(item -> item.optionId() != null && item.discovered())
+                        .map(item -> new ProductFactsData(item.optionId(), item.facts(), item.fetchedAt(), item.sourceExcerpt())).toList());
     }
 
     private ResolutionData resolutionData(Resolution resolution) {
@@ -589,7 +636,7 @@ public class DecisionService {
                 candidateSuggestions.findByDecisionIdOrderByCreatedAtAsc(decision.id()).stream()
                         .filter(item -> item.status() == CandidateSuggestion.Status.PROPOSED)
                         .map(item -> new CandidateSuggestionData(item.id(), item.name(), item.url(), item.reason(),
-                                item.status().name())).toList(),
+                                item.status().name(), item.facts(), item.fetchedAt(), item.sourceExcerpt())).toList(),
                 applied,
                 reminders.findByDecisionIdOrderByDueAtAsc(decision.id()).stream().map(item -> new ReminderData(
                         item.id(), item.dueAt(), item.status().name(), item.channel().name())).toList());

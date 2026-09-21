@@ -37,15 +37,19 @@ public class ProductLookupService {
     }
 
     public List<WebSearchProvider.SearchResult> lookup(String query) {
+        return lookupForOwner(query, currentUser.current().id());
+    }
+
+    // Internal worker entrypoint: owner is read from the persisted, consented Decision, never the HTTP body.
+    public List<WebSearchProvider.SearchResult> lookupForOwner(String query, UUID ownerId) {
         var start = System.nanoTime();
         var acquired = false;
         var outcome = "success";
         try {
-            var user = currentUser.current();
             if (!properties.configured()) throw new LookupException(503, "SEARCH_DISABLED", "제품 검색이 꺼져 있습니다. URL 직접 추가를 이용하세요.");
             acquired = concurrent.tryAcquire();
             if (!acquired) throw new LookupException(429, "SEARCH_BUSY", "다른 검색을 처리 중입니다. 잠시 후 다시 시도하세요.");
-            admit(user.id(), Instant.now());
+            admit(ownerId, Instant.now());
             quota.reserve();
             var results = new LinkedHashMap<String, WebSearchProvider.SearchResult>();
             for (var item : provider.search(query, 5)) {

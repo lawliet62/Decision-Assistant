@@ -10,6 +10,18 @@
 4. 개인정보·provider 전송 고지, 보존/삭제 정책, TLS/host 설정, DB backup/restore 책임자를 확정한다. 이 정책 승인과 실제 infrastructure 검증은 코드 테스트로 대체할 수 없다.
 5. 실제 key가 있는 staging에서 아래 smoke를 실행한다. mock 테스트는 provider의 실제 가용성·검색 품질을 보장하지 않는다.
 
+## 클릭 추천 운영 확인
+
+검색·수집·AI 설정이 모두 활성화되어야 클릭 추천을 시작한다. 하나라도 비활성이면 직접 제품명·URL 추가를 제공한다. 새로운 secret/provider/배포 단위는 필요하지 않다.
+
+- V8은 추천 작업·표시용 사양과 출처 metadata를 추가하고 새 추천의 중복 제약을 분리한다. 기존 결정·평가 snapshot은 변환하지 않는다. 운영 적용 전 백업·복원 검증을 수행한다.
+- 실제 Dev smoke: 5개 제품군에서 용도·예산을 선택하고 동의 후 추천 → 2개 승인 → 주요 사양·출처·조회 시점 확인 → 평가 없이 선택 기록을 수행한다. 수집 실패 시 확보된 결과·직접 추가·수동 재시도를 확인한다.
+- 추천 1회는 Serper 1회, 공개 페이지 최대 5개, AI 구조화 1회다. 추천용 SDK와 구조화 출력의 자동 재시도도 비활성화한다. 기존 평가·구조화 경로의 재시도 설정은 바꾸지 않는다.
+- 추천 검색은 제품명 lookup과 월 1,000회 및 burst 제한을 공유한다. AI/Firecrawl 전체 계정 비용 상한을 대체하지 않는다.
+- `product_event=discovery_finished/discovery_failed`와 `product.lookup.requests`를 관측한다. 추천 행에 provider/model, prompt/schema version, token/latency를 보존한다. 조건 원문·구매 메모·Secret을 로그에 추가하지 않는다.
+- 실패나 부분 완료는 사용자만 재시도한다. 재시작으로 RUNNING에 남은 작업은 15분 경과 후 다음 worker 점검에서 실패로 전환되며 자동 외부 재호출은 하지 않는다.
+- 기능을 끌 때는 기존 검색·수집·AI flag를 사용한다. 새 migration을 되돌리는 방식보다 forward recovery를 우선한다. 기능 비활성화는 이미 저장한 비교·사양 열람을 막지 않는다.
+
 ## Server-only configuration
 
 | 환경 변수 | 기본값 / 역할 |

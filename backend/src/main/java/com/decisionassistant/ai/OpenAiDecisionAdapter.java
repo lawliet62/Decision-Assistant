@@ -12,14 +12,21 @@ import static com.decisionassistant.ai.AiContracts.*;
 @Component
 @ConditionalOnProperty(prefix = "decision-assistant.ai", name = "enabled", havingValue = "true")
 @ConditionalOnProperty(prefix = "decision-assistant.ai", name = "provider", havingValue = "openai")
-public class OpenAiDecisionAdapter implements DecisionStructurer, DecisionAssessor {
+public class OpenAiDecisionAdapter implements DecisionStructurer, DecisionAssessor, com.decisionassistant.guidance.DiscoveryContracts.ProductDiscoverer {
 
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
+    private final ChatClient discoveryClient;
 
-    public OpenAiDecisionAdapter(ChatClient.Builder builder, ObjectMapper objectMapper) {
+    public OpenAiDecisionAdapter(ChatClient.Builder builder, ObjectMapper objectMapper, AiProperties properties,
+            org.springframework.ai.openai.OpenAiChatModel model,
+            @org.springframework.beans.factory.annotation.Value("${spring.ai.openai.api-key}") String apiKey) {
         this.chatClient = builder.build();
         this.objectMapper = objectMapper;
+        // 동일 provider 설정에서 추천용 SDK 재시도만 비활성화한다.
+        discoveryClient = ChatClient.create(org.springframework.ai.openai.OpenAiChatModel.builder()
+                .options(model.getOptions().mutate().apiKey(apiKey).model(properties.model())
+                        .maxRetries(0).timeout(properties.timeout()).store(false).build()).build());
     }
 
     @Override
@@ -40,6 +47,17 @@ public class OpenAiDecisionAdapter implements DecisionStructurer, DecisionAssess
                 .responseEntity(StructureProposal.class, specification -> specification
                         .useProviderStructuredOutput()
                         .validateSchema());
+        return withUsage(response.entity(), response.response());
+    }
+
+    @Override
+    public AiResult<com.decisionassistant.guidance.DiscoveryContracts.DiscoveryProposal> discover(
+            com.decisionassistant.guidance.DiscoveryContracts.DiscoveryInput input) {
+        var response = discoveryClient.prompt()
+                .system(com.decisionassistant.guidance.DiscoveryContracts.PROMPT)
+                .user(json(input)).call()
+                .responseEntity(com.decisionassistant.guidance.DiscoveryContracts.DiscoveryProposal.class,
+                        specification -> specification.useProviderStructuredOutput());
         return withUsage(response.entity(), response.response());
     }
 

@@ -9,7 +9,7 @@ Browser
       → Auth0 Universal Login (Google + email OTP)
       → PostgreSQL (user ownership + JDBC session + domain data)
       → Firecrawl API (public URL scrape/search, optional, explicit consent)
-      → Serper API (product-name lookup only, optional, per-request consent)
+      → Serper API (product-name lookup / condition discovery, explicit consent)
       → Gemini Developer API (dogfooding default, optional, explicit consent)
       → OpenAI API (optional alternative)
       → Resend API (outcome reminder email, optional)
@@ -28,6 +28,10 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 - StructureRun: LLM에 실제 전달한 input과 proposal, 실행 metadata를 저장한다. proposal은 Decision을 자동 변경하지 않는다.
 - 구조화 AI에는 현재 활성 비교 기준의 이름·타입·단위를 전달한다. 기존 `StructureRun` input snapshot에 기준 목록이 없어도 읽을 수 있으며 과거 snapshot을 재작성하지 않는다.
 - Resolution/OutcomeCheckIn: 선택과 사후 회고를 append한다.
+
+## 클릭 추천 작업
+
+`ProductDiscovery`는 기존 모놀리스의 scheduled worker에서 처리한다. 소유권과 명시적 동의를 확인한 Decision만 시작하며, `FOR UPDATE SKIP LOCKED`로 claim한 뒤 외부 호출을 transaction 밖에서 실행한다. 상태와 version으로 중복 실행·늦은 완료를 제어하고 실패는 수동 재시도한다. 최초 검색 1회·페이지 최대 5개·AI 1회로 제한하며 Serper quota는 제품명 lookup과 공유한다. 표시용 사양은 CandidateSuggestion에 저장하고 승인 시 Option과 연결한다. 평가값과 과거 snapshot을 변경하지 않는다. [ADR 0009](decisions/0009-click-first-product-discovery.md)에 동의·저장·실패 경계를 기록한다.
 
 ## 요청 흐름
 

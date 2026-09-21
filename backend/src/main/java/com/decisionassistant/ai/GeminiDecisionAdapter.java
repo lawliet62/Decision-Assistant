@@ -12,15 +12,31 @@ import static com.decisionassistant.ai.AiContracts.*;
 @Component
 @ConditionalOnProperty(prefix = "decision-assistant.ai", name = "enabled", havingValue = "true")
 @ConditionalOnProperty(prefix = "decision-assistant.ai", name = "provider", havingValue = "gemini")
-public class GeminiDecisionAdapter implements DecisionStructurer, DecisionAssessor {
+public class GeminiDecisionAdapter implements DecisionStructurer, DecisionAssessor, com.decisionassistant.guidance.DiscoveryContracts.ProductDiscoverer {
 
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
+    private final ChatClient discoveryClient;
+    private final com.google.genai.Client discoveryProvider;
 
-    public GeminiDecisionAdapter(ChatClient.Builder builder, ObjectMapper objectMapper) {
+    public GeminiDecisionAdapter(ChatClient.Builder builder, ObjectMapper objectMapper, AiProperties properties,
+            @org.springframework.beans.factory.annotation.Value("${spring.ai.google.genai.api-key}") String apiKey) {
         this.chatClient = builder.build();
         this.objectMapper = objectMapper;
+        // 추천 작업은 SDK·모델·출력 검증 계층의 자동 재호출 없이 한 번만 실행한다.
+        discoveryProvider = com.google.genai.Client.builder().apiKey(apiKey)
+                .httpOptions(com.google.genai.types.HttpOptions.builder()
+                        .timeout(Math.toIntExact(properties.timeout().toMillis()))
+                        .retryOptions(com.google.genai.types.HttpRetryOptions.builder().attempts(1).build()).build()).build();
+        discoveryClient = ChatClient.create(org.springframework.ai.google.genai.GoogleGenAiChatModel.builder()
+                .genAiClient(discoveryProvider)
+                .options(org.springframework.ai.google.genai.GoogleGenAiChatOptions.builder().model(properties.model()).build())
+                .retryTemplate(new org.springframework.core.retry.RetryTemplate(org.springframework.core.retry.RetryPolicy.withMaxRetries(0)))
+                .build());
     }
+
+    @jakarta.annotation.PreDestroy
+    void closeDiscoveryProvider() { discoveryProvider.close(); }
 
     @Override
     public AiResult<StructureProposal> structure(StructureInput input) {
@@ -40,6 +56,17 @@ public class GeminiDecisionAdapter implements DecisionStructurer, DecisionAssess
                 .responseEntity(StructureProposal.class, specification -> specification
                         .useProviderStructuredOutput()
                         .validateSchema());
+        return withUsage(response.entity(), response.response());
+    }
+
+    @Override
+    public AiResult<com.decisionassistant.guidance.DiscoveryContracts.DiscoveryProposal> discover(
+            com.decisionassistant.guidance.DiscoveryContracts.DiscoveryInput input) {
+        var response = discoveryClient.prompt()
+                .system(com.decisionassistant.guidance.DiscoveryContracts.PROMPT)
+                .user(json(input)).call()
+                .responseEntity(com.decisionassistant.guidance.DiscoveryContracts.DiscoveryProposal.class,
+                        specification -> specification.useProviderStructuredOutput());
         return withUsage(response.entity(), response.response());
     }
 

@@ -25,9 +25,16 @@ public final class DecisionDtos {
             Boolean aiConsent,
             Boolean webConsent,
             Boolean sensitiveDataAcknowledged,
-            @Size(max = 5) List<@NotNull @Valid AddSourceRequest> selectedSources
+            @Size(max = 5) List<@NotNull @Valid AddSourceRequest> selectedSources,
+            @Valid com.decisionassistant.guidance.DiscoveryContracts.DiscoveryRequest discovery
     ) {
     }
+
+    public record DiscoveryData(long version, String status, String error,
+            com.decisionassistant.guidance.DiscoveryContracts.DiscoveryRequest conditions, Instant updatedAt) {}
+    public record RetryDiscoveryRequest(long expectedVersion) {}
+    public record ProductFactsData(UUID optionId, List<com.decisionassistant.guidance.DiscoveryContracts.ProductFact> facts,
+                                   Instant fetchedAt, String sourceExcerpt) {}
 
     public record DecisionSummary(
             UUID id,
@@ -56,7 +63,9 @@ public final class DecisionDtos {
             List<OutcomeData> outcomes,
             GuidanceData guidance,
             Instant createdAt,
-            Instant updatedAt
+            Instant updatedAt,
+            DiscoveryData discovery,
+            List<ProductFactsData> productFacts
     ) {
     }
 
@@ -203,7 +212,8 @@ public final class DecisionDtos {
     }
 
     public record CandidateSuggestionData(
-            UUID id, String name, String url, String reason, String status
+            UUID id, String name, String url, String reason, String status,
+            List<com.decisionassistant.guidance.DiscoveryContracts.ProductFact> facts, Instant fetchedAt, String sourceExcerpt
     ) {
     }
 

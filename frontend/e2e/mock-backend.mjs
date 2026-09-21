@@ -2,6 +2,13 @@ import http from "node:http";
 import { randomUUID } from "node:crypto";
 
 const decisionId = "11111111-1111-1111-1111-111111111111";
+const templates = [
+  ["LAPTOP", "노트북", "학업", 1000000, "Windows", ["가격", "CPU/GPU", "메모리", "배터리"]],
+  ["PHONE", "휴대폰", "일상", 500000, "Android", ["가격", "OS", "화면", "배터리"]],
+  ["TABLET", "태블릿", "필기", 300000, "iPadOS", ["가격", "화면", "펜 지원", "무게"]],
+  ["MONITOR", "모니터", "사무", 200000, "HDMI", ["가격", "크기", "해상도", "주사율"]],
+  ["EARBUDS", "무선 이어폰", "출퇴근", 100000, "iOS", ["가격", "형태", "ANC 지원", "무게"]],
+].map(([key, label, use, budget, compatibility, facts]) => ({ key, label, version: "intake-v1", uses: [use], budgets: [budget], compatibility: [compatibility], facts }));
 const criteria = ["가격", "음질", "착용감", "노이즈 캔슬링", "배터리 적합도"].map((name, index) => ({
   id: `33333333-3333-3333-3333-33333333333${index}`, name,
   kind: index === 0 ? "NUMERIC_UTILITY" : "RATING_1_TO_5",
@@ -31,11 +38,25 @@ function create(body) {
       evidence: [], candidateSuggestions: [], appliedPreferences: [], reminders: [] },
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
+function createDiscovery(body) {
+  const template = templates.find(item => item.key === body.templateKey);
+  const result = create({ ...body, intentText: template.label + " 비교", selectedSources: [] });
+  result.discovery = { version: 1, status: "PENDING", conditions: body.discovery, updatedAt: new Date().toISOString() };
+  result.productFacts = [];
+  result.guidance.questions = [];
+  result.guidance.candidateSuggestions = ["Alpha", "Beta", "Gamma"].map((name, index) => ({
+    id: randomUUID(), name: template.label + " " + name, url: "https://example.com/" + name, reason: "주요 정보를 확인하고 비교하세요.", status: "PROPOSED",
+    facts: [{ name: "가격", value: (100000 + index * 10000) + " KRW", sourceUrl: "https://example.com/" + name, quote: name + " 제품 기본 구성 가격", fetchedAt: new Date().toISOString(), verificationStatus: "UNREVIEWED" }],
+  }));
+  return result;
+}
 const server = http.createServer(async (request, response) => {
   const send = (status, body, headers = {}) => { response.writeHead(status, { "content-type": "application/json", ...headers }); response.end(JSON.stringify(body)); };
   let body = {};
   if (request.method !== "GET") { let raw = ""; for await (const chunk of request) raw += chunk; body = raw ? JSON.parse(raw) : {}; }
   if (request.url === "/api/v1/me") return send(200, { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", email: "user@example.com" }, { "set-cookie": "XSRF-TOKEN=test-token; Path=/; SameSite=Lax" });
+  if (request.url === "/api/v1/intake-templates") return send(200, templates);
+  if (request.method === "GET" && request.url === "/api/v1/decisions") return send(200, current ? [current] : []);
   if (request.url === "/api/v1/product-lookups/capabilities") return send(200, {
     searchEnabled: true, searchProvider: "Serper", searchNotice: "입력한 제품명을 Serper로 전송하는 데 동의합니다.",
     importEnabled: true, importProvider: "Firecrawl", importNotice: "선택한 공개 URL을 Firecrawl로 보내 정보를 가져오는 데 동의합니다.",
@@ -50,15 +71,32 @@ const server = http.createServer(async (request, response) => {
     ] });
   }
   if (request.method === "POST" && request.url === "/api/v1/decisions") {
-    current = create(body);
+    current = body.discovery ? createDiscovery(body) : create(body);
     if (body.webConsent) current.guidance.evidence = current.options.map(item => ({
       id: randomUUID(), optionId: item.id, url: item.sourceUrl, status: "FAILED", error: "수집 실패", stale: false,
     }));
     return send(201, current);
   }
-  if (request.method === "GET" && request.url === `/api/v1/decisions/${decisionId}`) return send(200, current);
-  if (request.url === "/api/v1/ai/capabilities") return send(200, { enabled: false, provider: "gemini", model: "test", requiresSensitiveDataAcknowledgement: true });
+  if (request.method === "GET" && request.url === `/api/v1/decisions/${decisionId}`) {
+    if (current?.discovery?.status === "PENDING") current.discovery.status = "SUCCEEDED";
+    return send(200, current);
+  }
+  if (request.url === "/api/v1/ai/capabilities") return send(200, { enabled: true, provider: "gemini", model: "test", requiresSensitiveDataAcknowledgement: true });
   if (!current) return send(404, { detail: "Not found" });
+  if (request.method === "PATCH" && request.url.includes("/candidate-suggestions/")) {
+    const id = request.url.split("/").at(-1);
+    const candidate = current.guidance.candidateSuggestions.find(item => item.id === id);
+    if (candidate && body.action === "ACCEPT") {
+      const added = option(candidate); current.options.push(added);
+      current.productFacts.push({ optionId: added.id, facts: candidate.facts });
+    }
+    current.guidance.candidateSuggestions = current.guidance.candidateSuggestions.filter(item => item.id !== id);
+    current.version++; return send(200, current);
+  }
+  if (request.method === "POST" && request.url.endsWith("/discovery/retry")) {
+    current.discovery = { ...current.discovery, version: current.discovery.version + 1, status: "PENDING", error: null };
+    return send(200, current);
+  }
   if (request.method === "POST" && request.url.endsWith("/sources")) {
     if (!current.options.some(item => item.sourceUrl === body.url)) current.options.push(option(body));
     current.version++; return send(201, current);
