@@ -7,6 +7,7 @@ async function search(page: Page, query = "Buds") {
 }
 async function start(page: Page, intent = "출퇴근용 무선 이어폰 비교", collect = false) {
   await page.goto("/decisions/new");
+  await page.getByRole("button", { name: "제품 직접 추가", exact: true }).click();
   await page.getByLabel("어떤 상황에서 무엇을 고르고 있나요?").fill(intent);
   await search(page);
   await page.getByRole("list", { name: "제품 검색 결과" }).getByRole("button", { name: "이 제품 선택" }).first().click();
@@ -17,6 +18,7 @@ async function start(page: Page, intent = "출퇴근용 무선 이어폰 비교"
 
 test("product search, explicit selection, editing, evaluation, choice and outcome", async ({ page }) => {
   await page.goto("/decisions/new");
+  await page.getByRole("button", { name: "제품 직접 추가", exact: true }).click();
   await page.getByLabel("어떤 상황에서 무엇을 고르고 있나요?").fill("출퇴근용 무선 이어폰 비교");
   await page.getByLabel("제품명", { exact: true }).fill("Buds");
   await expect(page.getByRole("button", { name: "제품 검색", exact: true })).toBeDisabled();
@@ -33,6 +35,7 @@ test("product search, explicit selection, editing, evaluation, choice and outcom
   await expect(page.getByRole("button", { name: "이미 추가됨" })).toBeDisabled();
   await page.getByRole("list", { name: "제품 검색 결과" }).getByRole("listitem").filter({ hasText: "Buds 2" }).getByRole("button").click();
   await page.getByRole("button", { name: "2. 비교·평가", exact: true }).click();
+  await page.getByText("비교 값 확인과 평가", { exact: true }).click();
   await page.screenshot({ path: test.info().outputPath("comparison.png"), fullPage: true });
   for (const product of ["Buds Pro", "Buds 2"]) {
     await page.getByLabel(`${product} 가격`, { exact: true }).fill("150000");
@@ -56,6 +59,7 @@ test("product search, explicit selection, editing, evaluation, choice and outcom
 
 test("empty results and quota failure leave URL fallback usable without external consent", async ({ page }) => {
   await page.goto("/decisions/new");
+  await page.getByRole("button", { name: "제품 직접 추가", exact: true }).click();
   await page.getByLabel("어떤 상황에서 무엇을 고르고 있나요?").fill("직접 입력으로 이어폰 비교");
   await search(page, "none");
   await expect(page.getByText("검색 결과가 없습니다.", { exact: false })).toBeVisible();
@@ -67,12 +71,14 @@ test("empty results and quota failure leave URL fallback usable without external
   await page.getByRole("button", { name: "URL로 후보 추가" }).click();
   await page.getByRole("button", { name: "비교 시작하기" }).click();
   await page.getByRole("button", { name: "2. 비교·평가", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "직접 고른 이어폰", exact: true })).toBeVisible();
+  await page.getByText("비교 값 확인과 평가", { exact: true }).click();
+  await expect(page.getByRole("heading", { name: "직접 고른 이어폰", exact: true }).last()).toBeVisible();
 });
 
 test("polling preserves unsaved values and saving conflict does not discard input", async ({ page }) => {
   await start(page, "slow 이어폰 비교");
   await page.getByRole("button", { name: "2. 비교·평가", exact: true }).click();
+  await page.getByText("비교 값 확인과 평가", { exact: true }).click();
   const price = page.getByLabel("Buds Pro 가격", { exact: true });
   await price.fill("123456");
   await page.waitForTimeout(2800);
@@ -86,10 +92,11 @@ test("polling preserves unsaved values and saving conflict does not discard inpu
 test("failed page collection can be retried without losing the candidate", async ({ page }) => {
   await start(page, "수집 재시도 이어폰 비교", true);
   await page.getByRole("button", { name: "2. 비교·평가", exact: true }).click();
+  await page.getByText("비교 값 확인과 평가", { exact: true }).click();
   await expect(page.getByText("수집 실패", { exact: false }).first()).toBeVisible();
   await page.getByRole("button", { name: "다시 시도", exact: true }).click();
   await expect(page.getByText("후보 정보 수집을 다시 시작했습니다.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Buds Pro", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "제품 주요 정보 표" }).getByRole("heading", { name: "Buds Pro", exact: true })).toBeVisible();
   await expect(page.getByText("수집 실패", { exact: false })).toHaveCount(0);
 });
 
@@ -99,6 +106,7 @@ test("disabled search keeps URL fallback and enforces the five candidate limit",
     importEnabled: false, importProvider: "Firecrawl", importNotice: "수집 비활성",
   } }));
   await page.goto("/decisions/new");
+  await page.getByRole("button", { name: "제품 직접 추가", exact: true }).click();
   await expect(page.getByRole("button", { name: "제품 검색", exact: true })).toBeDisabled();
   await expect(page.getByText("현재 제품 검색이 꺼져 있습니다.", { exact: false })).toBeVisible();
   await page.getByText("URL 직접 추가 (검색이 어렵다면)", { exact: true }).click();

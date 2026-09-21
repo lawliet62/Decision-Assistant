@@ -21,8 +21,7 @@ export default async function Home() {
       <header className="flex flex-col gap-4 border-b border-zinc-200 pb-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium uppercase tracking-[0.22em] text-emerald-700">Decision Assistant</p>
-          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-950">링크만 모아도, 결정은 더 선명하게.</h1>
-          <p className="mt-3 max-w-2xl text-zinc-600">후보를 조사하고 꼭 필요한 질문만 드립니다. 선택과 실제 결과는 다음 결정의 기준으로 남습니다.</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-zinc-950">나에게 맞는 제품 찾기</h1>
         </div>
         <div className="flex flex-col items-end gap-3">
           <UserMenu email={user.email ?? ""} />
@@ -33,11 +32,14 @@ export default async function Home() {
         </div>
       </header>
 
+      <nav aria-label="제품군 선택" className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        {Object.entries(categoryLabels).map(([key, label]) => <Link key={key} href={`/decisions/new?category=${key}`} className="rounded-2xl border border-zinc-200 bg-white p-5 font-semibold hover:border-emerald-600 hover:bg-emerald-50">{label}<span aria-hidden="true" className="mt-4 block text-emerald-700">→</span></Link>)}
+      </nav>
       <section>
-        <h2 className="text-lg font-semibold text-zinc-900">최근 Decision</h2>
+        <h2 className="text-lg font-semibold text-zinc-900">최근 비교</h2>
         {decisions.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-dashed border-zinc-300 bg-white p-10 text-center text-zinc-500">
-            아직 저장된 Decision이 없거나 backend가 실행 중이 아닙니다.
+            아직 저장한 비교가 없습니다.
           </div>
         ) : (
           <div className="mt-4 grid gap-3">
@@ -45,7 +47,7 @@ export default async function Home() {
               <Link key={decision.id} href={`/decisions/${decision.id}`} className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm hover:border-emerald-400">
                 <div>
                   <h3 className="font-semibold text-zinc-900">{decision.title}</h3>
-                  <p className="mt-1 text-sm text-zinc-500">{decision.templateKey} · {decision.status}</p>
+                  <p className="mt-1 text-sm text-zinc-500">{categoryLabels[decision.templateKey ?? ""] ?? "직접 비교"} · {statusLabels[decision.status ?? ""] ?? decision.status}</p>
                 </div>
                 <span className="text-zinc-400">→</span>
               </Link>
@@ -56,3 +58,6 @@ export default async function Home() {
     </main>
   );
 }
+
+const categoryLabels: Record<string, string> = { LAPTOP: "노트북", PHONE: "휴대폰", TABLET: "태블릿", MONITOR: "모니터", EARBUDS: "무선 이어폰" };
+const statusLabels: Record<string, string> = { DRAFT: "비교 중", DEFERRED: "보류", CHOSEN: "선택 완료", ABANDONED: "구매하지 않음", ARCHIVED: "보관됨" };

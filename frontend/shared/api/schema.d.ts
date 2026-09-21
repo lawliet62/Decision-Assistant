@@ -181,6 +181,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/discovery/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retryDiscovery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/preferences/{preferenceId}": {
         parameters: {
             query?: never;
@@ -301,6 +317,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/intake-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -450,6 +482,10 @@ export interface components {
             url?: string;
             reason?: string;
             status?: string;
+            facts?: components["schemas"]["ProductFact"][];
+            /** Format: date-time */
+            fetchedAt?: string;
+            sourceExcerpt?: string;
         };
         DecisionResponse: {
             /** Format: uuid */
@@ -475,6 +511,27 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+            discovery?: components["schemas"]["DiscoveryData"];
+            productFacts?: components["schemas"]["ProductFactsData"][];
+        };
+        DiscoveryData: {
+            /** Format: int64 */
+            version?: number;
+            status?: string;
+            error?: string;
+            conditions?: components["schemas"]["DiscoveryRequest"];
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        DiscoveryRequest: {
+            templateVersion: string;
+            use?: string;
+            maxBudget?: number;
+            compatibility?: string;
+            searchConsent: boolean;
+            collectionConsent: boolean;
+            aiConsent: boolean;
+            sensitiveDataAcknowledged: boolean;
         };
         EvidenceData: {
             /** Format: uuid */
@@ -532,6 +589,23 @@ export interface components {
             /** Format: uuid */
             sourceDecisionId?: string;
         };
+        ProductFact: {
+            name?: string;
+            value?: string;
+            sourceUrl?: string;
+            quote?: string;
+            /** Format: date-time */
+            fetchedAt?: string;
+            verificationStatus?: string;
+        };
+        ProductFactsData: {
+            /** Format: uuid */
+            optionId?: string;
+            facts?: components["schemas"]["ProductFact"][];
+            /** Format: date-time */
+            fetchedAt?: string;
+            sourceExcerpt?: string;
+        };
         QuestionData: {
             /** Format: uuid */
             id?: string;
@@ -588,6 +662,7 @@ export interface components {
             webConsent?: boolean;
             sensitiveDataAcknowledged?: boolean;
             selectedSources?: components["schemas"]["AddSourceRequest"][];
+            discovery?: components["schemas"]["DiscoveryRequest"];
         };
         CreateStructureProposalRequest: {
             /** Format: int64 */
@@ -740,6 +815,10 @@ export interface components {
             aiConsent?: boolean;
             sensitiveDataAcknowledged?: boolean;
         };
+        RetryDiscoveryRequest: {
+            /** Format: int64 */
+            expectedVersion?: number;
+        };
         UpdatePreferenceRequest: {
             action: string;
             statement?: string;
@@ -793,6 +872,16 @@ export interface components {
             id?: string;
             email?: string;
             displayName?: string;
+        };
+        IntakeTemplate: {
+            /** @enum {string} */
+            key?: "LAPTOP" | "PHONE" | "TABLET" | "MONITOR" | "EARBUDS" | "CUSTOM";
+            version?: string;
+            label?: string;
+            uses?: string[];
+            budgets?: number[];
+            compatibility?: string[];
+            facts?: string[];
         };
         DecisionSummary: {
             /** Format: uuid */
@@ -1124,6 +1213,32 @@ export interface operations {
             };
         };
     };
+    retryDiscovery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryDiscoveryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
     delete: {
         parameters: {
             query?: never;
@@ -1349,6 +1464,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["CurrentUserResponse"];
+                };
+            };
+        };
+    };
+    list_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["IntakeTemplate"][];
                 };
             };
         };

@@ -23,6 +23,13 @@ public class CandidateSuggestion {
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private Status status;
     @Column(length = 100) private String provider;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private java.util.List<DiscoveryContracts.ProductFact> facts = java.util.List.of();
+    @Column(name = "option_id") private UUID optionId;
+    @Column(nullable = false) private boolean discovered;
+    @Column(name = "source_excerpt", columnDefinition = "text") private String sourceExcerpt;
+    @Column(name = "fetched_at") private Instant fetchedAt;
 
     protected CandidateSuggestion() {}
     public CandidateSuggestion(UUID decisionId, String name, String url, String reason, String provider, Instant now) {
@@ -30,6 +37,18 @@ public class CandidateSuggestion {
         this.reason = reason; this.provider = provider; this.status = Status.PROPOSED; this.createdAt = now;
     }
     public void accept() { status = Status.ACCEPTED; }
+    public void accept(UUID optionId) { accept(); this.optionId = optionId; }
+    public void discovered(java.util.List<DiscoveryContracts.ProductFact> facts) { this.facts = java.util.List.copyOf(facts); discovered = true; }
+    public java.util.List<DiscoveryContracts.ProductFact> facts() { return facts; }
+    public UUID optionId() { return optionId; }
+    public boolean discovered() { return discovered; }
+    public void sourceEvidence(String excerpt, Instant fetchedAt) { this.sourceExcerpt = excerpt; this.fetchedAt = fetchedAt; }
+    public String sourceExcerpt() { return sourceExcerpt; }
+    public Instant fetchedAt() { return fetchedAt; }
+    public void refreshDiscovery(CandidateSuggestion source) {
+        reason = source.reason; url = source.url; facts = source.facts;
+        sourceExcerpt = source.sourceExcerpt; fetchedAt = source.fetchedAt;
+    }
     public void dismiss() { status = Status.DISMISSED; }
     public UUID id() { return id; }
     public UUID decisionId() { return decisionId; }

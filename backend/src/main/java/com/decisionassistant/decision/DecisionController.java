@@ -45,6 +45,11 @@ public class DecisionController {
         return service.get(decisionId);
     }
 
+    @PostMapping("/{decisionId}/discovery/retry")
+    public DecisionResponse retryDiscovery(@PathVariable UUID decisionId, @Valid @RequestBody RetryDiscoveryRequest request) {
+        return service.retryDiscovery(decisionId, request);
+    }
+
     @PostMapping("/{decisionId}/sources")
     @ResponseStatus(HttpStatus.CREATED)
     public DecisionResponse addSource(@PathVariable UUID decisionId, @Valid @RequestBody AddSourceRequest request) {

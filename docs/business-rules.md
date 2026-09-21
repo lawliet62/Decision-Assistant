@@ -105,14 +105,28 @@
 
 ### BR-EVD-01: 사용자 동의로 공개 URL만 통제해 수집한다
 
-- **동작:** 사용자가 제공하거나 후보 제안에서 승인한 공개 HTTP(S) URL만 managed provider가 수집한다. 인증 정보·cookie·private/local host·지속 crawling을 허용하지 않으며 원문 전체를 장기 저장하지 않는다. 값에는 URL과 조회 시점을 표시하고 수집 실패는 다른 후보를 훼손하지 않는다.
+- **동작:** 기존 guided 경로는 사용자가 제공하거나 후보 제안에서 승인한 공개 HTTP(S) URL을 수집한다. 클릭 추천은 별도 명시적 동의 후 검색된 공개 URL 최대 5개를 후보 선택 전에 managed provider로 수집한다. 인증 정보·cookie·private/local host·지속 crawling을 허용하지 않으며 원문 전체를 장기 저장하지 않는다. 값에는 URL과 조회 시점을 표시하고 수집 실패는 다른 후보를 훼손하지 않는다.
 - **이유:** 입력 부담을 줄이면서 SSRF, 비공개 데이터 수집, 최신성 오인을 제한한다.
 - **동작:** 일부 URL 수집이 재시도 후 실패해도 다른 URL의 성공한 근거는 구조화할 수 있다. 대기 중인 수집이 남아 있으면 수집 상태를 유지하고, 모두 실패하면 AI로 빈 근거를 채우지 않고 입력 보강으로 돌아간다.
 
 ### BR-EVD-02: 발견된 후보는 사용자가 승인해야 한다
 
-- **동작:** 후보가 하나 이상 있을 때 현재 범주의 대안을 최대 3개 제안할 수 있다. 발견 결과는 사용자가 승인하기 전에는 Option이나 Evaluation input이 아니다.
+- **동작:** 기존 경로는 후보가 하나 이상일 때 같은 범주의 대안을 최대 3개 제안한다. 클릭 추천은 후보 없이 시작하여 선택 조건과 수집 근거로 최대 5개를 제안한다. 발견 결과는 사용자가 승인하기 전에는 Option이나 Evaluation input이 아니다.
 - **이유:** 검색 누락·광고성 결과·지역별 판매 차이가 사용자의 후보군을 몰래 바꾸지 않게 한다.
+
+### BR-DISC-01: 선택 조건만으로 추천을 시작한다
+
+- **동작:** 지원하는 5개 제품군의 versioned intake template로 용도·최대 예산·호환성을 선택한다. 미정·제한 없음도 허용하며 자유 텍스트는 필수가 아니다. 조건·검색/수집/AI 동의·민감 정보 비포함 확인을 저장한다. 기존 동의는 새 경로를 허용하지 않는다.
+- **동작:** 최초 추천은 Serper 조건 검색 1회, 공개 페이지 최대 5개 수집, AI 구조화 최대 1회로 제한한다. 검색은 기존 월·burst 한도를 공유한다. 메모·사용자 identity는 최초 추천 검색·AI 입력에서 제외한다.
+- **동작:** 작업과 후보는 해당 Decision 소유자에게만 보인다. 일부 실패는 확보한 후보를 보존한다. 실패·부분 완료만 현재 작업 version으로 명시적으로 재시도하며 실행 중·성공 상태는 재실행하지 않는다.
+- **이유:** 타이핑 부담과 외부 호출 비용을 제한하고 새로고침·실패 후에도 비교를 이어간다.
+
+### BR-DISC-02: 주요 정보와 평가값은 구분한다
+
+- **동작:** 제품·사양은 수집한 페이지의 URL·원문 인용과 대조하고 값·통화·조회 시점을 표시한다. 사양은 미확인 또는 UNREVIEWED이며 OptionValue·만족도 rating을 자동 생성하지 않는다. 원문 전체는 저장하지 않는다.
+- **동작:** 같은 비교 글이 여러 제품의 근거가 될 수 있다. 새 추천은 제품명 중복을 제한하고 승인 시 저장된 사양을 Option에 연결한다. 중복 승인으로 Option이 늘어나지 않으며 최대 5개를 유지한다.
+- **동작:** 주요 정보 비교와 실제 선택은 점수 평가 없이 가능하다. 용도 선택은 weight를 변경하지 않으며 선택한 최대 예산은 context와 최대 예산 constraint에 반영한다. 기존 검증된 평가의 완전성 규칙은 유지한다.
+- **이유:** 사용자가 객관적 정보를 직접 비교하면서 AI 추출·개인 만족도·재현 가능한 평가를 구별하게 한다.
 
 ### BR-EVD-03: 제품명 검색은 사용자 선택을 돕는 URL lookup이다
 
@@ -161,6 +175,7 @@
 | BR-DEC-06, BR-AI-02, BR-EVD-01~02, BR-PREF-01 | `DecisionApiIntegrationTest.createsGuidedDecisionAnswersCriticalQuestionsAndBuildsPreferenceMemory` |
 | BR-EVD-01~02 | `EvidenceWorkflowWorkerTest` (부분 실패·빈 페이지·재시도 종료·AI 실패 격리·후보 승인 경계) |
 | BR-EVD-03, BR-COST-01 | `ProductLookupServiceTest`, `SerperSearchProviderTest`, `SearchQuotaIntegrationTest`, `ProductLookupApiIntegrationTest`, `DecisionApiIntegrationTest.lookupRequiresAuthenticationCsrfAndExplicitConsentEvenWhenDisabled` |
+| BR-DISC-01~02 | `DiscoveryWorkerTest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-TPL-01 | `DecisionApiIntegrationTest.earbudsAndSelectedSourcesReuseExistingLifecycle`, `EvidenceWorkflowWorkerTest.earbudsNeverAutoFillSubjectiveRatings` |
 | BR-DEC-02, BR-EVD-03 | `frontend/e2e/guided-decision.spec.ts` (선택→평가→회고·한도 fallback·polling/충돌 입력 보존·수집 재시도) |
 
