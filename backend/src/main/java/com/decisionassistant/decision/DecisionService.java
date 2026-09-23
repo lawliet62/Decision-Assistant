@@ -13,6 +13,10 @@ import com.decisionassistant.guidance.EvidenceImport;
 import com.decisionassistant.guidance.EvidenceImportRepository;
 import com.decisionassistant.guidance.PublicUrlPolicy;
 import com.decisionassistant.guidance.WebProperties;
+import com.decisionassistant.guidance.DiscoveryContracts;
+import com.decisionassistant.guidance.MinimumRequirementMatcher;
+import com.decisionassistant.guidance.ProductFactResolver;
+import com.decisionassistant.template.MinimumRequirements;
 import com.decisionassistant.notification.OutcomeReminder;
 import com.decisionassistant.notification.OutcomeReminderRepository;
 import com.decisionassistant.preference.PreferenceMemory;
@@ -113,7 +117,9 @@ public class DecisionService {
         var conditions = request.discovery().normalized(template);
         var intent = template.label() + " · " + (conditions.uses().isEmpty() ? "용도 미정" : String.join(" · ", conditions.uses()))
                 + (conditions.maxBudget() == null ? "" : " · 최대 " + conditions.maxBudget().toPlainString() + "원")
-                + (conditions.compatibility() == null ? "" : " · " + conditions.compatibility());
+                + (conditions.compatibility() == null ? "" : " · " + conditions.compatibility())
+                + MinimumRequirementMatcher.conditions(template.minimumRequirements(), conditions.selectedRequirements()).stream()
+                        .map(item -> " · " + item.label() + " " + item.requiredValue()).collect(Collectors.joining());
         var now = Instant.now(clock);
         var decision = new Decision(currentUser.current().id(), template.label() + " 비교", template.key(), templates.version(template.key()), now);
         decision.startGuidedIntake(intent, true, true, "discovery-v1", now);
@@ -576,6 +582,18 @@ public class DecisionService {
     }
 
     private DecisionResponse response(Decision decision) {
+        var run = discoveries.findById(decision.id()).orElse(null);
+        var selected = run == null ? java.util.Map.<String, String>of() : run.conditions().selectedRequirements();
+        var suggestions = candidateSuggestions.findByDecisionIdOrderByCreatedAtAsc(decision.id());
+        var evidence = evidenceImports.findByDecisionIdOrderByCreatedAtAsc(decision.id());
+        var productFacts = decision.options().stream().map(option -> {
+            var source = suggestions.stream().filter(item -> option.id().equals(item.optionId()) && item.discovered()).findFirst().orElse(null);
+            var fetchedAt = evidence.stream().filter(item -> option.id().equals(item.optionId())).map(EvidenceImport::fetchedAt)
+                    .filter(java.util.Objects::nonNull).findFirst().orElse(null);
+            var facts = ProductFactResolver.resolve(decision, option.id(), source == null ? List.of() : source.facts(), fetchedAt);
+            return new ProductFactsData(option.id(), facts, source == null ? fetchedAt : source.fetchedAt(),
+                    source == null ? null : source.sourceExcerpt(), requirementChecks(decision, selected, facts));
+        }).toList();
         return new DecisionResponse(
                 decision.id(), decision.version(), decision.title(), decision.templateKey(), decision.templateVersion(),
                 decision.status(), new ContextData(decision.context().intendedUse(), decision.context().budget(),
@@ -596,13 +614,15 @@ public class DecisionService {
                         result.id(), result.optionId(), result.constraintId(), result.status(), result.note())).toList(),
                 resolutions.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().map(this::resolutionData).toList(),
                 outcomes.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().map(this::outcomeData).toList(),
-                guidance(decision),
+                guidance(decision, suggestions, evidence, selected),
                 decision.createdAt(), decision.updatedAt(),
-                discoveries.findById(decision.id()).map(run -> new DiscoveryData(run.version(), run.status().name(),
-                        run.error(), run.conditions(), run.updatedAt())).orElse(null),
-                candidateSuggestions.findByDecisionIdOrderByCreatedAtAsc(decision.id()).stream()
-                        .filter(item -> item.optionId() != null && item.discovered())
-                        .map(item -> new ProductFactsData(item.optionId(), item.facts(), item.fetchedAt(), item.sourceExcerpt())).toList());
+                run == null ? null : new DiscoveryData(run.version(), run.status().name(), run.error(), run.conditions(), run.updatedAt()),
+                productFacts);
+    }
+
+    private List<DiscoveryContracts.RequirementCheck> requirementChecks(Decision decision, java.util.Map<String, String> selected,
+                                                                       List<DiscoveryContracts.ProductFact> facts) {
+        return MinimumRequirementMatcher.check(MinimumRequirements.forCategory(decision.templateKey()), selected, facts);
     }
 
     private ResolutionData resolutionData(Resolution resolution) {
@@ -616,7 +636,8 @@ public class DecisionService {
                 outcome.createdAt());
     }
 
-    private GuidanceData guidance(Decision decision) {
+    private GuidanceData guidance(Decision decision, List<CandidateSuggestion> suggestions, List<EvidenceImport> evidence,
+                                  java.util.Map<String, String> selected) {
         if (decision.intentText() == null) return null;
         var analyzed = readiness.analyze(decision);
         var processing = decision.processingStatus();
@@ -629,14 +650,15 @@ public class DecisionService {
                         decision.id(), DecisionQuestion.Status.OPEN).stream().map(question -> new QuestionData(
                         question.id(), question.kind().name(), question.targetKey(), question.prompt(), question.impact(),
                         question.options(), question.answer(), question.status().name())).toList(),
-                evidenceImports.findByDecisionIdOrderByCreatedAtAsc(decision.id()).stream().map(item -> new EvidenceData(
+                evidence.stream().map(item -> new EvidenceData(
                         item.id(), item.optionId(), item.url(), item.status().name(), item.title(), item.excerpt(),
                         item.error(), item.fetchedAt(), item.fetchedAt() != null
                                 && item.fetchedAt().isBefore(Instant.now(clock).minus(24, ChronoUnit.HOURS)))).toList(),
-                candidateSuggestions.findByDecisionIdOrderByCreatedAtAsc(decision.id()).stream()
+                suggestions.stream()
                         .filter(item -> item.status() == CandidateSuggestion.Status.PROPOSED)
                         .map(item -> new CandidateSuggestionData(item.id(), item.name(), item.url(), item.reason(),
-                                item.status().name(), item.facts(), item.fetchedAt(), item.sourceExcerpt())).toList(),
+                                item.status().name(), item.facts(), item.fetchedAt(), item.sourceExcerpt(),
+                                requirementChecks(decision, selected, item.facts()))).toList(),
                 applied,
                 reminders.findByDecisionIdOrderByDueAtAsc(decision.id()).stream().map(item -> new ReminderData(
                         item.id(), item.dueAt(), item.status().name(), item.channel().name())).toList());

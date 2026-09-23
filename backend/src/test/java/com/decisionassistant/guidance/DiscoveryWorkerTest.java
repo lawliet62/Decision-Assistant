@@ -11,7 +11,7 @@ class DiscoveryWorkerTest {
     private final SourcePage page = new SourcePage("https://example.com/review", "비교",
             "Buds A 가격 100,000 KRW. Buds B 무게 5 g.", Instant.now());
     private final DiscoveryInput input = new DiscoveryInput("무선 이어폰", List.of("출퇴근"), null, null,
-            List.of("가격", "무게"), List.of(page));
+            List.of("가격", "무게"), List.of(page), List.of());
 
     @Test void rejectsInventedProductsSourcesValuesAndSubjectiveRatings() {
         var real = new ProposedProduct("Buds A", page.url(), "Buds A 가격 100,000 KRW.", "조건과 비교하세요.", List.of(
@@ -37,5 +37,18 @@ class DiscoveryWorkerTest {
                 new ProposedProduct("Buds B", page.url(), "Buds B", "", List.of()))), input);
         assertThat(result).extracting(CandidateSuggestion::name).containsExactly("Buds A", "Buds B");
         assertThat(result).allMatch(item -> item.status() == CandidateSuggestion.Status.PROPOSED && item.optionId() == null);
+    }
+
+    @Test void conflictingSourceFactsSurviveValidationForUnknownRequirementStatus() {
+        var source = new SourcePage(page.url(), "사양", "Laptop A 메모리 8GB. Laptop A 메모리 32GB.", Instant.now());
+        var input = new DiscoveryInput("노트북", List.of(), null, null, List.of("메모리"), List.of(source), List.of());
+        var proposal = new DiscoveryProposal(List.of(new ProposedProduct("Laptop A", page.url(), "Laptop A", "구성 확인", List.of(
+                new ProposedFact("메모리", "8GB", page.url(), "Laptop A 메모리 8GB."),
+                new ProposedFact("메모리", "32GB", page.url(), "Laptop A 메모리 32GB.")))));
+        var facts = DiscoveryWorker.validateProducts(UUID.randomUUID(), proposal, input).getFirst().facts();
+        assertThat(facts).hasSize(2);
+        assertThat(MinimumRequirementMatcher.check(com.decisionassistant.template.MinimumRequirements.forCategory(
+                com.decisionassistant.decision.DecisionTypes.TemplateKey.LAPTOP), java.util.Map.of("memory", "16"), facts)
+                .getFirst().status()).isEqualTo(RequirementStatus.UNKNOWN);
     }
 }

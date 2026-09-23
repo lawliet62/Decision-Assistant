@@ -128,6 +128,14 @@
 - **동작:** 주요 정보 비교와 실제 선택은 점수 평가 없이 가능하다. 용도 선택은 weight를 변경하지 않으며 선택한 최대 예산은 context와 최대 예산 constraint에 반영한다. 기존 검증된 평가의 완전성 규칙은 유지한다.
 - **이유:** 사용자가 객관적 정보를 직접 비교하면서 AI 추출·개인 만족도·재현 가능한 평가를 구별하게 한다.
 
+### BR-DISC-03: 최소 사양은 근거와 함께 비교하고 불확실성을 보존한다
+
+- **동작:** intake-v2는 5개 제품군에 선택형 최소 사양을 제공한다. 수치 하한·해상도·명시적 지원 여부만 판정하고 CPU 성능·음질·배터리 시간은 제외한다. 기본값은 조건 없음이다.
+- **동작:** 조건을 동일한 검색·AI 호출에 포함한다. 호출 수·동의·quota·메모/identity 제외 정책은 유지하며 조건을 자동 완화하거나 재검색하지 않는다. v1 데이터와 재시도는 기존 조건을 유지한다.
+- **동작:** 사양 누락·모호함·상충은 UNKNOWN이다. 단일 수치·명확한 단위와 지원 표현을 비교하며 저장 공간은 1TB=1,000GB, 해상도는 가로·세로 각각을 기준으로 한다. 자동 사양의 MEETS는 검증 완료가 아니며 UNREVIEWED를 유지한다.
+- **동작:** 하나라도 BELOW면 미달 영역에 분리하고 UNKNOWN은 기본 목록에 남긴다. 영역 내 순서를 유지하며 미달 후보도 사용자가 비교에 추가할 수 있다. 승인 후 비교표에서 조건별 근거를 유지하고 사용자 확인 수치는 표시·판정에 함께 우선한다.
+- **이유:** 포트폴리오 MVP에서 적은 외부 호출로 조건·근거·판정의 연결을 보여준다. 기존 평가값·가중치·hard Constraint를 자동 변경하지 않는다.
+
 ### BR-EVD-03: 제품명 검색은 사용자 선택을 돕는 URL lookup이다
 
 - **동작:** 인증된 사용자가 제품명 전송에 동의한 요청만 Serper로 보낸다. 요청마다 최대 200자의 query 하나만 전달하며 Decision의 의도·메모·사용자 identity를 보내지 않는다. 응답은 공개 HTTP(S) 페이지 최대 5개이며 부적절한 URL과 중복 URL을 제외하므로 3개 미만일 수도 있다.
@@ -176,6 +184,7 @@
 | BR-EVD-01~02 | `EvidenceWorkflowWorkerTest` (부분 실패·빈 페이지·재시도 종료·AI 실패 격리·후보 승인 경계) |
 | BR-EVD-03, BR-COST-01 | `ProductLookupServiceTest`, `SerperSearchProviderTest`, `SearchQuotaIntegrationTest`, `ProductLookupApiIntegrationTest`, `DecisionApiIntegrationTest.lookupRequiresAuthenticationCsrfAndExplicitConsentEvenWhenDisabled` |
 | BR-DISC-01~02 | `DiscoveryWorkerTest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
+| BR-DISC-03 | `MinimumRequirementMatcherTest`, `DiscoveryApiIntegrationTest.minimumRequirementsPersistAndRemainAdvisoryWithBoundedExternalCalls`, `DiscoveryApiIntegrationTest.invalidMinimumRequirementsAndLegacyVersionCannotTriggerProviders`, `frontend/e2e/minimum-requirements.spec.ts` |
 | BR-TPL-01 | `DecisionApiIntegrationTest.earbudsAndSelectedSourcesReuseExistingLifecycle`, `EvidenceWorkflowWorkerTest.earbudsNeverAutoFillSubjectiveRatings` |
 | BR-DEC-02, BR-EVD-03 | `frontend/e2e/guided-decision.spec.ts` (선택→평가→회고·한도 fallback·polling/충돌 입력 보존·수집 재시도) |
 

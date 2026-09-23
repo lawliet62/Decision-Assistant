@@ -2,13 +2,25 @@ import http from "node:http";
 import { randomUUID } from "node:crypto";
 
 const decisionId = "11111111-1111-1111-1111-111111111111";
+const numeric = (id, label, factName, values, unit) => ({ id, label, factName,
+  choices: values.map(value => ({ id: String(value), label: `${value === 1000 ? "1TB" : value + unit} 이상` })) });
+const support = (id, label, factName) => ({ id, label, factName, choices: [{ id: "required", label: "지원 필수" }] });
+const storage = numeric("storage", "저장 공간", "저장공간", [128, 256, 512], "GB");
+const refresh = numeric("refreshRate", "화면 주사율", "주사율", [60, 90, 120], "Hz");
+const minimumTemplates = {
+  LAPTOP: [numeric("memory", "메모리", "메모리", [8, 16, 32], "GB"), numeric("storage", "저장 공간", "저장공간", [256, 512, 1000], "GB")],
+  PHONE: [storage, refresh],
+  TABLET: [storage, refresh, support("pen", "전용 펜 지원", "펜 지원")],
+  MONITOR: [{ id: "resolution", label: "해상도", factName: "해상도", choices: [{ id: "fhd", label: "FHD 이상" }, { id: "qhd", label: "QHD 이상" }, { id: "uhd", label: "4K UHD 이상" }] }, numeric("refreshRate", "화면 주사율", "주사율", [60, 120, 144, 165], "Hz")],
+  EARBUDS: [support("anc", "ANC 지원", "ANC 지원")],
+};
 const templates = [
   ["LAPTOP", "노트북", "학업", 1000000, "Windows", ["가격", "CPU/GPU", "메모리", "배터리"]],
   ["PHONE", "휴대폰", "일상", 500000, "Android", ["가격", "OS", "화면", "배터리"]],
   ["TABLET", "태블릿", "필기", 300000, "iPadOS", ["가격", "화면", "펜 지원", "무게"]],
   ["MONITOR", "모니터", "사무", 200000, "HDMI", ["가격", "크기", "해상도", "주사율"]],
   ["EARBUDS", "무선 이어폰", "출퇴근", 100000, "iOS", ["가격", "형태", "ANC 지원", "무게"]],
-].map(([key, label, use, budget, compatibility, facts]) => ({ key, label, version: "intake-v1", uses: [use, key === "EARBUDS" ? "운동" : key === "TABLET" ? "그림" : "게임"], budgets: [budget], compatibility: [compatibility], facts }));
+].map(([key, label, use, budget, compatibility, facts]) => ({ key, label, version: "intake-v2", uses: [use, key === "EARBUDS" ? "운동" : key === "TABLET" ? "그림" : "게임"], budgets: [budget], compatibility: [compatibility], facts: [...new Set([...facts, ...minimumTemplates[key].map(item => item.factName)])], minimumRequirements: minimumTemplates[key] }));
 const criteria = ["가격", "음질", "착용감", "노이즈 캔슬링", "배터리 적합도"].map((name, index) => ({
   id: `33333333-3333-3333-3333-33333333333${index}`, name,
   kind: index === 0 ? "NUMERIC_UTILITY" : "RATING_1_TO_5",
@@ -48,6 +60,18 @@ function createDiscovery(body) {
     id: randomUUID(), name: template.label + " " + name, url: "https://example.com/" + name, reason: "주요 정보를 확인하고 비교하세요.", status: "PROPOSED",
     facts: [{ name: "가격", value: (100000 + index * 10000) + " KRW", sourceUrl: "https://example.com/" + name, quote: name + " 제품 기본 구성 가격", fetchedAt: new Date().toISOString(), verificationStatus: "UNREVIEWED" }],
   }));
+  // 브라우저 테스트의 고정 사례: 충족 / 미달 / 근거 없음. 실제 판정기는 backend 테스트에서 검증한다.
+  result.guidance.candidateSuggestions.forEach((candidate, index) => {
+    const actuals = index === 0
+      ? { memory: "32 GB", storage: "1 TB", refreshRate: "165 Hz", resolution: "4K UHD", anc: "지원", pen: "전용 펜 지원" }
+      : { memory: "4 GB", storage: "64 GB", refreshRate: "30 Hz", resolution: "1280x720", anc: "미지원", pen: "미지원" };
+    candidate.requirementChecks = template.minimumRequirements.filter(item => body.discovery.minimumRequirements?.[item.id]).map(item => {
+      const fact = { name: item.factName, value: actuals[item.id], sourceUrl: candidate.url, quote: candidate.name + " " + item.factName + " " + actuals[item.id], fetchedAt: new Date().toISOString(), verificationStatus: "UNREVIEWED" };
+      if (index < 2) candidate.facts.push(fact);
+      return { id: item.id, label: item.label, requiredValue: item.choices.find(choice => choice.id === body.discovery.minimumRequirements[item.id]).label,
+        status: ["MEETS", "BELOW", "UNKNOWN"][index], facts: index < 2 ? [fact] : [] };
+    });
+  });
   return result;
 }
 const server = http.createServer(async (request, response) => {
@@ -88,7 +112,7 @@ const server = http.createServer(async (request, response) => {
     const candidate = current.guidance.candidateSuggestions.find(item => item.id === id);
     if (candidate && body.action === "ACCEPT") {
       const added = option(candidate); current.options.push(added);
-      current.productFacts.push({ optionId: added.id, facts: candidate.facts });
+      current.productFacts.push({ optionId: added.id, facts: candidate.facts, requirementChecks: candidate.requirementChecks });
     }
     current.guidance.candidateSuggestions = current.guidance.candidateSuggestions.filter(item => item.id !== id);
     current.version++; return send(200, current);

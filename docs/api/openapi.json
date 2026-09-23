@@ -1133,6 +1133,12 @@
           },
           "sourceExcerpt" : {
             "type" : "string"
+          },
+          "requirementChecks" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RequirementCheck"
+            }
           }
         }
       },
@@ -1295,6 +1301,12 @@
           },
           "sensitiveDataAcknowledged" : {
             "type" : "boolean"
+          },
+          "minimumRequirements" : {
+            "type" : "object",
+            "additionalProperties" : {
+              "type" : "string"
+            }
           }
         },
         "required" : [ "aiConsent", "collectionConsent", "searchConsent", "sensitiveDataAcknowledged", "templateVersion" ]
@@ -1497,6 +1509,12 @@
           },
           "sourceExcerpt" : {
             "type" : "string"
+          },
+          "requirementChecks" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RequirementCheck"
+            }
           }
         }
       },
@@ -1549,6 +1567,30 @@
           },
           "channel" : {
             "type" : "string"
+          }
+        }
+      },
+      "RequirementCheck" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "requiredValue" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "MEETS", "BELOW", "UNKNOWN" ]
+          },
+          "facts" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProductFact"
+            }
           }
         }
       },
@@ -2300,6 +2342,59 @@
             "items" : {
               "type" : "string"
             }
+          },
+          "minimumRequirements" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MinimumRequirement"
+            }
+          }
+        }
+      },
+      "MinimumRequirement" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "factName" : {
+            "type" : "string"
+          },
+          "rule" : {
+            "type" : "string",
+            "enum" : [ "CAPACITY", "REFRESH_RATE", "RESOLUTION", "SUPPORT" ]
+          },
+          "choices" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RequirementChoice"
+            }
+          }
+        }
+      },
+      "RequirementChoice" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "minimum" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "width" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "height" : {
+            "type" : "integer",
+            "format" : "int32"
           }
         }
       },

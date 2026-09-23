@@ -175,7 +175,7 @@ class DiscoveryApiIntegrationTest {
     @Test void failureRequiresExplicitVersionedRetryAndRetainsExistingResults() throws Exception {
         var id = create();
         // 기존 JSONB에는 uses 없이 단일 use만 저장돼 있다.
-        jdbc.update("UPDATE product_discoveries SET conditions = (conditions - 'uses') || '{\"use\":\"출퇴근\"}'::jsonb WHERE decision_id = ?", UUID.fromString(id));
+        jdbc.update("UPDATE product_discoveries SET conditions = (conditions - 'uses' - 'minimumRequirements') || '{\"use\":\"출퇴근\"}'::jsonb WHERE decision_id = ?", UUID.fromString(id));
         assertThat(runs.findById(UUID.fromString(id)).orElseThrow().conditions().uses()).isNull();
         when(web.scrape(anyString())).thenThrow(new IllegalStateException("provider failure"));
         worker.processNext(); worker.processNext();
@@ -190,7 +190,7 @@ class DiscoveryApiIntegrationTest {
         doReturn(new WebEvidenceProvider.Page("비교", "Buds A 가격 100,000 KRW. Buds B 가격 150,000 KRW.")).when(web).scrape(anyString());
         worker.processNext();
         assertThat(runs.findById(UUID.fromString(id)).orElseThrow().status()).isEqualTo(ProductDiscovery.Status.SUCCEEDED);
-        verify(discoverer).discover(argThat(input -> input.uses().equals(List.of("출퇴근"))));
+        verify(discoverer).discover(argThat(input -> input.uses().equals(List.of("출퇴근")) && input.minimumRequirements().isEmpty()));
     }
 
     @Test void concurrentWorkersClaimOnceAndPartialRetryKeepsAcceptedFacts() throws Exception {
@@ -221,5 +221,97 @@ class DiscoveryApiIntegrationTest {
                 .andExpect(jsonPath("$.productFacts[0].facts[0].value").value("100,000 KRW"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(1))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].facts[0].value").value("140,000 KRW"));
+    }
+
+    @Test void minimumRequirementsPersistAndRemainAdvisoryWithBoundedExternalCalls() throws Exception {
+        var source = "https://example.com/compare";
+        var text = "Buds A ANC 지원. Buds B ANC 미지원. Buds C 제품 소개.";
+        when(search.search(anyString(), eq(5))).thenReturn(java.util.stream.IntStream.range(0, 8)
+                .mapToObj(index -> new WebSearchProvider.SearchResult("비교", index == 0 ? source : "https://example.com/page" + index, "")).toList());
+        when(web.scrape(anyString())).thenReturn(new WebEvidenceProvider.Page("비교", text));
+        when(discoverer.discover(any())).thenReturn(new AiContracts.AiResult<>(new DiscoveryProposal(List.of(
+                new ProposedProduct("Buds A", source, "Buds A", "근거 확인", List.of(new ProposedFact("ANC 지원", "지원", source, "Buds A ANC 지원."))),
+                new ProposedProduct("Buds B", source, "Buds B", "근거 확인", List.of(new ProposedFact("ANC 지원", "미지원", source, "Buds B ANC 미지원."))),
+                new ProposedProduct("Buds C", source, "Buds C", "근거 확인", List.of()))), 100, 50));
+        var body = BODY.replace("intake-v1", "intake-v2").replace("\"use\":\"출퇴근\"", "\"uses\":[\"출퇴근\"],\"minimumRequirements\":{\"anc\":\"required\"}");
+        var id = create(body);
+        assertThat(runs.findById(UUID.fromString(id)).orElseThrow().conditions().minimumRequirements()).containsEntry("anc", "required");
+        worker.processNext(); worker.processNext();
+        var response = mapper.readTree(mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.discovery.conditions.minimumRequirements.anc").value("required"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[1].requirementChecks[0].status").value("BELOW"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[2].requirementChecks[0].status").value("UNKNOWN"))
+                .andExpect(jsonPath("$.values.length()").value(0)).andReturn().getResponse().getContentAsString());
+        var belowId = response.path("guidance").path("candidateSuggestions").get(1).path("id").asText();
+        mvc.perform(get("/api/v1/decisions/" + id).with(user())).andExpect(status().isNotFound());
+        mvc.perform(patch("/api/v1/decisions/" + id + "/candidate-suggestions/" + belowId).with(owner).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"ACCEPT\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.productFacts[0].requirementChecks[0].status").value("BELOW"))
+                .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].facts[0].verificationStatus").value("UNREVIEWED"));
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].status").value("BELOW"));
+        verify(search, times(1)).search(argThat(query -> query.contains("ANC 지원 지원 필수") && !query.contains("서버에만")), eq(5));
+        verify(web, times(5)).scrape(anyString());
+        verify(discoverer, times(1)).discover(argThat(input -> input.minimumRequirements().equals(List.of(new MinimumCondition("anc", "ANC 지원", "지원 필수")))
+                && input.pages().size() == 5 && !mapper.writeValueAsString(input).contains("서버에만")));
+    }
+
+    @Test void invalidMinimumRequirementsAndLegacyVersionCannotTriggerProviders() throws Exception {
+        for (var selection : List.of("{\"memory\":\"16\"}", "{\"anc\":\"yes\"}", "{\"unknown\":\"required\"}")) {
+            mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content(BODY.replace("intake-v1", "intake-v2").replace("\"use\":\"출퇴근\"", "\"minimumRequirements\":" + selection)))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(BODY.replace("\"use\":\"출퇴근\"", "\"minimumRequirements\":{\"anc\":\"required\"}")))
+                .andExpect(status().isUnprocessableEntity());
+        for (var selection : List.of("{\"anc\":null}", "{\"anc\":\"\"}", "{\"\":\"required\"}", "{\"a\":\"1\",\"b\":\"1\",\"c\":\"1\",\"d\":\"1\"}")) {
+            mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content(BODY.replace("intake-v1", "intake-v2").replace("\"use\":\"출퇴근\"", "\"minimumRequirements\":" + selection)))
+                    .andExpect(status().isBadRequest());
+        }
+        verifyNoInteractions(search, web, discoverer);
+    }
+
+    @Test void confirmedNumericEditUpdatesDisplayedFactsAndRequirementChecksTogether() throws Exception {
+        var body = BODY.replace("EARBUDS", "LAPTOP").replace("intake-v1", "intake-v2")
+                .replace("\"use\":\"출퇴근\"", "\"uses\":[],\"minimumRequirements\":{\"memory\":\"16\",\"storage\":\"1000\"}");
+        var source = "https://example.com/compare";
+        when(web.scrape(source)).thenReturn(new WebEvidenceProvider.Page("노트북", "Laptop A 메모리 8GB. Laptop A 저장공간 256GB."));
+        when(discoverer.discover(any())).thenReturn(new AiContracts.AiResult<>(new DiscoveryProposal(List.of(new ProposedProduct(
+                "Laptop A", source, "Laptop A", "구성을 확인하세요", List.of(
+                        new ProposedFact("메모리", "8GB", source, "Laptop A 메모리 8GB."),
+                        new ProposedFact("저장공간", "256GB", source, "Laptop A 저장공간 256GB."))))), 10, 10));
+        var id = create(body); worker.processNext();
+        var json = mapper.readTree(mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.context.intendedUse").value(org.hamcrest.Matchers.containsString("메모리 16GB 이상")))
+                .andReturn().getResponse().getContentAsString());
+        var candidate = json.path("guidance").path("candidateSuggestions").get(0).path("id").asText();
+        var accepted = mapper.readTree(mvc.perform(patch("/api/v1/decisions/" + id + "/candidate-suggestions/" + candidate)
+                .with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"ACCEPT\"}"))
+                .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].status").value("BELOW"))
+                .andReturn().getResponse().getContentAsString());
+        var values = new ArrayList<Map<String, Object>>();
+        for (var criterion : accepted.path("criteria")) {
+            var name = criterion.path("name").asText();
+            if (name.equals("메모리") || name.equals("스토리지")) values.add(Map.of(
+                    "optionId", accepted.path("options").get(0).path("id").asText(), "criterionId", criterion.path("id").asText(),
+                    "numericValue", name.equals("메모리") ? 32 : 1024, "certainty", "CONFIRMED", "origin", "USER", "verificationStatus", "CONFIRMED"));
+        }
+        var draft = Map.of("expectedVersion", accepted.path("version").asLong(), "title", accepted.path("title").asText(),
+                "context", accepted.path("context"), "options", accepted.path("options"), "criteria", accepted.path("criteria"),
+                "constraints", accepted.path("constraints"), "constraintResults", List.of(), "values", values);
+        mvc.perform(put("/api/v1/decisions/" + id + "/draft").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(draft)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].status").value("MEETS"))
+                .andExpect(jsonPath("$.productFacts[0].requirementChecks[1].status").value("MEETS"))
+                .andExpect(jsonPath("$.productFacts[0].requirementChecks[1].facts[0].value").value("1024 GB"))
+                .andExpect(jsonPath("$.productFacts[0].facts[1].value").value("1024 GB"));
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].facts[0].verificationStatus").value("CONFIRMED"));
+        verify(search, times(1)).search(anyString(), eq(5));
+        verify(discoverer, times(1)).discover(any());
     }
 }

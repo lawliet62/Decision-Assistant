@@ -486,6 +486,7 @@ export interface components {
             /** Format: date-time */
             fetchedAt?: string;
             sourceExcerpt?: string;
+            requirementChecks?: components["schemas"]["RequirementCheck"][];
         };
         DecisionResponse: {
             /** Format: uuid */
@@ -537,6 +538,9 @@ export interface components {
             collectionConsent: boolean;
             aiConsent: boolean;
             sensitiveDataAcknowledged: boolean;
+            minimumRequirements?: {
+                [key: string]: string;
+            };
         };
         EvidenceData: {
             /** Format: uuid */
@@ -610,6 +614,7 @@ export interface components {
             /** Format: date-time */
             fetchedAt?: string;
             sourceExcerpt?: string;
+            requirementChecks?: components["schemas"]["RequirementCheck"][];
         };
         QuestionData: {
             /** Format: uuid */
@@ -629,6 +634,14 @@ export interface components {
             dueAt?: string;
             status?: string;
             channel?: string;
+        };
+        RequirementCheck: {
+            id?: string;
+            label?: string;
+            requiredValue?: string;
+            /** @enum {string} */
+            status?: "MEETS" | "BELOW" | "UNKNOWN";
+            facts?: components["schemas"]["ProductFact"][];
         };
         ResolutionData: {
             /** Format: uuid */
@@ -887,6 +900,25 @@ export interface components {
             budgets?: number[];
             compatibility?: string[];
             facts?: string[];
+            minimumRequirements?: components["schemas"]["MinimumRequirement"][];
+        };
+        MinimumRequirement: {
+            id?: string;
+            label?: string;
+            factName?: string;
+            /** @enum {string} */
+            rule?: "CAPACITY" | "REFRESH_RATE" | "RESOLUTION" | "SUPPORT";
+            choices?: components["schemas"]["RequirementChoice"][];
+        };
+        RequirementChoice: {
+            id?: string;
+            label?: string;
+            /** Format: int32 */
+            minimum?: number;
+            /** Format: int32 */
+            width?: number;
+            /** Format: int32 */
+            height?: number;
         };
         DecisionSummary: {
             /** Format: uuid */

@@ -25,3 +25,11 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 ## 추천 용도 선택
 
 `DiscoveryRequest.uses`는 카테고리에서 제공하는 용도 배열(최대 4개)이다. 빈 배열은 용도 미정이며 중복은 제거하고 템플릿 순서로 정규화한다. 새 화면은 `uses`만 보낸다. 기존 `use`는 deprecated 호환 필드로, `uses`가 없거나 null일 때만 사용한다. 두 필드가 함께 있으면 빈 배열을 포함해 `uses`가 우선한다. 기존 JSONB 데이터도 같은 규칙으로 조회·재시도하며 일괄 재작성이나 템플릿 버전 변경은 하지 않는다.
+
+## 최소 사양 선택
+
+- `GET /api/v1/intake-templates`는 `intake-v2`와 `minimumRequirements` 정의를 반환한다. 항목 ID·라벨·사양 이름·비교 규칙·선택지가 서버의 source of truth다.
+- 생성 요청의 `discovery.minimumRequirements`는 최대 3개의 `{항목ID: 선택지ID}` 객체다. 예: `{"memory":"16","storage":"1000"}`. 생략·null·빈 객체는 조건 없음이다. `intake-v1`은 조건 없는 기존 계약으로 생성·조회·재시도를 지원한다.
+- 다른 제품군의 항목·알 수 없는 선택지·v1의 최소 조건은 422다. 빈 ID·빈 값·null 값·개수 초과는 400이다. 정규화한 선택은 템플릿 순서로 기존 JSONB에 보존한다.
+- `CandidateSuggestionData`와 `ProductFactsData`에 `requirementChecks` 배열을 추가한다. 각 결과는 항목 ID·라벨·요구값, `MEETS|BELOW|UNKNOWN`, 비교에 사용한 `facts`를 포함한다. 선택하지 않으면 빈 배열이다. 이 판정은 후보 승인이나 평가를 차단하지 않는다.
+- `ProductFactsData`는 직접 추가한 제품도 포함해 Option별 표시 사양을 반환한다. 사용자 확인 수치가 있으면 해당 수치가 자동 추출 사양보다 우선하며 `스토리지` Criterion은 `저장공간` 표시 사양에 연결한다. 프런트 표시와 최소 조건 판정은 같은 사양을 사용한다.
