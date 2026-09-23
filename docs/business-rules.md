@@ -119,6 +119,7 @@
 - **동작:** 지원하는 5개 제품군의 versioned intake template로 하나 이상의 용도·최대 예산·호환성을 선택한다. 선택한 용도는 하나의 추천에서 함께 고려하며 중복을 제거하고 템플릿 순서로 저장한다. 미정·제한 없음도 허용하며 자유 텍스트는 필수가 아니다. 조건·검색/수집/AI 동의·민감 정보 비포함 확인을 저장한다. 기존 동의는 새 경로를 허용하지 않는다.
 - **동작:** 최초 추천은 Serper 조건 검색 1회, 공개 페이지 최대 5개 수집, AI 구조화 최대 1회로 제한한다. 검색은 기존 월·burst 한도를 공유한다. 메모·사용자 identity는 최초 추천 검색·AI 입력에서 제외한다.
 - **동작:** 작업과 후보는 해당 Decision 소유자에게만 보인다. 일부 실패는 확보한 후보를 보존한다. 실패·부분 완료만 현재 작업 version으로 명시적으로 재시도하며 실행 중·성공 상태는 재실행하지 않는다.
+- **동작:** 추천 실패 안내는 검색 한도·검색 결과 없음·페이지 수집·AI 정리·근거 부족·저장 실패를 구분한다. 수집한 내용이 전혀 없으면 AI를 호출하지 않고, 일부 페이지 수집 실패는 나머지 근거로 추천을 계속한다. provider 원문 오류는 사용자에게 전달하지 않는다.
 - **이유:** 타이핑 부담과 외부 호출 비용을 제한하고 새로고침·실패 후에도 비교를 이어간다.
 
 ### BR-DISC-02: 주요 정보와 평가값은 구분한다
@@ -183,7 +184,7 @@
 | BR-DEC-06, BR-AI-02, BR-EVD-01~02, BR-PREF-01 | `DecisionApiIntegrationTest.createsGuidedDecisionAnswersCriticalQuestionsAndBuildsPreferenceMemory` |
 | BR-EVD-01~02 | `EvidenceWorkflowWorkerTest` (부분 실패·빈 페이지·재시도 종료·AI 실패 격리·후보 승인 경계) |
 | BR-EVD-03, BR-COST-01 | `ProductLookupServiceTest`, `SerperSearchProviderTest`, `SearchQuotaIntegrationTest`, `ProductLookupApiIntegrationTest`, `DecisionApiIntegrationTest.lookupRequiresAuthenticationCsrfAndExplicitConsentEvenWhenDisabled` |
-| BR-DISC-01~02 | `DiscoveryWorkerTest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
+| BR-DISC-01~02 | `DiscoveryWorkerTest`, `DiscoveryFailureTest`, `ProviderResponseConversionTest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-DISC-03 | `MinimumRequirementMatcherTest`, `DiscoveryApiIntegrationTest.minimumRequirementsPersistAndRemainAdvisoryWithBoundedExternalCalls`, `DiscoveryApiIntegrationTest.invalidMinimumRequirementsAndLegacyVersionCannotTriggerProviders`, `frontend/e2e/minimum-requirements.spec.ts` |
 | BR-TPL-01 | `DecisionApiIntegrationTest.earbudsAndSelectedSourcesReuseExistingLifecycle`, `EvidenceWorkflowWorkerTest.earbudsNeverAutoFillSubjectiveRatings` |
 | BR-DEC-02, BR-EVD-03 | `frontend/e2e/guided-decision.spec.ts` (선택→평가→회고·한도 fallback·polling/충돌 입력 보존·수집 재시도) |

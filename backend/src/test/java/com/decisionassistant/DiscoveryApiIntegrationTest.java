@@ -7,6 +7,9 @@ import com.decisionassistant.lookup.SerperSearchProvider;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
@@ -313,5 +316,67 @@ class DiscoveryApiIntegrationTest {
                 .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].facts[0].verificationStatus").value("CONFIRMED"));
         verify(search, times(1)).search(anyString(), eq(5));
         verify(discoverer, times(1)).discover(any());
+    }
+
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> failureScenarios() {
+        return java.util.stream.Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of("quota", "SEARCH", "SEARCH_MONTHLY_LIMIT", "이번 달 제품 검색 한도"),
+                org.junit.jupiter.params.provider.Arguments.of("noResults", "SEARCH", "SEARCH_NO_RESULTS", "공개 제품 페이지를 찾지 못했습니다"),
+                org.junit.jupiter.params.provider.Arguments.of("collectionJson", "COLLECTION", "COLLECTION_RESPONSE_INVALID", "공개 페이지 수집 응답을 처리하지 못했습니다"),
+                org.junit.jupiter.params.provider.Arguments.of("emptyPage", "COLLECTION", "COLLECTION_EMPTY", "비교할 내용이 없습니다"),
+                org.junit.jupiter.params.provider.Arguments.of("aiJson", "AI", "AI_RESPONSE_INVALID", "AI 응답을 제품 정보로 변환하지 못했습니다"),
+                org.junit.jupiter.params.provider.Arguments.of("aiTimeout", "AI", "AI_TIMEOUT", "시간이 초과되었습니다"),
+                org.junit.jupiter.params.provider.Arguments.of("aiFailed", "AI", "AI_FAILED", "AI 제품 정보 정리에 실패했습니다"),
+                org.junit.jupiter.params.provider.Arguments.of("noEvidence", "VALIDATION", "EVIDENCE_INSUFFICIENT", "제품을 확인할 근거가 부족합니다"));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("failureScenarios")
+    @ExtendWith(OutputCaptureExtension.class)
+    void failureStageSurvivesWithoutLeakingProviderDetailsOrRetrying(String scenario, String stage, String code,
+                                                                   String message, CapturedOutput output) throws Exception {
+        var secret = "fixture-private-provider-body";
+        switch (scenario) {
+            case "quota" -> when(search.search(anyString(), eq(5))).thenThrow(new com.decisionassistant.lookup.LookupException(429, "SEARCH_MONTHLY_LIMIT", secret));
+            case "noResults" -> when(search.search(anyString(), eq(5))).thenReturn(List.of());
+            case "collectionJson" -> when(web.scrape(anyString())).thenThrow(new org.springframework.http.converter.HttpMessageConversionException(secret, new IllegalArgumentException(secret)));
+            case "emptyPage" -> when(web.scrape(anyString())).thenReturn(new WebEvidenceProvider.Page("empty", " "));
+            case "aiJson" -> when(discoverer.discover(any())).thenThrow(new org.springframework.http.converter.HttpMessageConversionException(secret));
+            case "aiTimeout" -> when(discoverer.discover(any())).thenThrow(new AiInvocationException(secret, new java.util.concurrent.TimeoutException(secret)));
+            case "aiFailed" -> when(discoverer.discover(any())).thenThrow(new IllegalStateException(secret));
+            case "noEvidence" -> when(discoverer.discover(any())).thenReturn(new AiContracts.AiResult<>(new DiscoveryProposal(List.of()), 10, 10));
+            default -> throw new AssertionError(scenario);
+        }
+        var id = create(); worker.processNext(); worker.processNext();
+        var run = runs.findById(UUID.fromString(id)).orElseThrow();
+        assertThat(run.status()).isEqualTo(ProductDiscovery.Status.FAILED);
+        assertThat(run.error()).contains(message).doesNotContain(secret);
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.discovery.error").value(org.hamcrest.Matchers.containsString(message)))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(0));
+        assertThat(output.getAll()).contains("product_event=discovery_failed", "stage=" + stage, "code=" + code).doesNotContain(secret);
+        if (scenario.equals("collectionJson")) assertThat(output.getAll()).contains("product_event=discovery_page_failed", "root_cause=IllegalArgumentException");
+        verify(search, times(1)).search(anyString(), eq(5));
+        if (stage.equals("SEARCH")) verifyNoInteractions(web, discoverer);
+        else {
+            verify(web, times(1)).scrape(anyString());
+            verify(discoverer, times(stage.equals("COLLECTION") ? 0 : 1)).discover(any());
+        }
+    }
+
+    @Test @ExtendWith(OutputCaptureExtension.class)
+    void conversionFailureKeepsSuccessfulPagesAndCandidates(CapturedOutput output) throws Exception {
+        when(search.search(anyString(), eq(5))).thenReturn(List.of(
+                new WebSearchProvider.SearchResult("오류", "https://example.com/bad", ""),
+                new WebSearchProvider.SearchResult("비교", "https://example.com/compare", "")));
+        when(web.scrape("https://example.com/bad")).thenThrow(new org.springframework.http.converter.HttpMessageConversionException("fixture-private-provider-body"));
+        var id = create(); worker.processNext(); worker.processNext();
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.discovery.status").value("PARTIAL"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(2));
+        verify(discoverer, times(1)).discover(argThat(input -> input.pages().size() == 1));
+        verify(search, times(1)).search(anyString(), eq(5)); verify(web, times(2)).scrape(anyString());
+        assertThat(output.getAll()).contains("product_event=discovery_page_failed", "code=COLLECTION_RESPONSE_INVALID")
+                .doesNotContain("fixture-private-provider-body");
     }
 }

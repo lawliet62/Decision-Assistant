@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import static com.decisionassistant.guidance.DiscoveryContracts.*;
+import static com.decisionassistant.guidance.DiscoveryFailure.*;
 
 @Component
 public class DiscoveryWorker {
@@ -53,6 +54,7 @@ public class DiscoveryWorker {
         });
         if (work == null) return;
         var start = System.nanoTime();
+        var stage = Stage.CONFIGURATION;
         try {
             service.validate(work.category(), work.conditions());
             if (ai == null) throw new IllegalStateException("AI unavailable");
@@ -64,21 +66,40 @@ public class DiscoveryWorker {
                     + " " + Objects.toString(condition.compatibility(), "")
                     + minimums.stream().map(item -> " " + item.label() + " " + item.requiredValue()).collect(java.util.stream.Collectors.joining());
             var pages = new ArrayList<SourcePage>();
-            var failed = false;
-            for (var result : search.lookupForOwner(query, work.owner())) {
+            stage = Stage.SEARCH;
+            var searchResults = search.lookupForOwner(query, work.owner());
+            if (searchResults.isEmpty()) {
+                fail(work, new DiscoveryFailure(Stage.SEARCH, Code.SEARCH_NO_RESULTS), null);
+                return;
+            }
+            stage = Stage.COLLECTION;
+            var collectionFailures = new ArrayList<DiscoveryFailure>();
+            for (var result : searchResults) {
                 try {
                     var url = urls.validate(result.url());
                     var page = web.scrape(url);
-                    if (page == null || page.markdown() == null || page.markdown().isBlank()) { failed = true; continue; }
+                    if (page == null || page.markdown() == null || page.markdown().isBlank()) {
+                        var failure = new DiscoveryFailure(Stage.COLLECTION, Code.COLLECTION_EMPTY);
+                        collectionFailures.add(failure); logFailure("discovery_page_failed", work, failure, null); continue;
+                    }
                     pages.add(new SourcePage(url, page.title(), truncate(page.markdown(), 6000), Instant.now()));
-                } catch (RuntimeException ex) { failed = true; }
+                } catch (RuntimeException ex) {
+                    var failure = DiscoveryFailure.classify(Stage.COLLECTION, ex);
+                    collectionFailures.add(failure); logFailure("discovery_page_failed", work, failure, ex);
+                }
             }
-            if (pages.isEmpty()) throw new IllegalStateException("No usable source pages");
+            if (pages.isEmpty()) {
+                fail(work, collectionFailures.getFirst(), null);
+                return;
+            }
             var input = new DiscoveryInput(template.label(), condition.uses(), condition.maxBudget(),
                     condition.compatibility(), template.facts(), pages, minimums);
+            stage = Stage.AI;
             var result = executor.call(() -> ai.discover(input));
+            stage = Stage.VALIDATION;
             var verified = validateProducts(work.id(), result.value(), input);
-            var partial = failed || verified.size() < 2;
+            var partial = !collectionFailures.isEmpty() || verified.size() < 2;
+            stage = Stage.PERSISTENCE;
             tx.executeWithoutResult(status -> {
                 var run = runs.findById(work.id()).orElseThrow();
                 var decision = decisions.lockByIdAndOwner(work.id(), work.owner()).orElseThrow();
@@ -100,17 +121,30 @@ public class DiscoveryWorker {
                 run.usage(properties.provider(), properties.model(), result.inputTokens(), result.outputTokens(),
                         (System.nanoTime() - start) / 1_000_000);
                 run.finish(verified.isEmpty() ? ProductDiscovery.Status.FAILED : partial ? ProductDiscovery.Status.PARTIAL : ProductDiscovery.Status.SUCCEEDED,
-                        verified.isEmpty() ? "제품을 확인할 근거가 부족합니다. 조건을 바꾸거나 직접 추가하세요." : partial ? "일부 정보만 확인했습니다. 직접 추가하거나 다시 시도할 수 있습니다." : null);
+                        verified.isEmpty() ? Code.EVIDENCE_INSUFFICIENT.message() : partial ? "일부 정보만 확인했습니다. 직접 추가하거나 다시 시도할 수 있습니다." : null);
             });
-            log.info("product_event=discovery_finished decision_id={} candidates={} partial={}", work.id(), verified.size(), partial);
+            if (verified.isEmpty()) logFailure("discovery_failed", work, new DiscoveryFailure(Stage.VALIDATION, Code.EVIDENCE_INSUFFICIENT), null);
+            else log.info("product_event=discovery_finished decision_id={} candidates={} partial={}", work.id(), verified.size(), partial);
         } catch (RuntimeException ex) {
-            tx.executeWithoutResult(status -> {
-                var run = runs.findById(work.id()).orElseThrow();
-                if (run.status() == ProductDiscovery.Status.RUNNING && run.version() == work.version())
-                    run.finish(ProductDiscovery.Status.FAILED, "추천 정보를 가져오지 못했습니다. 서비스 상태·검색 한도를 확인하거나 직접 추가하세요.");
-            });
-            log.warn("product_event=discovery_failed decision_id={} reason={}", work.id(), ex.getClass().getSimpleName());
+            fail(work, DiscoveryFailure.classify(stage, ex), ex);
         }
+    }
+
+    private void fail(Work work, DiscoveryFailure failure, Throwable cause) {
+        // 실패 상태 저장까지 불가능한 경우에도 최초 실패 단계를 관측할 수 있게 한다.
+        logFailure("discovery_failed", work, failure, cause);
+        tx.executeWithoutResult(status -> {
+            var run = runs.findById(work.id()).orElseThrow();
+            if (run.status() == ProductDiscovery.Status.RUNNING && run.version() == work.version())
+                run.finish(ProductDiscovery.Status.FAILED, failure.message());
+        });
+    }
+
+    private static void logFailure(String event, Work work, DiscoveryFailure failure, Throwable cause) {
+        // 예외 메시지·stack trace에는 URL, 페이지 본문, provider 응답이 포함될 수 있다.
+        log.warn("product_event={} decision_id={} stage={} code={} reason={} root_cause={} http_status={}",
+                event, work.id(), failure.stage(), failure.code(), cause == null ? "none" : cause.getClass().getSimpleName(),
+                DiscoveryFailure.rootCauseType(cause), DiscoveryFailure.httpStatus(cause));
     }
 
     static List<CandidateSuggestion> validateProducts(UUID decisionId, DiscoveryProposal proposal, DiscoveryInput input) {

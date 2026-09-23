@@ -26,6 +26,8 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 
 `DiscoveryRequest.uses`는 카테고리에서 제공하는 용도 배열(최대 4개)이다. 빈 배열은 용도 미정이며 중복은 제거하고 템플릿 순서로 정규화한다. 새 화면은 `uses`만 보낸다. 기존 `use`는 deprecated 호환 필드로, `uses`가 없거나 null일 때만 사용한다. 두 필드가 함께 있으면 빈 배열을 포함해 `uses`가 우선한다. 기존 JSONB 데이터도 같은 규칙으로 조회·재시도하며 일괄 재작성이나 템플릿 버전 변경은 하지 않는다.
 
+추천 작업의 기존 `discovery.error`는 실패 단계에 맞는 안전한 한국어 안내를 반환한다. 검색 한도·결과 없음, 페이지 수집·응답 변환, AI 처리, 근거 부족, 저장 실패를 구분하되 provider 원문 오류는 반환하지 않는다. 화면은 이 문자열을 표시하고 분기에는 기존 `status`를 사용한다. 진단용 `stage`·`code`는 서버 로그에만 기록하며 API 필드나 상태 enum을 추가하지 않는다.
+
 ## 최소 사양 선택
 
 - `GET /api/v1/intake-templates`는 `intake-v2`와 `minimumRequirements` 정의를 반환한다. 항목 ID·라벨·사양 이름·비교 규칙·선택지가 서버의 source of truth다.

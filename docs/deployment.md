@@ -18,9 +18,23 @@
 - 실제 Dev smoke: 5개 제품군에서 용도·예산을 선택하고 동의 후 추천 → 2개 승인 → 주요 사양·출처·조회 시점 확인 → 평가 없이 선택 기록을 수행한다. 수집 실패 시 확보된 결과·직접 추가·수동 재시도를 확인한다.
 - 추천 1회는 Serper 1회, 공개 페이지 최대 5개, AI 구조화 1회다. 추천용 SDK와 구조화 출력의 자동 재시도도 비활성화한다. 기존 평가·구조화 경로의 재시도 설정은 바꾸지 않는다.
 - 추천 검색은 제품명 lookup과 월 1,000회 및 burst 제한을 공유한다. AI/Firecrawl 전체 계정 비용 상한을 대체하지 않는다.
-- `product_event=discovery_finished/discovery_failed`와 `product.lookup.requests`를 관측한다. 추천 행에 provider/model, prompt/schema version, token/latency를 보존한다. 조건 원문·구매 메모·Secret을 로그에 추가하지 않는다.
+- `product_event=discovery_finished/discovery_failed/discovery_page_failed`와 `product.lookup.requests`를 관측한다. 실패 로그의 `decision_id`, `stage`, `code`, `reason`, `root_cause`, `http_status`로 단계를 찾는다. `reason`과 `root_cause`는 예외 종류이며 메시지·stack trace·URL·provider 원문 응답은 기록하지 않는다. 추천 행에 provider/model, prompt/schema version, token/latency를 보존한다. 조건 원문·구매 메모·Secret을 로그에 추가하지 않는다.
 - 실패나 부분 완료는 사용자만 재시도한다. 재시작으로 RUNNING에 남은 작업은 15분 경과 후 다음 worker 점검에서 실패로 전환되며 자동 외부 재호출은 하지 않는다.
 - 기능을 끌 때는 기존 검색·수집·AI flag를 사용한다. 새 migration을 되돌리는 방식보다 forward recovery를 우선한다. 기능 비활성화는 이미 저장한 비교·사양 열람을 막지 않는다.
+
+추천 실패 시 아래 순서로 확인한다. 여러 페이지가 모두 실패하면 화면은 첫 페이지의 실패 종류를 안내하며, 개별 원인은 `discovery_page_failed` 로그에서 확인한다.
+
+| `stage` / 대표 `code` | 확인 사항 |
+| --- | --- |
+| `CONFIGURATION` / `CONFIGURATION_UNAVAILABLE` | 검색·수집·AI 기능 설정과 저장된 조건의 유효성 |
+| `SEARCH` / `SEARCH_MONTHLY_LIMIT`, `SEARCH_BUSY`, `SEARCH_TIMEOUT`, `SEARCH_NO_RESULTS`, `SEARCH_FAILED` | 월 한도·burst·provider 상태·검색 결과 유무 |
+| `COLLECTION` / `COLLECTION_RESPONSE_INVALID` | HTTP 성공 후 JSON 변환·응답 구조 오류. Boot가 사용하는 Jackson 타입과 adapter의 응답 타입이 일치하는지 확인 |
+| `COLLECTION` / `COLLECTION_TIMEOUT`, `COLLECTION_EMPTY`, `COLLECTION_FAILED` | 수집 지연·빈 본문·provider HTTP 상태. 일부 페이지 성공은 부분 추천으로 이어짐 |
+| `AI` / `AI_TIMEOUT`, `AI_RESPONSE_INVALID`, `AI_FAILED` | AI 호출 지연·구조화 응답 변환·provider 실패 |
+| `VALIDATION` / `EVIDENCE_INSUFFICIENT` | 수집 원문에서 제품명·출처·인용 근거를 확인할 수 있는지 점검 |
+| `PERSISTENCE` / `PERSISTENCE_FAILED` | DB 연결·트랜잭션 오류. 실패 상태 저장도 불가능하면 로그를 먼저 확인하고 기존 중단 작업 복구 규칙을 적용 |
+
+`ProviderResponseConversionTest`는 로컬 HTTP fixture와 Boot의 실제 `RestClient` JSON converter로 Firecrawl·Resend 응답을 검사한다. 실제 provider 가용성은 별도 smoke로 확인한다. 수정 배포 후 과거 FAILED 작업은 자동 재실행되지 않으며 사용자가 명시적으로 다시 시도한다.
 
 ## Server-only configuration
 
