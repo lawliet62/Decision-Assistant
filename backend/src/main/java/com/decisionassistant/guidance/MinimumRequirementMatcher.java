@@ -45,7 +45,9 @@ public final class MinimumRequirementMatcher {
                 };
                 status = meets ? RequirementStatus.MEETS : RequirementStatus.BELOW;
             }
-            return new RequirementCheck(item.id(), item.label(), choice.label(), status, evidence);
+            var reason = status != RequirementStatus.UNKNOWN ? null : evidence.isEmpty() ? UnknownReason.MISSING
+                    : values.stream().filter(Objects::nonNull).distinct().count() > 1 ? UnknownReason.CONFLICT : UnknownReason.AMBIGUOUS;
+            return new RequirementCheck(item.id(), item.label(), choice.label(), status, evidence, reason);
         }).toList();
     }
 
@@ -78,6 +80,10 @@ public final class MinimumRequirementMatcher {
             case "미지원", "지원 안 함", "지원하지 않음", "없음", "not supported", "unsupported", "no", "false" -> false;
             default -> null;
         };
+        if (supported == null && "ANC 지원".equals(fact.name()) && ANC_CONTEXT.matcher(raw).find()) {
+            if (raw.matches("(?i)(?:(?:적응형|하이브리드|adaptive|hybrid)\\s+)?(?:ANC|액티브\\s*노이즈\\s*캔슬링|active noise cancell?ation)\\s*(?:지원|탑재|제공|기능|supported|enabled)")) supported = true;
+            else if (raw.matches("(?i)(?:ANC|액티브\\s*노이즈\\s*캔슬링|active noise cancell?ation)\\s*(?:미지원|없음|not supported|unsupported)")) supported = false;
+        }
         if (supported == null) return null;
         var quote = Objects.toString(fact.quote(), "");
         if (supported && NEGATIVE.matcher(quote).find()) return null;

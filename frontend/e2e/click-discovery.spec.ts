@@ -31,7 +31,7 @@ for (const [key, name, use] of [["LAPTOP", "노트북", "학업"], ["PHONE", "�
     await expect(page.getByRole("table").getByRole("columnheader")).toHaveCount(3);
     await expect(page.getByRole("table")).toContainText("100000 KRW");
     await expect(page.getByRole("table")).toContainText("미확인");
-    await expect(page.getByRole("table")).toContainText("확인 필요");
+    await expect(page.getByRole("table")).toContainText("사용자 확인 전");
     await expect(page.getByRole("button", { name: "검증된 평가 실행" })).not.toBeVisible();
     await page.getByRole("region", { name: "제품 주요 정보 표" }).focus();
     await page.keyboard.press("ArrowRight");

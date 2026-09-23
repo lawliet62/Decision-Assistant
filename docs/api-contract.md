@@ -34,4 +34,5 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 - 생성 요청의 `discovery.minimumRequirements`는 최대 3개의 `{항목ID: 선택지ID}` 객체다. 예: `{"memory":"16","storage":"1000"}`. 생략·null·빈 객체는 조건 없음이다. `intake-v1`은 조건 없는 기존 계약으로 생성·조회·재시도를 지원한다.
 - 다른 제품군의 항목·알 수 없는 선택지·v1의 최소 조건은 422다. 빈 ID·빈 값·null 값·개수 초과는 400이다. 정규화한 선택은 템플릿 순서로 기존 JSONB에 보존한다.
 - `CandidateSuggestionData`와 `ProductFactsData`에 `requirementChecks` 배열을 추가한다. 각 결과는 항목 ID·라벨·요구값, `MEETS|BELOW|UNKNOWN`, 비교에 사용한 `facts`를 포함한다. 선택하지 않으면 빈 배열이다. 이 판정은 후보 승인이나 평가를 차단하지 않는다.
+- UNKNOWN 결과의 `unknownReason`은 `MISSING`, `AMBIGUOUS`, `CONFLICT`로 근거 없음·표현 모호함·상충을 구분한다. 판정 가능한 항목에서는 null이다. 자동 수집 정보의 사용자 확인 상태와 조건 충족 여부는 다른 의미다.
 - `ProductFactsData`는 직접 추가한 제품도 포함해 Option별 표시 사양을 반환한다. 사용자 확인 수치가 있으면 해당 수치가 자동 추출 사양보다 우선하며 `스토리지` Criterion은 `저장공간` 표시 사양에 연결한다. 프런트 표시와 최소 조건 판정은 같은 사양을 사용한다.

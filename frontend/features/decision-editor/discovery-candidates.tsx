@@ -14,10 +14,10 @@ export function DiscoveryCandidates({ candidates, editable, optionCount, pending
     return <article key={item.id} aria-label={item.name} className="space-y-3 rounded-2xl border border-zinc-200 p-4">
       <h3 className="font-semibold">{item.name}</h3><p className="text-sm text-zinc-600">{item.reason}</p>
       <a href={item.url} target="_blank" rel="noreferrer" className="text-xs text-emerald-800">제품 출처 ↗</a>
-      {item.fetchedAt && <p className="text-xs text-zinc-500">조회 {new Date(item.fetchedAt).toLocaleString("ko-KR")} · 확인 필요</p>}
+      {item.fetchedAt && <p className="text-xs text-zinc-500">조회 {new Date(item.fetchedAt).toLocaleString("ko-KR")} · 수집 정보, 사용자 확인 전</p>}
       <RequirementChecks checks={item.requirementChecks} />
-      <dl className="space-y-2 text-sm">{item.facts?.map((fact, index) => <div key={index}><dt className="text-zinc-500">{fact.name}</dt><dd><FactValue fact={fact} /></dd></div>)}</dl>
-      {!item.facts?.length && <p className="text-sm text-zinc-500">주요 사양 미확인</p>}
+      <dl className="space-y-2 text-sm">{item.facts?.filter(fact => !item.requirementChecks?.some(check => check.facts?.some(checked => checked.name === fact.name))).map((fact, index) => <div key={index}><dt className="text-zinc-500">{fact.name}</dt><dd><FactValue fact={fact} compact /></dd></div>)}</dl>
+      {!item.facts?.length && !item.requirementChecks?.length && <p className="text-sm text-zinc-500">수집한 사양이 없습니다.</p>}
       {editable && <div className="flex gap-2"><button disabled={optionCount >= 5} onClick={() => onAction(item.id!, "ACCEPT")} className="rounded-full bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">비교에 추가</button><button onClick={() => onAction(item.id!, "DISMISS")} className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium">제외</button></div>}
     </article>;
   }

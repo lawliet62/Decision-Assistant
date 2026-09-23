@@ -33,7 +33,8 @@ for (const scenario of scenarios) {
     const beta = page.getByRole("article", { name: `${scenario.name} Beta`, exact: true });
     const gamma = page.getByRole("article", { name: `${scenario.name} Gamma`, exact: true });
     await expect(alpha.getByText("수집 사양상 충족", { exact: true })).toHaveCount(scenario.choices.length);
-    await expect(gamma.getByText("사양 미확인", { exact: true })).toHaveCount(scenario.choices.length);
+    await expect(gamma.getByText("근거 없음", { exact: true })).toHaveCount(scenario.choices.length);
+    for (const [label, choice] of scenario.choices) await expect(alpha.getByText(`${label}: ${choice}`, { exact: true })).toBeVisible();
     await expect(beta).not.toBeVisible();
     await page.getByText("최소 조건에 미달한 제품 (1)", { exact: true }).click();
     await expect(beta).toBeVisible();
