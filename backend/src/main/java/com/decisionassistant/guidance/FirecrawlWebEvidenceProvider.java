@@ -1,6 +1,6 @@
 package com.decisionassistant.guidance;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -34,8 +34,8 @@ public class FirecrawlWebEvidenceProvider implements WebEvidenceProvider, WebSea
                         "removeBase64Images", true,
                         "timeout", millis(properties.timeout(), Duration.ofSeconds(45))))
                 .retrieve().body(JsonNode.class);
-        if (response == null || !response.path("success").asBoolean()) throw new IllegalStateException("웹 페이지를 가져오지 못했습니다.");
-        var data = response.path("data");
+        var data = successfulData(response);
+        if (!data.path("markdown").isString()) throw new WebEvidenceException(WebEvidenceException.Reason.RESPONSE_INVALID);
         var title = data.path("metadata").path("title").asText("");
         return new Page(title, data.path("markdown").asText(""));
     }
@@ -47,8 +47,9 @@ public class FirecrawlWebEvidenceProvider implements WebEvidenceProvider, WebSea
                 .body(Map.of("query", query, "limit", limit, "country", "KR", "ignoreInvalidURLs", true))
                 .retrieve().body(JsonNode.class);
         var results = new ArrayList<SearchResult>();
-        if (response == null || !response.path("success").asBoolean()) return results;
-        for (var item : response.path("data").path("web")) {
+        var data = successfulData(response);
+        if (!data.path("web").isArray()) throw new WebEvidenceException(WebEvidenceException.Reason.RESPONSE_INVALID);
+        for (var item : data.path("web")) {
             results.add(new SearchResult(item.path("title").asText("대안 후보"), item.path("url").asText(),
                     item.path("description").asText("현재 후보군과 비교할 수 있는 대안입니다.")));
         }
@@ -56,6 +57,14 @@ public class FirecrawlWebEvidenceProvider implements WebEvidenceProvider, WebSea
     }
 
     @Override public String name() { return "firecrawl"; }
+    private JsonNode successfulData(JsonNode response) {
+        if (response == null || !response.path("success").isBoolean())
+            throw new WebEvidenceException(WebEvidenceException.Reason.RESPONSE_INVALID);
+        if (!response.path("success").asBoolean()) throw new WebEvidenceException(WebEvidenceException.Reason.REJECTED);
+        var data = response.path("data");
+        if (!data.isObject()) throw new WebEvidenceException(WebEvidenceException.Reason.RESPONSE_INVALID);
+        return data;
+    }
     private void requireConfigured() { if (!properties.configured()) throw new IllegalStateException("웹 수집 provider가 비활성화되어 있습니다."); }
     private int millis(Duration value, Duration fallback) { return Math.toIntExact((value == null ? fallback : value).toMillis()); }
 }
