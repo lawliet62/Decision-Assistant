@@ -9,6 +9,7 @@
 - [Deployment runbook](deployment.md): MVP 설정·검색 비용 한도·장애 대응·staging smoke
 - [Known limitations](known-limitations.md): 배포 blocker와 deferred decision
 - [클릭 중심 추천](decisions/0009-click-first-product-discovery.md): 템플릿 진입·외부 동의·표시용 사양 경계
+- [최소 사양 조건](decisions/0010-minimum-product-requirements.md): 포트폴리오 MVP의 객관적 조건·미달 분리·불확실성
 - [ADR](decisions/): 장기간 유지할 architecture decision과 trade-off
 - [Identity-based secrets](decisions/0008-identity-based-secret-management.md): Dev/Prod 격리, runtime 조회와 cloud-free 테스트 전략
 

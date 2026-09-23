@@ -36,7 +36,7 @@ class DiscoveryAdapterTest {
                         .baseUrl("http://127.0.0.1:" + server.getAddress().getPort()).model("test").maxRetries(0).build()).build();
                 var adapter = new OpenAiDecisionAdapter(ChatClient.builder(model), new ObjectMapper(),
                         new AiProperties(true, "openai", "test", Duration.ofSeconds(3)), model, "fixture");
-                assertThatThrownBy(() -> adapter.discover(new DiscoveryInput("노트북", null, null, null, List.of("가격"), List.of())))
+                assertThatThrownBy(() -> adapter.discover(new DiscoveryInput("노트북", null, null, null, List.of("가격"), List.of(), List.of())))
                         .isInstanceOf(RuntimeException.class);
                 assertThat(calls).hasValue(1);
             } finally { server.stop(0); }

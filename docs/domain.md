@@ -25,6 +25,8 @@ Decision draft ──evaluate──> Evaluation(snapshot + results)
 - ProductDiscovery: 선택 조건·전송 동의·비동기 추천 상태·실행 metadata를 Decision에 귀속해 보존한다. 후보 0개에서 시작할 수 있다.
 - CandidateSuggestion: 검색으로 찾은 후보이며 승인 전에는 Option이 아니다. 새 추천은 주요 사양·원문 인용·조회 시점을 포함하고 승인 시 Option에 연결한다.
 - ProductFact: 출처가 있는 표시용 사양이다. 평가용 OptionValue와 분리하고 자동 값은 UNREVIEWED로 표시한다.
+- MinimumRequirement: intake-v2에서 선택한 객관적 사양 하한·지원 요구다. 기존 hard Constraint와 별개로 추천·사양 비교에만 적용한다.
+- RequirementCheck: 선택 조건과 표시 사양으로 계산한 MEETS/BELOW/UNKNOWN 및 근거다. 검증 완료나 평가 탈락을 뜻하지 않으며, 사용자가 확인 수치를 변경하면 화면과 함께 다시 계산한다.
 - Product lookup result: 제품명에 대한 일시적인 웹 검색 결과. 저장된 CandidateSuggestion이나 제품 catalog가 아니며 선택한 이름·URL만 기존 Option으로 연결한다. 검색 발췌는 확인된 OptionValue가 아니다.
 - Evaluation: 특정 Decision version의 재현 가능한 run. 현재 draft를 참조해 재계산하지 않는다.
 - Resolution: 사용자가 선택·보류·포기한 사실과 이유.

@@ -22,12 +22,17 @@ public class DiscoveryService {
     }
     public IntakeTemplates.IntakeTemplate validate(com.decisionassistant.decision.DecisionTypes.TemplateKey key,
                                                   DiscoveryContracts.DiscoveryRequest request) {
-        var template = templates.required(key);
+        var template = templates.required(key, request.templateVersion());
         if (!template.version().equals(request.templateVersion())
                 || request.selectedUses().size() > 4
                 || request.selectedUses().stream().anyMatch(use -> use == null || !template.uses().contains(use))
                 || (request.compatibility() != null && !template.compatibility().contains(request.compatibility()))) {
             throw new InvalidDecisionException(List.of("최신 템플릿의 선택 항목을 사용하세요."));
+        }
+        for (var selected : request.selectedRequirements().entrySet()) {
+            var definition = template.minimumRequirements().stream().filter(item -> item.id().equals(selected.getKey())).findFirst();
+            if (definition.isEmpty() || definition.get().choices().stream().noneMatch(choice -> choice.id().equals(selected.getValue())))
+                throw new InvalidDecisionException(List.of("해당 제품군의 최소 사양 선택 항목을 사용하세요."));
         }
         if (!Boolean.TRUE.equals(request.searchConsent()) || !Boolean.TRUE.equals(request.collectionConsent())
                 || !Boolean.TRUE.equals(request.aiConsent()) || !Boolean.TRUE.equals(request.sensitiveDataAcknowledged())) {

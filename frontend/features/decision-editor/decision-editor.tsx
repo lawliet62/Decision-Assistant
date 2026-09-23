@@ -5,7 +5,8 @@ import { api } from "@/shared/api/client";
 import type { AiCapabilitiesResponse, DecisionResponse, EvaluationResponse, UpdateDraftRequest } from "@/shared/api/types";
 import { EvaluationResultView } from "@/features/evaluation-result/evaluation-result";
 
-import { ProductFacts, FactValue } from "./product-facts";
+import { ProductFacts } from "./product-facts";
+import { DiscoveryCandidates } from "./discovery-candidates";
 import Link from "next/link";
 
 import { ProductPicker, type SelectedSource } from "@/features/product-lookup/product-picker";
@@ -214,14 +215,9 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
         if (error) { setError(problemMessage(error)); return; } apply(data);
       })}>추천 다시 시도</button>}
       <Link href={"/decisions/new?category=" + decision.templateKey} className="ml-3 text-sm text-emerald-800 underline">조건 바꿔 새로 찾기</Link>
-      <div className="grid gap-4 sm:grid-cols-2">{guidance?.candidateSuggestions?.map(item => <article key={item.id} className="space-y-3 rounded-2xl border border-zinc-200 p-4">
-        <h3 className="font-semibold">{item.name}</h3><p className="text-sm text-zinc-600">{item.reason}</p>
-        <a href={item.url} target="_blank" rel="noreferrer" className="text-xs text-emerald-800">제품 출처 ↗</a>
-        {item.fetchedAt && <p className="text-xs text-zinc-500">조회 {new Date(item.fetchedAt).toLocaleString("ko-KR")} · 확인 필요</p>}
-        <dl className="space-y-2 text-sm">{item.facts?.map(fact => <div key={fact.name}><dt className="text-zinc-500">{fact.name}</dt><dd><FactValue fact={fact} /></dd></div>)}</dl>
-        {!item.facts?.length && <p className="text-sm text-zinc-500">주요 사양 미확인</p>}
-        {editable && <div className="flex gap-2"><button disabled={options.length >= 5} onClick={() => run(() => updateSuggestion(item.id!, "ACCEPT"))} className={primarySmall}>비교에 추가</button><button onClick={() => run(() => updateSuggestion(item.id!, "DISMISS"))} className={secondaryButton}>제외</button></div>}
-      </article>)}</div>
+      <DiscoveryCandidates candidates={guidance?.candidateSuggestions ?? []} editable={editable} optionCount={options.length}
+        pending={pending} hasRequirements={Object.keys(decision.discovery.conditions?.minimumRequirements ?? {}).length > 0}
+        onAction={(id, action) => run(() => updateSuggestion(id, action))} />
       <p className="text-sm text-zinc-500">비교에 추가한 제품 {options.length}/5</p>
     </Section>}
     {!decision.discovery && <Section title="비교 준비 상태" description="수집된 정보와 아직 확인할 내용을 구분합니다.">{pending && <div className="flex items-center gap-3 text-sm text-emerald-800"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />후보 링크를 읽고 있습니다. 이 화면은 자동으로 갱신됩니다.</div>}<p className="text-lg leading-8 text-zinc-800">{guidance?.summary ?? "기존 Decision입니다. 아래 검증 입력에서 비교를 계속할 수 있습니다."}</p>{(guidance?.appliedPreferences?.length ?? 0) > 0 && <div><p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">과거 결정에서 적용</p><div className="mt-2 flex flex-wrap gap-2">{guidance?.appliedPreferences?.map((item) => <span key={item.id} className="rounded-full bg-violet-50 px-3 py-1 text-xs text-violet-800">{item.statement}</span>)}</div></div>}</Section>}

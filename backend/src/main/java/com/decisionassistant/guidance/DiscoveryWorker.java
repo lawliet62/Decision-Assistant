@@ -56,11 +56,13 @@ public class DiscoveryWorker {
         try {
             service.validate(work.category(), work.conditions());
             if (ai == null) throw new IllegalStateException("AI unavailable");
-            var template = templates.required(work.category());
+            var template = templates.required(work.category(), work.conditions().templateVersion());
             var condition = work.conditions().normalized(template);
+            var minimums = MinimumRequirementMatcher.conditions(template.minimumRequirements(), condition.selectedRequirements());
             var query = template.label() + " 제품 비교 한국 " + String.join(" ", condition.uses())
                     + (condition.maxBudget() == null ? "" : " " + condition.maxBudget().toPlainString() + "원 이하")
-                    + " " + Objects.toString(condition.compatibility(), "");
+                    + " " + Objects.toString(condition.compatibility(), "")
+                    + minimums.stream().map(item -> " " + item.label() + " " + item.requiredValue()).collect(java.util.stream.Collectors.joining());
             var pages = new ArrayList<SourcePage>();
             var failed = false;
             for (var result : search.lookupForOwner(query, work.owner())) {
@@ -73,7 +75,7 @@ public class DiscoveryWorker {
             }
             if (pages.isEmpty()) throw new IllegalStateException("No usable source pages");
             var input = new DiscoveryInput(template.label(), condition.uses(), condition.maxBudget(),
-                    condition.compatibility(), template.facts(), pages);
+                    condition.compatibility(), template.facts(), pages, minimums);
             var result = executor.call(() -> ai.discover(input));
             var verified = validateProducts(work.id(), result.value(), input);
             var partial = failed || verified.size() < 2;
@@ -122,7 +124,7 @@ public class DiscoveryWorker {
             var source = pages.get(product.sourceUrl());
             if (source == null || !quoted(source, product.modelQuote()) || !product.modelQuote().contains(product.name())) continue;
             if (!names.add(product.name().strip().toLowerCase(Locale.ROOT))) continue;
-            var facts = new LinkedHashMap<String, ProductFact>();
+            var facts = new LinkedHashSet<ProductFact>();
             if (product.facts() != null) for (var fact : product.facts()) {
                 if (fact == null || fact.name() == null || !input.factNames().contains(fact.name()) || fact.value() == null
                         || fact.value().isBlank() || fact.value().length() > 300) continue;
@@ -130,12 +132,12 @@ public class DiscoveryWorker {
                 if (page == null || !quoted(page, fact.quote()) || !fact.quote().contains(fact.value())
                         || !fact.quote().contains(product.name())) continue;
                 if ("가격".equals(fact.name()) && !fact.value().matches("(?is).*(KRW|원|₩|USD|\\$|EUR|€|JPY|¥|GBP|£).*$")) continue;
-                facts.putIfAbsent(fact.name(), new ProductFact(fact.name(), fact.value(), page.url(),
+                facts.add(new ProductFact(fact.name(), fact.value(), page.url(),
                         fact.quote(), page.fetchedAt(), "UNREVIEWED"));
             }
             var candidate = new CandidateSuggestion(decisionId, product.name().strip(), source.url(),
                     truncate(Objects.toString(product.reason(), "조건과 주요 정보를 확인해 보세요."), 500), PROMPT_VERSION, Instant.now());
-            candidate.discovered(new ArrayList<>(facts.values()));
+            candidate.discovered(new ArrayList<>(facts));
             candidate.sourceEvidence(product.modelQuote(), source.fetchedAt()); result.add(candidate);
             if (result.size() == 5) break;
         }
