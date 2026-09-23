@@ -3,14 +3,16 @@ import { redirect } from "next/navigation";
 import { UserMenu } from "@/features/auth/user-menu";
 import { ApiError, serverApi } from "@/shared/api/server";
 import type { DecisionSummary } from "@/shared/api/types";
+import { OfficialPolicyNotice } from "@/features/product-lookup/official-policy-notice";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   let user: Awaited<ReturnType<typeof serverApi.me>>;
   let decisions: DecisionSummary[];
+  let capabilities: Awaited<ReturnType<typeof serverApi.lookupCapabilities>> | undefined;
   try {
-    [user, decisions] = await Promise.all([serverApi.me(), serverApi.decisions()]);
+    [user, decisions, capabilities] = await Promise.all([serverApi.me(), serverApi.decisions(), serverApi.lookupCapabilities().catch(() => undefined)]);
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) redirect("/login");
     throw error;
@@ -32,6 +34,7 @@ export default async function Home() {
         </div>
       </header>
 
+      <OfficialPolicyNotice version={capabilities?.discoveryPolicy?.version} placement="home" />
       <nav aria-label="제품군 선택" className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {Object.entries(categoryLabels).map(([key, label]) => <Link key={key} href={`/decisions/new?category=${key}`} className="rounded-2xl border border-zinc-200 bg-white p-5 font-semibold hover:border-emerald-600 hover:bg-emerald-50">{label}<span aria-hidden="true" className="mt-4 block text-emerald-700">→</span></Link>)}
       </nav>

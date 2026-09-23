@@ -1139,6 +1139,17 @@
             "items" : {
               "$ref" : "#/components/schemas/RequirementCheck"
             }
+          },
+          "officialOffer" : {
+            "$ref" : "#/components/schemas/OfficialOffer"
+          },
+          "sourceKind" : {
+            "type" : "string",
+            "enum" : [ "VIDEO", "BLOG", "OFFICIAL_STORE", "WEB" ]
+          },
+          "recommendationGroup" : {
+            "type" : "string",
+            "enum" : [ "RECOMMENDED", "UNKNOWN", "BELOW", "LEGACY" ]
           }
         }
       },
@@ -1253,6 +1264,19 @@
           "updatedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "policyVersion" : {
+            "type" : "string"
+          },
+          "stage" : {
+            "type" : "string"
+          },
+          "executionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "emptyReason" : {
+            "type" : "string"
           }
         }
       },
@@ -1400,6 +1424,36 @@
           }
         }
       },
+      "OfficialOffer" : {
+        "type" : "object",
+        "properties" : {
+          "purchaseUrl" : {
+            "type" : "string"
+          },
+          "seller" : {
+            "type" : "string"
+          },
+          "price" : {
+            "type" : "number"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "imageUrl" : {
+            "type" : "string"
+          },
+          "fetchedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "priceBasis" : {
+            "type" : "string"
+          },
+          "policyVersion" : {
+            "type" : "string"
+          }
+        }
+      },
       "OutcomeData" : {
         "type" : "object",
         "properties" : {
@@ -1515,6 +1569,13 @@
             "items" : {
               "$ref" : "#/components/schemas/RequirementCheck"
             }
+          },
+          "officialOffer" : {
+            "$ref" : "#/components/schemas/OfficialOffer"
+          },
+          "sourceKind" : {
+            "type" : "string",
+            "enum" : [ "VIDEO", "BLOG", "OFFICIAL_STORE", "WEB" ]
           }
         }
       },
@@ -2271,6 +2332,20 @@
         },
         "required" : [ "action" ]
       },
+      "Description" : {
+        "type" : "object",
+        "properties" : {
+          "version" : {
+            "type" : "string"
+          },
+          "scope" : {
+            "type" : "string"
+          },
+          "priceBasis" : {
+            "type" : "string"
+          }
+        }
+      },
       "LookupCapabilities" : {
         "type" : "object",
         "properties" : {
@@ -2291,6 +2366,9 @@
           },
           "importNotice" : {
             "type" : "string"
+          },
+          "discoveryPolicy" : {
+            "$ref" : "#/components/schemas/Description"
           }
         }
       },

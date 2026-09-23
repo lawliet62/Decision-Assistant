@@ -6,6 +6,7 @@ import { api } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
 import { DecisionCreateForm } from "./decision-create-form";
 import { problemMessage } from "@/features/product-lookup/product-picker";
+import { OfficialPolicyNotice } from "@/features/product-lookup/official-policy-notice";
 
 type Template = components["schemas"]["IntakeTemplate"];
 type Capabilities = components["schemas"]["LookupCapabilities"];
@@ -64,6 +65,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
       <button className={chip + (manual ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-zinc-200")} aria-pressed={manual} onClick={() => setManual(true)}>제품 직접 추가</button>
     </div>
     {manual ? <DecisionCreateForm /> : <form onSubmit={submit} className="space-y-7 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+      <OfficialPolicyNotice version={web?.discoveryPolicy?.version} placement="input" />
       <fieldset disabled={pending} className="space-y-7">
         <ChoiceGroup title="제품군" options={templates.map(item => ({ value: item.key!, label: item.label! }))} selected={template?.key} onSelect={value => { setCategory(value!); setUses([]); setBudget(undefined); setCompatibility(undefined); setMinimumRequirements({}); }} />
         {template && <>
@@ -72,7 +74,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
           <ChoiceGroup title="필요한 호환성" options={[{ label: "상관없음" }, ...(template.compatibility ?? []).map(value => ({ value, label: value }))]} selected={compatibility} onSelect={setCompatibility} />
           {!!template.minimumRequirements?.length && <fieldset className="space-y-4 rounded-2xl border border-zinc-200 p-4">
             <legend className="px-1 font-semibold">필요한 최소 사양 (선택)</legend>
-            <p className="text-sm text-zinc-600">필요한 항목만 선택하세요. 미달 제품은 따로 보여드리며, 사양을 찾지 못한 제품은 확인 필요로 표시합니다.</p>
+            <p className="text-sm text-zinc-600">필요한 항목만 선택하세요. 조건 충족 제품은 판매가 낮은 순으로 보여드리며, 미달하거나 근거가 부족한 제품은 따로 표시합니다.</p>
             {template.minimumRequirements.map(item => <ChoiceGroup key={item.id} title={item.label!}
               options={[{ label: "상관없음" }, ...(item.choices ?? []).map(choice => ({ value: choice.id, label: choice.label! }))]}
               selected={minimumRequirements[item.id!]} onSelect={value => setMinimumRequirements(current => {
@@ -96,6 +98,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
           <label className="flex gap-2"><input type="checkbox" checked={consents.sensitive} onChange={e => setConsents({ ...consents, sensitive: e.target.checked })} />개인 식별·금융·건강·비공개 업무 정보가 없음을 확인합니다.</label>
           {ai?.provider === "gemini" && <p className="text-xs text-zinc-600">Gemini 무료 티어에서는 전송 콘텐츠가 Google 제품 개선에 사용될 수 있습니다.</p>}
           <p className="text-xs text-zinc-500">이 비교에만 적용됩니다. 출처·짧은 발췌·조회 시점을 저장하며 자동 정보는 확인이 필요합니다. 실제 판매·재고·최저가는 보장하지 않습니다.</p>
+          <p className="text-xs text-zinc-500">제품 이미지는 공식 판매처의 이미지 서버에서 직접 불러옵니다. 이때 해당 서버에 IP 주소가 전달되며, 현재 페이지 주소는 전달하지 않습니다.</p>
         </fieldset>
         {web && ai && !(web.searchEnabled && web.importEnabled && ai.enabled) && <p role="status" className="text-sm text-amber-800">현재 추천 서비스가 꺼져 있습니다. 제품 직접 추가를 이용하세요.</p>}
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}

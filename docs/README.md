@@ -11,6 +11,7 @@
 - [클릭 중심 추천](decisions/0009-click-first-product-discovery.md): 템플릿 진입·외부 동의·표시용 사양 경계
 - [최소 사양 조건](decisions/0010-minimum-product-requirements.md): 포트폴리오 MVP의 객관적 조건·미달 분리·불확실성
 - [공식 판매처 중심 추천](decisions/0011-official-store-discovery.md): 승인된 추천 범위·가격 정렬·고지·추가 탐색과 수집 개선
+- [공식 판매처 등록과 검증](official-stores.md): 판매처 근거·가격/이미지 수집 범위·화면 안내
 - [ADR](decisions/): 장기간 유지할 architecture decision과 trade-off
 - [Identity-based secrets](decisions/0008-identity-based-secret-management.md): Dev/Prod 격리, runtime 조회와 cloud-free 테스트 전략
 

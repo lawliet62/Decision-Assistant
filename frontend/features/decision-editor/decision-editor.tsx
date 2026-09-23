@@ -7,12 +7,17 @@ import { EvaluationResultView } from "@/features/evaluation-result/evaluation-re
 
 import { ProductFacts } from "./product-facts";
 import { DiscoveryCandidates } from "./discovery-candidates";
+import { OfficialPolicyNotice } from "@/features/product-lookup/official-policy-notice";
 import Link from "next/link";
 
 import { ProductPicker, type SelectedSource } from "@/features/product-lookup/product-picker";
 
 type Problem = { detail?: string; violations?: string[] };
 type DraftValue = NonNullable<UpdateDraftRequest["values"]>[number];
+const discoveryStages: Record<string, string> = {
+  QUEUED: "추천을 준비하고 있습니다…", CONFIGURATION: "추천 조건을 확인하고 있습니다…", SEARCH: "공식 판매처에서 제품을 찾고 있습니다…",
+  COLLECTION: "제품의 가격과 사양을 가져오고 있습니다…", AI: "수집한 제품 정보를 정리하고 있습니다…", VALIDATION: "조건과 근거를 확인하고 있습니다…", PERSISTENCE: "추천 결과를 저장하고 있습니다…",
+};
 
 export function DecisionEditor({ initialDecision }: { initialDecision: DecisionResponse }) {
   const [decision, setDecision] = useState(initialDecision);
@@ -207,8 +212,10 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
     {dirty && <div role="status" className="rounded-xl bg-amber-50 p-3 text-sm">저장하지 않은 변경이 있습니다. 자동 갱신은 잠시 멈췄습니다. <button onClick={() => run(saveComparison, true)} className={primarySmall}>변경 저장</button> <button onClick={() => run(refreshDecision, true)} className={secondaryButton}>변경 취소·최신 내용 불러오기</button></div>}
     {stage === 0 && <>
     {decision.discovery && <Section title="추천 제품" description="조건에 맞춰 찾은 후보입니다. 주요 정보와 출처를 확인하고 비교할 제품을 선택하세요.">
+      <OfficialPolicyNotice version={decision.discovery.policyVersion} placement="result" />
       <p className="text-sm text-zinc-600">{guidance?.intentText}</p>
-      {pending && <p role="status" className="text-sm text-emerald-800">제품 정보를 찾고 있습니다…</p>}
+      {pending && <p role="status" className="text-sm text-emerald-800">{discoveryStages[decision.discovery.stage ?? ""] ?? "제품 정보를 찾고 있습니다…"}</p>}
+      {decision.discovery.emptyReason && <p role="status" className="text-sm text-zinc-600">이번 검색에서 공식 판매처와 비교 가능한 가격을 확인한 새 제품이 없습니다. 조건을 바꾸거나 제품을 직접 추가할 수 있습니다.</p>}
       {decision.discovery.error && <p role="status" className="text-sm text-amber-800">{decision.discovery.error}</p>}
       {editable && ["FAILED", "PARTIAL"].includes(decision.discovery.status ?? "") && <button className={secondaryButton} onClick={() => run(async () => {
         const { data, error } = await api.POST("/api/v1/decisions/{decisionId}/discovery/retry", { params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.discovery!.version! } });
@@ -216,6 +223,7 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
       })}>추천 다시 시도</button>}
       <Link href={"/decisions/new?category=" + decision.templateKey} className="ml-3 text-sm text-emerald-800 underline">조건 바꿔 새로 찾기</Link>
       <DiscoveryCandidates candidates={guidance?.candidateSuggestions ?? []} editable={editable} optionCount={options.length}
+        officialPolicy={decision.discovery.policyVersion === "official-kr-v1"}
         pending={pending} hasRequirements={Object.keys(decision.discovery.conditions?.minimumRequirements ?? {}).length > 0}
         onAction={(id, action) => run(() => updateSuggestion(id, action))} />
       <p className="text-sm text-zinc-500">비교에 추가한 제품 {options.length}/5</p>

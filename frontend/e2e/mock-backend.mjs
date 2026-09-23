@@ -53,7 +53,7 @@ function create(body) {
 function createDiscovery(body) {
   const template = templates.find(item => item.key === body.templateKey);
   const result = create({ ...body, intentText: template.label + " 비교", selectedSources: [] });
-  result.discovery = { version: 1, status: "PENDING", conditions: body.discovery, updatedAt: new Date().toISOString() };
+  result.discovery = { version: 1, status: "PENDING", policyVersion: "official-kr-v1", conditions: body.discovery, updatedAt: new Date().toISOString() };
   result.productFacts = [];
   result.guidance.questions = [];
   result.guidance.candidateSuggestions = ["Alpha", "Beta", "Gamma"].map((name, index) => ({
@@ -71,6 +71,9 @@ function createDiscovery(body) {
       return { id: item.id, label: item.label, requiredValue: item.choices.find(choice => choice.id === body.discovery.minimumRequirements[item.id]).label,
         status: ["MEETS", "BELOW", "UNKNOWN"][index], facts: index < 2 ? [fact] : [] };
     });
+    candidate.officialOffer = { purchaseUrl: `https://qcystore.co.kr/product/fixture/${100 + index}/`, seller: "QCY 공식몰", price: 100000 + index * 10000, currency: "KRW", imageUrl: index === 0 ? "https://qcystore.co.kr/web/product/fixture.jpg" : undefined, fetchedAt: new Date().toISOString(), policyVersion: "official-kr-v1" };
+    candidate.sourceKind = "OFFICIAL_STORE";
+    candidate.recommendationGroup = candidate.requirementChecks.length ? ["RECOMMENDED", "BELOW", "UNKNOWN"][index] : "RECOMMENDED";
   });
   return result;
 }
@@ -84,6 +87,7 @@ const server = http.createServer(async (request, response) => {
   if (request.url === "/api/v1/product-lookups/capabilities") return send(200, {
     searchEnabled: true, searchProvider: "Serper", searchNotice: "입력한 제품명을 Serper로 전송하는 데 동의합니다.",
     importEnabled: true, importProvider: "Firecrawl", importNotice: "선택한 공개 URL을 Firecrawl로 보내 정보를 가져오는 데 동의합니다.",
+    discoveryPolicy: { version: "official-kr-v1", scope: "KOREAN_OFFICIAL_STORES", priceBasis: "OBSERVED_KRW_PRICE" },
   });
   if (request.method === "POST" && request.url === "/api/v1/product-lookups") {
     if (!body.searchConsent) return send(400, { detail: "Consent required" });
@@ -112,7 +116,7 @@ const server = http.createServer(async (request, response) => {
     const candidate = current.guidance.candidateSuggestions.find(item => item.id === id);
     if (candidate && body.action === "ACCEPT") {
       const added = option(candidate); current.options.push(added);
-      current.productFacts.push({ optionId: added.id, facts: candidate.facts, requirementChecks: candidate.requirementChecks });
+      current.productFacts.push({ optionId: added.id, facts: candidate.facts, requirementChecks: candidate.requirementChecks, officialOffer: candidate.officialOffer, sourceKind: candidate.sourceKind });
     }
     current.guidance.candidateSuggestions = current.guidance.candidateSuggestions.filter(item => item.id !== id);
     current.version++; return send(200, current);

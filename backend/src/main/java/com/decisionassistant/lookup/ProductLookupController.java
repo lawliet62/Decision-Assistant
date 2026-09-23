@@ -27,14 +27,16 @@ public class ProductLookupController {
     public record LookupRequest(@NotBlank @Size(max = 200) String query, @NotNull @AssertTrue Boolean searchConsent) {}
     public record LookupResponse(List<WebSearchProvider.SearchResult> results) {}
     public record LookupCapabilities(boolean searchEnabled, String searchProvider, String searchNotice,
-                                     boolean importEnabled, String importProvider, String importNotice) {}
+                                     boolean importEnabled, String importProvider, String importNotice,
+                                     com.decisionassistant.guidance.OfficialStorePolicy.Description discoveryPolicy) {}
 
     @GetMapping("/capabilities")
     public LookupCapabilities lookupCapabilities() {
         return new LookupCapabilities(search.configured(), "Serper",
                 "입력한 제품명만 Serper 검색 API로 전송합니다. 개인정보·민감정보를 입력하지 마세요. 검색어와 결과 목록은 서버에 저장하지 않습니다.",
                 web.configured(), "Firecrawl",
-                "선택한 공개 URL을 Firecrawl로 보내 페이지 정보를 가져옵니다. 이후 추가한 URL과 기존 대안 검색에도 적용됩니다. 출처·짧은 발췌·조회 시각을 저장하며 가격·재고·공식 유통을 보장하지 않습니다.");
+                "선택한 공개 URL을 Firecrawl로 보내 페이지 정보를 가져옵니다. 이후 추가한 URL과 기존 대안 검색에도 적용됩니다. 출처·짧은 발췌·조회 시각을 저장하며 가격·재고·공식 유통을 보장하지 않습니다.",
+                com.decisionassistant.guidance.OfficialStorePolicy.description());
     }
 
     @PostMapping

@@ -487,6 +487,11 @@ export interface components {
             fetchedAt?: string;
             sourceExcerpt?: string;
             requirementChecks?: components["schemas"]["RequirementCheck"][];
+            officialOffer?: components["schemas"]["OfficialOffer"];
+            /** @enum {string} */
+            sourceKind?: "VIDEO" | "BLOG" | "OFFICIAL_STORE" | "WEB";
+            /** @enum {string} */
+            recommendationGroup?: "RECOMMENDED" | "UNKNOWN" | "BELOW" | "LEGACY";
         };
         DecisionResponse: {
             /** Format: uuid */
@@ -523,6 +528,11 @@ export interface components {
             conditions?: components["schemas"]["DiscoveryRequest"];
             /** Format: date-time */
             updatedAt?: string;
+            policyVersion?: string;
+            stage?: string;
+            /** Format: uuid */
+            executionId?: string;
+            emptyReason?: string;
         };
         DiscoveryRequest: {
             templateVersion: string;
@@ -570,6 +580,17 @@ export interface components {
             appliedPreferences?: components["schemas"]["PreferenceData"][];
             reminders?: components["schemas"]["ReminderData"][];
         };
+        OfficialOffer: {
+            purchaseUrl?: string;
+            seller?: string;
+            price?: number;
+            currency?: string;
+            imageUrl?: string;
+            /** Format: date-time */
+            fetchedAt?: string;
+            priceBasis?: string;
+            policyVersion?: string;
+        };
         OutcomeData: {
             /** Format: uuid */
             id?: string;
@@ -615,6 +636,9 @@ export interface components {
             fetchedAt?: string;
             sourceExcerpt?: string;
             requirementChecks?: components["schemas"]["RequirementCheck"][];
+            officialOffer?: components["schemas"]["OfficialOffer"];
+            /** @enum {string} */
+            sourceKind?: "VIDEO" | "BLOG" | "OFFICIAL_STORE" | "WEB";
         };
         QuestionData: {
             /** Format: uuid */
@@ -879,6 +903,11 @@ export interface components {
         UpdateSuggestionRequest: {
             action: string;
         };
+        Description: {
+            version?: string;
+            scope?: string;
+            priceBasis?: string;
+        };
         LookupCapabilities: {
             searchEnabled?: boolean;
             searchProvider?: string;
@@ -886,6 +915,7 @@ export interface components {
             importEnabled?: boolean;
             importProvider?: string;
             importNotice?: string;
+            discoveryPolicy?: components["schemas"]["Description"];
         };
         CurrentUserResponse: {
             /** Format: uuid */

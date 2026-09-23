@@ -1,5 +1,8 @@
 package com.decisionassistant.decision;
 
+import com.decisionassistant.guidance.OfficialStorePolicy;
+import com.decisionassistant.guidance.DiscoveryRanking;
+
 import com.decisionassistant.common.ConflictException;
 import com.decisionassistant.common.InvalidDecisionException;
 import com.decisionassistant.common.NotFoundException;
@@ -592,7 +595,8 @@ public class DecisionService {
                     .filter(java.util.Objects::nonNull).findFirst().orElse(null);
             var facts = ProductFactResolver.resolve(decision, option.id(), source == null ? List.of() : source.facts(), fetchedAt);
             return new ProductFactsData(option.id(), facts, source == null ? fetchedAt : source.fetchedAt(),
-                    source == null ? null : source.sourceExcerpt(), requirementChecks(decision, selected, facts));
+                    source == null ? null : source.sourceExcerpt(), requirementChecks(decision, selected, facts),
+                    source == null ? null : source.officialOffer(), OfficialStorePolicy.sourceKind(option.sourceUrl(), source != null && source.officialOffer() != null));
         }).toList();
         return new DecisionResponse(
                 decision.id(), decision.version(), decision.title(), decision.templateKey(), decision.templateVersion(),
@@ -616,7 +620,8 @@ public class DecisionService {
                 outcomes.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().map(this::outcomeData).toList(),
                 guidance(decision, suggestions, evidence, selected),
                 decision.createdAt(), decision.updatedAt(),
-                run == null ? null : new DiscoveryData(run.version(), run.status().name(), run.error(), run.conditions(), run.updatedAt()),
+                run == null ? null : new DiscoveryData(run.version(), run.status().name(), run.error(), run.conditions(), run.updatedAt(),
+                        run.policyVersion(), run.stage(), run.executionId(), run.emptyReason()),
                 productFacts);
     }
 
@@ -656,9 +661,12 @@ public class DecisionService {
                                 && item.fetchedAt().isBefore(Instant.now(clock).minus(24, ChronoUnit.HOURS)))).toList(),
                 suggestions.stream()
                         .filter(item -> item.status() == CandidateSuggestion.Status.PROPOSED)
+                        .sorted(DiscoveryRanking.byPrice())
                         .map(item -> new CandidateSuggestionData(item.id(), item.name(), item.url(), item.reason(),
                                 item.status().name(), item.facts(), item.fetchedAt(), item.sourceExcerpt(),
-                                requirementChecks(decision, selected, item.facts()))).toList(),
+                                requirementChecks(decision, selected, item.facts()), item.officialOffer(),
+                                OfficialStorePolicy.sourceKind(item.url(), item.officialOffer() != null),
+                                DiscoveryRanking.group(item.officialOffer(), requirementChecks(decision, selected, item.facts()), decision.context().budget()))).toList(),
                 applied,
                 reminders.findByDecisionIdOrderByDueAtAsc(decision.id()).stream().map(item -> new ReminderData(
                         item.id(), item.dueAt(), item.status().name(), item.channel().name())).toList());

@@ -38,10 +38,18 @@ public class DiscoveryPageCollector {
         var start = System.nanoTime();
         try {
             var url = urls.validate(result.url());
-            var page = web.scrape(url);
+            var page = web.scrapeProduct(url);
             if (page == null || page.markdown() == null || page.markdown().isBlank())
                 return failed(id, new DiscoveryFailure(Stage.COLLECTION, Code.COLLECTION_EMPTY), null);
-            return new Collected(new SourcePage(url, page.title(), DiscoveryEvidence.excerpt(page.markdown(), facts), Instant.now()), null);
+            var fetchedAt = Instant.now();
+            var product = OfficialProductParser.parse(url, page, fetchedAt);
+            var excerpt = DiscoveryEvidence.excerpt(page.markdown(), facts);
+            // 구조화 데이터의 제품명도 수집 원문이다. 생성한 사양은 추가하지 않는다.
+            if (product != null) {
+                var metadata = "# " + product.name() + "\n" + product.description() + "\n\n<!-- evidence boundary -->\n\n";
+                excerpt = metadata + excerpt.substring(0, Math.min(excerpt.length(), 6000 - metadata.length()));
+            }
+            return new Collected(new SourcePage(url, page.title(), excerpt, fetchedAt, product), null);
         } catch (RuntimeException ex) { return failed(id, classify(Stage.COLLECTION, ex), ex); }
         finally { log.info("product_event=discovery_page_timing decision_id={} duration_ms={}", id, (System.nanoTime() - start) / 1_000_000); }
     }

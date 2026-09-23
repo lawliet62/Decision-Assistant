@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => { await page.route("https://qcystore.co.kr/web/product/fixture.jpg", route => route.fulfill({ status: 404, body: "" })); });
+
 async function consent(page: Page) {
   for (const label of ["선택 조건을 Serper", "검색된 공개 페이지를 후보 선택 전에 Firecrawl", "선택 조건과 수집 정보를", "개인 식별·금융·건강·비공개 업무 정보가 없음을 확인합니다."]) {
     await page.getByLabel(label).check();
@@ -33,14 +35,16 @@ for (const scenario of scenarios) {
     const beta = page.getByRole("article", { name: `${scenario.name} Beta`, exact: true });
     const gamma = page.getByRole("article", { name: `${scenario.name} Gamma`, exact: true });
     await expect(alpha.getByText("수집 사양상 충족", { exact: true })).toHaveCount(scenario.choices.length);
+    await expect(gamma).not.toBeVisible();
+    await page.getByText("최소 조건의 근거가 부족한 제품 (1)", { exact: true }).click();
     await expect(gamma.getByText("근거 없음", { exact: true })).toHaveCount(scenario.choices.length);
     for (const [label, choice] of scenario.choices) await expect(alpha.getByText(`${label}: ${choice}`, { exact: true })).toBeVisible();
     await expect(beta).not.toBeVisible();
-    await page.getByText("최소 조건에 미달한 제품 (1)", { exact: true }).click();
+    await page.getByText("최소 조건·예산에 미달한 제품 (1)", { exact: true }).click();
     await expect(beta).toBeVisible();
     await expect(beta.getByText("미달", { exact: true })).toHaveCount(scenario.choices.length);
     await beta.getByRole("list", { name: "최소 사양 확인" }).getByText("출처·조회 시점").first().click();
-    await expect(beta.getByRole("link", { name: "원문 보기 ↗" }).first()).toHaveAttribute("href", "https://example.com/Beta");
+    await expect(beta.getByRole("link", { name: "웹페이지 보기 ↗" }).first()).toHaveAttribute("href", "https://example.com/Beta");
     await beta.getByRole("button", { name: "비교에 추가", exact: true }).click();
     await alpha.getByRole("button", { name: "비교에 추가", exact: true }).click();
     await page.getByRole("button", { name: "후보 비교로 이동", exact: true }).click();
@@ -68,7 +72,7 @@ test("선택 해제와 제품군 변경은 최소 조건을 초기화한다", as
   const sent = page.waitForRequest(request => request.method() === "POST" && request.url().endsWith("/api/v1/decisions"));
   await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
   expect((await sent).postDataJSON().discovery.minimumRequirements).toEqual({});
-  await expect(page.getByText("최소 조건에 미달한 제품", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("최소 조건·예산에 미달한 제품", { exact: false })).toHaveCount(0);
 });
 
 test("기본 후보가 없으면 자동 재검색 없이 직접 추가와 조건 변경을 안내한다", async ({ page }) => {
@@ -81,6 +85,7 @@ test("기본 후보가 없으면 자동 재검색 없이 직접 추가와 조건
   await page.getByRole("group", { name: "ANC 지원", exact: true }).getByRole("button", { name: "지원 필수" }).click();
   await consent(page);
   await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
+  await page.getByText("최소 조건의 근거가 부족한 제품 (1)", { exact: true }).click();
   for (const name of ["Alpha", "Gamma"]) await page.getByRole("article", { name: `무선 이어폰 ${name}`, exact: true }).getByRole("button", { name: "제외", exact: true }).click();
   await expect(page.getByText("추가할 기본 추천 후보가 없습니다.", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "조건 바꿔 새로 찾기" })).toBeVisible();

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import type { CurrentUserResponse, DecisionResponse, DecisionSummary } from "./types";
+import type { components } from "./schema";
 
 const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
 
@@ -17,6 +18,7 @@ async function get<T>(path: string): Promise<T> {
 
 export const serverApi = {
   me: () => get<CurrentUserResponse>("/api/v1/me"),
+  lookupCapabilities: () => get<components["schemas"]["LookupCapabilities"]>("/api/v1/product-lookups/capabilities"),
   decisions: () => get<DecisionSummary[]>("/api/v1/decisions"),
   decision: (id: string) => get<DecisionResponse>(`/api/v1/decisions/${id}`),
 };

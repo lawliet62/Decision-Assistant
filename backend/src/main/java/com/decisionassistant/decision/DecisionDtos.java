@@ -31,11 +31,14 @@ public final class DecisionDtos {
     }
 
     public record DiscoveryData(long version, String status, String error,
-            com.decisionassistant.guidance.DiscoveryContracts.DiscoveryRequest conditions, Instant updatedAt) {}
+            com.decisionassistant.guidance.DiscoveryContracts.DiscoveryRequest conditions, Instant updatedAt,
+            String policyVersion, String stage, UUID executionId, String emptyReason) {}
     public record RetryDiscoveryRequest(long expectedVersion) {}
     public record ProductFactsData(UUID optionId, List<com.decisionassistant.guidance.DiscoveryContracts.ProductFact> facts,
                                    Instant fetchedAt, String sourceExcerpt,
-                                   List<com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck> requirementChecks) {}
+                                   List<com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck> requirementChecks,
+                                   com.decisionassistant.guidance.DiscoveryContracts.OfficialOffer officialOffer,
+                                   com.decisionassistant.guidance.OfficialStorePolicy.SourceKind sourceKind) {}
 
     public record DecisionSummary(
             UUID id,
@@ -215,7 +218,10 @@ public final class DecisionDtos {
     public record CandidateSuggestionData(
             UUID id, String name, String url, String reason, String status,
             List<com.decisionassistant.guidance.DiscoveryContracts.ProductFact> facts, Instant fetchedAt, String sourceExcerpt,
-            List<com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck> requirementChecks
+            List<com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck> requirementChecks,
+            com.decisionassistant.guidance.DiscoveryContracts.OfficialOffer officialOffer,
+            com.decisionassistant.guidance.OfficialStorePolicy.SourceKind sourceKind,
+            com.decisionassistant.guidance.DiscoveryRanking.Group recommendationGroup
     ) {
     }
 

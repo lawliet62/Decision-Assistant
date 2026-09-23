@@ -30,6 +30,9 @@ public class CandidateSuggestion {
     @Column(nullable = false) private boolean discovered;
     @Column(name = "source_excerpt", columnDefinition = "text") private String sourceExcerpt;
     @Column(name = "fetched_at") private Instant fetchedAt;
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "official_offer", columnDefinition = "jsonb") private DiscoveryContracts.OfficialOffer officialOffer;
+    @Column(name = "product_identity", length = 500) private String productIdentity;
 
     protected CandidateSuggestion() {}
     public CandidateSuggestion(UUID decisionId, String name, String url, String reason, String provider, Instant now) {
@@ -45,9 +48,13 @@ public class CandidateSuggestion {
     public void sourceEvidence(String excerpt, Instant fetchedAt) { this.sourceExcerpt = excerpt; this.fetchedAt = fetchedAt; }
     public String sourceExcerpt() { return sourceExcerpt; }
     public Instant fetchedAt() { return fetchedAt; }
+    public DiscoveryContracts.OfficialOffer officialOffer() { return officialOffer; }
+    public String productIdentity() { return productIdentity; }
+    public void officialProduct(DiscoveryContracts.OfficialProduct product) { officialOffer = product.offer(); productIdentity = product.identity(); }
     public void refreshDiscovery(CandidateSuggestion source) {
         reason = source.reason; url = source.url; facts = source.facts;
         sourceExcerpt = source.sourceExcerpt; fetchedAt = source.fetchedAt;
+        officialOffer = source.officialOffer; productIdentity = source.productIdentity;
     }
     public void dismiss() { status = Status.DISMISSED; }
     public UUID id() { return id; }
