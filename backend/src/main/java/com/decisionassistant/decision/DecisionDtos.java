@@ -32,7 +32,10 @@ public final class DecisionDtos {
 
     public record DiscoveryData(long version, String status, String error,
             com.decisionassistant.guidance.DiscoveryContracts.DiscoveryRequest conditions, Instant updatedAt,
-            String policyVersion, String stage, UUID executionId, String emptyReason) {}
+            String policyVersion, String stage, UUID executionId, String emptyReason,
+            int generation, int displayedGeneration, List<DiscoveryHistoryData> history) {}
+    public record DiscoveryHistoryData(int generation, String status, String error, String emptyReason,
+                                       String policyVersion, Instant completedAt, List<CandidateSuggestionData> candidates) {}
     public record RetryDiscoveryRequest(long expectedVersion) {}
     public record ProductFactsData(UUID optionId, List<com.decisionassistant.guidance.DiscoveryContracts.ProductFact> facts,
                                    Instant fetchedAt, String sourceExcerpt,

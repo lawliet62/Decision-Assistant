@@ -20,6 +20,8 @@ export function DiscoveryCandidates({ candidates, editable, optionCount, pending
   function card(item: Candidate) {
     return <article key={item.id} aria-label={item.name} className="space-y-3 rounded-2xl border border-zinc-200 p-4">
       <h3 className="font-semibold">{item.name}</h3><p className="text-sm text-zinc-600">{item.reason}</p>
+      {item.status === "ACCEPTED" && <p className="text-xs text-emerald-800">비교에 추가됨</p>}
+      {item.status === "DISMISSED" && <p className="text-xs text-zinc-500">제외한 제품</p>}
       <ProductOffer offer={item.officialOffer} name={item.name} />
       {!item.officialOffer && <SourceLink url={item.url} kind={item.sourceKind} />}
       {item.fetchedAt && <p className="text-xs text-zinc-500">조회 {new Date(item.fetchedAt).toLocaleString("ko-KR")} · 수집 정보, 사용자 확인 전</p>}

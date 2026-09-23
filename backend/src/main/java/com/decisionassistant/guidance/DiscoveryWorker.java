@@ -39,7 +39,8 @@ public class DiscoveryWorker {
         this.collector = collector; this.ai = ai.getIfAvailable(); this.executor = executor; this.properties = properties;
         this.service = service; this.templates = templates; tx = new TransactionTemplate(manager);
     }
-    private record Work(UUID id, UUID owner, DecisionTypes.TemplateKey category, DiscoveryRequest conditions, UUID executionId) {}
+    private record Work(UUID id, UUID owner, DecisionTypes.TemplateKey category, DiscoveryRequest conditions, UUID executionId,
+                        int generation, DiscoveryExclusions excluded) {}
 
     @Scheduled(scheduler = "discoveryScheduler", fixedDelayString = "${decision-assistant.web.poll-interval:2000}")
     public void processNext() {
@@ -57,7 +58,10 @@ public class DiscoveryWorker {
             log.info("product_event=discovery_queue_timing decision_id={} duration_ms={}", decision.id(),
                     Math.max(0, java.time.Duration.between(run.updatedAt(), Instant.now()).toMillis()));
             run.running(); runs.flush();
-            return new Work(decision.id(), decision.ownerUserId(), decision.templateKey(), run.conditions(), run.executionId());
+            var previous = candidates.findByDecisionIdOrderByCreatedAtAsc(decision.id()).stream()
+                    .filter(item -> item.discovered() && item.generation() < run.generation()).toList();
+            return new Work(decision.id(), decision.ownerUserId(), decision.templateKey(), run.conditions(), run.executionId(), run.generation(),
+                    DiscoveryExclusions.from(previous, decision.options().stream().map(DecisionOption::name).toList()));
         });
         if (work == null) return;
         var start = System.nanoTime();
@@ -71,30 +75,34 @@ public class DiscoveryWorker {
             var query = OfficialStorePolicy.searchScope(work.category()) + " " + template.label() + " 구매 " + String.join(" ", condition.uses())
                     + (condition.maxBudget() == null ? "" : " " + condition.maxBudget().toPlainString() + "원 이하")
                     + " " + Objects.toString(condition.compatibility(), "")
-                    + minimums.stream().map(item -> " " + item.label() + " " + item.requiredValue()).collect(java.util.stream.Collectors.joining());
+                    + minimums.stream().map(item -> " " + item.label() + " " + item.requiredValue()).collect(java.util.stream.Collectors.joining())
+                    + work.excluded().searchTerms();
             stage = Stage.SEARCH;
             trace.enter(stage);
             progress(work, stage);
             var searchResults = search.lookupForOwner(query, work.owner());
             if (searchResults.isEmpty()) {
-                empty(work, "NO_OFFICIAL_RESULTS", false);
+                empty(work, work.generation() > 0 ? "NO_NEW_PRODUCTS" : "NO_OFFICIAL_RESULTS", false);
                 return;
             }
             var officialResults = searchResults.stream().filter(item -> OfficialStorePolicy.store(item.url()).isPresent()).toList();
             if (officialResults.isEmpty()) { empty(work, "NO_OFFICIAL_RESULTS", false); return; }
+            var unseen = officialResults.stream().filter(item -> !work.excluded().containsUrl(item.url())).toList();
+            if (unseen.isEmpty()) { empty(work, "NO_NEW_PRODUCTS", false); return; }
             stage = Stage.COLLECTION;
             trace.enter(stage);
             progress(work, stage);
-            var collected = collector.collect(work.id(), officialResults, template.facts());
+            var collected = collector.collect(work.id(), unseen, template.facts());
             var collectionFailures = collected.failures();
             if (collected.pages().isEmpty()) {
                 fail(work, collectionFailures.getFirst(), null);
                 return;
             }
-            var pages = collected.pages().stream().filter(page -> page.officialProduct() != null).toList();
+            var eligible = collected.pages().stream().filter(page -> page.officialProduct() != null).toList();
+            var pages = eligible.stream().filter(page -> !work.excluded().contains(page.officialProduct())).toList();
             log.info("product_event=discovery_offer_validation decision_id={} collected={} eligible={} rejected={}",
                     work.id(), collected.pages().size(), pages.size(), collected.pages().size() - pages.size());
-            if (pages.isEmpty()) { empty(work, "NO_VERIFIED_OFFERS", !collectionFailures.isEmpty()); return; }
+            if (pages.isEmpty()) { empty(work, eligible.isEmpty() ? "NO_VERIFIED_OFFERS" : "NO_NEW_PRODUCTS", !collectionFailures.isEmpty()); return; }
             var input = new DiscoveryInput(template.label(), condition.uses(), condition.maxBudget(),
                     condition.compatibility(), template.facts(), pages, minimums);
             stage = Stage.AI;
@@ -116,8 +124,9 @@ public class DiscoveryWorker {
                 if (!editable(decision)) { run.finish(ProductDiscovery.Status.FAILED, "종료된 비교입니다."); return; }
                 var existing = candidates.findByDecisionIdOrderByCreatedAtAsc(work.id());
                 var names = new HashMap<String, CandidateSuggestion>();
-                existing.stream().filter(CandidateSuggestion::discovered).forEach(item -> names.put(item.name().toLowerCase(Locale.ROOT), item));
+                existing.stream().filter(item -> item.discovered() && item.generation() == work.generation()).forEach(item -> names.put(item.name().toLowerCase(Locale.ROOT), item));
                 for (var candidate : verified) {
+                    candidate.generation(work.generation());
                     var key = candidate.name().toLowerCase(Locale.ROOT);
                     var previous = names.get(key);
                     if (previous != null) {
@@ -129,6 +138,7 @@ public class DiscoveryWorker {
                 }
                 run.usage(properties.provider(), properties.model(), result.inputTokens(), result.outputTokens(),
                         (System.nanoTime() - start) / 1_000_000);
+                if (!verified.isEmpty()) run.displayCurrentGeneration();
                 run.finish(verified.isEmpty() ? ProductDiscovery.Status.FAILED : partial ? ProductDiscovery.Status.PARTIAL : ProductDiscovery.Status.SUCCEEDED,
                         verified.isEmpty() ? Code.EVIDENCE_INSUFFICIENT.message() : partial ? "일부 정보만 확인했습니다. 직접 추가하거나 다시 시도할 수 있습니다." : null);
             });
@@ -176,7 +186,8 @@ public class DiscoveryWorker {
             var product = products.get(candidate.url());
             if (product == null || !product.name().equals(candidate.name())) continue;
             candidate.officialProduct(product);
-            var facts = new ArrayList<>(candidate.facts().stream().filter(fact -> !"가격".equals(fact.name())).toList());
+            var facts = new ArrayList<>(candidate.facts().stream()
+                    .filter(fact -> !"가격".equals(fact.name()) && candidate.url().equals(fact.sourceUrl())).toList());
             var offer = product.offer();
             facts.addFirst(new ProductFact("가격", offer.price().stripTrailingZeros().toPlainString() + " KRW", offer.purchaseUrl(),
                     product.name() + " · " + offer.priceBasis() + " " + offer.price().toPlainString() + " KRW", offer.fetchedAt(), "UNREVIEWED"));

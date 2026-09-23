@@ -216,17 +216,33 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
       <p className="text-sm text-zinc-600">{guidance?.intentText}</p>
       {pending && <p role="status" className="text-sm text-emerald-800">{discoveryStages[decision.discovery.stage ?? ""] ?? "제품 정보를 찾고 있습니다…"}</p>}
       {decision.discovery.emptyReason && <p role="status" className="text-sm text-zinc-600">이번 검색에서 공식 판매처와 비교 가능한 가격을 확인한 새 제품이 없습니다. 조건을 바꾸거나 제품을 직접 추가할 수 있습니다.</p>}
+      {(decision.discovery.generation ?? 0) > (decision.discovery.displayedGeneration ?? 0) && <p className="text-sm text-zinc-600">새 추천을 확보할 때까지 이전 추천 목록과 비교 내용을 유지합니다.</p>}
       {decision.discovery.error && <p role="status" className="text-sm text-amber-800">{decision.discovery.error}</p>}
       {editable && ["FAILED", "PARTIAL"].includes(decision.discovery.status ?? "") && <button className={secondaryButton} onClick={() => run(async () => {
         const { data, error } = await api.POST("/api/v1/decisions/{decisionId}/discovery/retry", { params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.discovery!.version! } });
         if (error) { setError(problemMessage(error)); return; } apply(data);
       })}>추천 다시 시도</button>}
+      {editable && <button disabled={pending || busy || dirty} className={secondaryButton} onClick={() => run(async () => {
+        clearFeedback();
+        const { data, error } = await api.POST("/api/v1/decisions/{decisionId}/discovery/refresh", { params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.discovery!.version! } });
+        if (error) { setError(problemMessage(error)); return; } apply(data);
+      })}>같은 조건으로 다른 제품 찾기</button>}
       <Link href={"/decisions/new?category=" + decision.templateKey} className="ml-3 text-sm text-emerald-800 underline">조건 바꿔 새로 찾기</Link>
       <DiscoveryCandidates candidates={guidance?.candidateSuggestions ?? []} editable={editable} optionCount={options.length}
         officialPolicy={decision.discovery.policyVersion === "official-kr-v1"}
         pending={pending} hasRequirements={Object.keys(decision.discovery.conditions?.minimumRequirements ?? {}).length > 0}
         onAction={(id, action) => run(() => updateSuggestion(id, action))} />
       <p className="text-sm text-zinc-500">비교에 추가한 제품 {options.length}/5</p>
+      {!!decision.discovery.history?.length && <details className="rounded-2xl border border-zinc-200 p-4">
+        <summary className="cursor-pointer font-semibold">추천 이력 ({decision.discovery.history.length})</summary>
+        <div className="mt-4 space-y-6">{[...decision.discovery.history].reverse().map(round => <section key={round.generation} aria-label={`추천 묶음 ${(round.generation ?? 0) + 1}`} className="space-y-3">
+          <h3 className="font-semibold">추천 묶음 {(round.generation ?? 0) + 1}</h3>
+          {round.error && <p className="text-sm text-amber-800">{round.error}</p>}
+          {round.emptyReason && <p className="text-sm text-zinc-600">새롭게 확인한 제품이 없었습니다.</p>}
+          <DiscoveryCandidates candidates={round.candidates ?? []} editable={false} optionCount={options.length} pending={false} hasRequirements={false}
+            officialPolicy={round.policyVersion === "official-kr-v1"} onAction={() => {}} />
+        </section>)}</div>
+      </details>}
     </Section>}
     {!decision.discovery && <Section title="비교 준비 상태" description="수집된 정보와 아직 확인할 내용을 구분합니다.">{pending && <div className="flex items-center gap-3 text-sm text-emerald-800"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />후보 링크를 읽고 있습니다. 이 화면은 자동으로 갱신됩니다.</div>}<p className="text-lg leading-8 text-zinc-800">{guidance?.summary ?? "기존 Decision입니다. 아래 검증 입력에서 비교를 계속할 수 있습니다."}</p>{(guidance?.appliedPreferences?.length ?? 0) > 0 && <div><p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">과거 결정에서 적용</p><div className="mt-2 flex flex-wrap gap-2">{guidance?.appliedPreferences?.map((item) => <span key={item.id} className="rounded-full bg-violet-50 px-3 py-1 text-xs text-violet-800">{item.statement}</span>)}</div></div>}</Section>}
 

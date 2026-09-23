@@ -48,7 +48,7 @@ public class DiscoveryService {
         runs.save(new ProductDiscovery(decision.id(), request));
     }
     public void retry(Decision decision, long expectedVersion) {
-        var run = runs.findById(decision.id()).orElseThrow(() -> new NotFoundException("추천 요청이 없습니다."));
+        var run = runs.lockById(decision.id()).orElseThrow(() -> new NotFoundException("추천 요청이 없습니다."));
         if (run.version() != expectedVersion) throw new ConflictException("추천 상태가 변경되었습니다. 다시 불러오세요.");
         if (run.status() != ProductDiscovery.Status.FAILED && run.status() != ProductDiscovery.Status.PARTIAL) {
             throw new ConflictException("실패하거나 일부만 완료된 추천만 재시도할 수 있습니다.");
@@ -56,5 +56,13 @@ public class DiscoveryService {
         validate(decision.templateKey(), run.conditions());
         run.pending();
         runs.flush();
+    }
+    public void refresh(Decision decision, long expectedVersion) {
+        var run = runs.lockById(decision.id()).orElseThrow(() -> new NotFoundException("추천 요청이 없습니다."));
+        if (run.version() != expectedVersion) throw new ConflictException("추천 상태가 변경되었습니다. 다시 불러오세요.");
+        if (run.status() == ProductDiscovery.Status.PENDING || run.status() == ProductDiscovery.Status.RUNNING)
+            throw new ConflictException("추천이 진행 중입니다. 완료 후 다른 제품을 찾아보세요.");
+        validate(decision.templateKey(), run.conditions());
+        run.refresh(); runs.flush();
     }
 }

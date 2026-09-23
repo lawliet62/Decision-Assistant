@@ -118,7 +118,7 @@
 
 - **동작:** 지원하는 5개 제품군의 versioned intake template로 하나 이상의 용도·최대 예산·호환성을 선택한다. 선택한 용도는 하나의 추천에서 함께 고려하며 중복을 제거하고 템플릿 순서로 저장한다. 미정·제한 없음도 허용하며 자유 텍스트는 필수가 아니다. 조건·검색/수집/AI 동의·민감 정보 비포함 확인을 저장한다. 기존 동의는 새 경로를 허용하지 않는다.
 - **동작:** 최초 추천은 Serper 조건 검색 1회, 공개 페이지 최대 5개 수집, AI 구조화 최대 1회로 제한한다. 검색은 기존 월·burst 한도를 공유한다. 메모·사용자 identity는 최초 추천 검색·AI 입력에서 제외한다.
-- **동작:** 작업과 후보는 해당 Decision 소유자에게만 보인다. 일부 실패는 확보한 후보를 보존한다. 실패·부분 완료만 현재 작업 version으로 명시적으로 재시도하며 실행 중·성공 상태는 재실행하지 않는다.
+- **동작:** 작업과 후보는 해당 Decision 소유자에게만 보인다. 일부 실패는 확보한 후보를 보존한다. 실패·부분 완료는 현재 작업 version으로 같은 추천 묶음을 재시도한다. 같은 조건으로 다른 제품 찾기는 별도 요청으로 새 묶음을 만든다. 진행 중인 중복 요청은 거절한다.
 - **동작:** 추천 실패 안내는 검색 한도·페이지 수집·AI 정리·근거 부족·저장 실패를 구분한다. 공식 검색 결과·비교 가능한 가격이 없는 경우는 별도 빈 결과로 안내한다. 수집한 공식 상품·가격이 없으면 AI를 호출하지 않고, 일부 페이지 수집 실패는 나머지 근거로 추천을 계속한다. provider 원문 오류는 사용자에게 전달하지 않는다.
 - **이유:** 타이핑 부담과 외부 호출 비용을 제한하고 새로고침·실패 후에도 비교를 이어간다.
 
@@ -144,6 +144,13 @@
 - **동작:** 공식 제품 이미지는 확인한 이미지 호스트에서 브라우저가 referrer 없이 직접 불러온다. 이미지가 없거나 실패하면 대체 영역을 표시한다. 입력 화면에서 이미지 서버로 IP가 전달됨을 알린다.
 - **동작:** 홈·조건 입력·결과에 공식 판매처 기준과 다른 판매·할인 경로가 더 저렴할 수 있음을 본문으로 표시한다. 실행의 정책 버전과 개별 공식 offer를 저장하며 기존 추천·직접 추가를 공식 추천으로 소급하지 않는다.
 - **이유:** 추천 범위와 가격 정렬의 의미를 명확히 하되 제품 안전성·품질·정품·최저가를 인증하지 않는다.
+
+### BR-DISC-05: 같은 조건의 추가 탐색은 비교와 추천 이력을 보존한다
+
+- **동작:** 명시적 refresh는 최초 저장한 조건과 동의로 새 generation을 만든다. 승인·제외·미선택을 포함한 이전 추천 전체를 모델 식별자·정규화한 이름·공식 상품 URL로 누적 제외한다. 최근 공개 모델명 최대 5개만 검색 보조 조건으로 보내고 전체 제외는 서버에서 적용한다. 직접 편집한 제품명·메모는 검색 조건에 추가하지 않는다.
+- **동작:** 실행마다 검색 1회·수집 최대 5개·AI 최대 1회와 기존 quota를 유지한다. 신규 후보가 확보돼야 표시 중인 generation을 교체하며, 실패·새 제품 없음은 이전 목록을 유지한다. 비교에 승인한 Option·사용자 입력·확인값은 변경하지 않는다.
+- **동작:** 추천 묶음의 최종 상태와 후보는 이력으로 남긴다. retry는 같은 generation을 복구하며 승인한 사양을 덮어쓰지 않는다. 진행 단계 변경은 optimistic version을 증가시키지만 executionId를 유지한다. 이전 실행의 지연 응답은 새 실행에 반영하지 않는다.
+- **이유:** 재검색 비용을 명시적으로 통제하면서 비교 내용을 잃지 않고 다른 후보를 확인한다. 별칭·판매자 간 완전한 모델 식별 catalog는 도입하지 않는다.
 
 ### BR-EVD-03: 제품명 검색은 사용자 선택을 돕는 URL lookup이다
 
@@ -197,6 +204,7 @@
 | BR-DISC-01~02 | `DiscoveryWorkerTest`, `DiscoveryFailureTest`, `ProviderResponseConversionTest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-DISC-03 | `MinimumRequirementMatcherTest`, `DiscoveryApiIntegrationTest.minimumRequirementsPersistAndRemainAdvisoryWithBoundedExternalCalls`, `DiscoveryApiIntegrationTest.invalidMinimumRequirementsAndLegacyVersionCannotTriggerProviders`, `frontend/e2e/minimum-requirements.spec.ts` |
 | BR-DISC-04 | `OfficialProductParserTest`, `ProviderResponseConversionTest.productScrapeConvertsHtmlAndFinalUrlWithOneRequest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
+| BR-DISC-05 | `DiscoveryExclusionsTest`, `DiscoveryApiIntegrationTest.refreshExcludesAllPreviousProductsAndPreservesAcceptedInputAndHistory`, `DiscoveryApiIntegrationTest.failedRefreshKeepsPreviousListAndRetryUsesSameGeneration`, `DiscoveryApiIntegrationTest.concurrentRefreshRequestsCreateOneNewGeneration`, `DiscoveryApiIntegrationTest.lateAiCompletionCannotOverwriteANewerExecution`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-TPL-01 | `DecisionApiIntegrationTest.earbudsAndSelectedSourcesReuseExistingLifecycle`, `EvidenceWorkflowWorkerTest.earbudsNeverAutoFillSubjectiveRatings` |
 | BR-DEC-02, BR-EVD-03 | `frontend/e2e/guided-decision.spec.ts` (선택→평가→회고·한도 fallback·polling/충돌 입력 보존·수집 재시도) |
 

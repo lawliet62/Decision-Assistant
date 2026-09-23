@@ -144,6 +144,14 @@ public class DecisionService {
         return response(decision);
     }
 
+    @Transactional
+    public DecisionResponse refreshDiscovery(UUID id, RetryDiscoveryRequest request) {
+        var decision = decisions.lockByIdAndOwner(id, currentUser.current().id()).orElseThrow(() -> new NotFoundException("비교를 찾을 수 없습니다."));
+        ensureEditable(decision);
+        discoveryService.refresh(decision, request.expectedVersion());
+        return response(decision);
+    }
+
     private DecisionResponse createGuided(CreateDecisionRequest request) {
         if (Boolean.TRUE.equals(request.aiConsent())) {
             aiDataPolicy.validateSensitiveDataAcknowledgement(Boolean.TRUE.equals(request.sensitiveDataAcknowledged()));
@@ -587,6 +595,7 @@ public class DecisionService {
     private DecisionResponse response(Decision decision) {
         var run = discoveries.findById(decision.id()).orElse(null);
         var selected = run == null ? java.util.Map.<String, String>of() : run.conditions().selectedRequirements();
+        var discoveryBudget = run == null ? decision.context().budget() : run.conditions().maxBudget();
         var suggestions = candidateSuggestions.findByDecisionIdOrderByCreatedAtAsc(decision.id());
         var evidence = evidenceImports.findByDecisionIdOrderByCreatedAtAsc(decision.id());
         var productFacts = decision.options().stream().map(option -> {
@@ -618,10 +627,14 @@ public class DecisionService {
                         result.id(), result.optionId(), result.constraintId(), result.status(), result.note())).toList(),
                 resolutions.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().map(this::resolutionData).toList(),
                 outcomes.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().map(this::outcomeData).toList(),
-                guidance(decision, suggestions, evidence, selected),
+                guidance(decision, run == null ? suggestions : suggestions.stream().filter(item -> !item.discovered() || item.generation() == run.displayedGeneration()).toList(), evidence, selected, discoveryBudget),
                 decision.createdAt(), decision.updatedAt(),
                 run == null ? null : new DiscoveryData(run.version(), run.status().name(), run.error(), run.conditions(), run.updatedAt(),
-                        run.policyVersion(), run.stage(), run.executionId(), run.emptyReason()),
+                        run.policyVersion(), run.stage(), run.executionId(), run.emptyReason(), run.generation(), run.displayedGeneration(),
+                        run.history().stream().filter(round -> round.generation() != run.displayedGeneration()).map(round -> new DiscoveryHistoryData(
+                                round.generation(), round.status(), round.error(), round.emptyReason(), round.policyVersion(), round.completedAt(),
+                                suggestions.stream().filter(item -> item.discovered() && item.generation() == round.generation()).sorted(DiscoveryRanking.byPrice())
+                                        .map(item -> candidateData(decision, selected, item, discoveryBudget)).toList())).toList()),
                 productFacts);
     }
 
@@ -642,7 +655,7 @@ public class DecisionService {
     }
 
     private GuidanceData guidance(Decision decision, List<CandidateSuggestion> suggestions, List<EvidenceImport> evidence,
-                                  java.util.Map<String, String> selected) {
+                                  java.util.Map<String, String> selected, BigDecimal discoveryBudget) {
         if (decision.intentText() == null) return null;
         var analyzed = readiness.analyze(decision);
         var processing = decision.processingStatus();
@@ -662,11 +675,7 @@ public class DecisionService {
                 suggestions.stream()
                         .filter(item -> item.status() == CandidateSuggestion.Status.PROPOSED)
                         .sorted(DiscoveryRanking.byPrice())
-                        .map(item -> new CandidateSuggestionData(item.id(), item.name(), item.url(), item.reason(),
-                                item.status().name(), item.facts(), item.fetchedAt(), item.sourceExcerpt(),
-                                requirementChecks(decision, selected, item.facts()), item.officialOffer(),
-                                OfficialStorePolicy.sourceKind(item.url(), item.officialOffer() != null),
-                                DiscoveryRanking.group(item.officialOffer(), requirementChecks(decision, selected, item.facts()), decision.context().budget()))).toList(),
+                        .map(item -> candidateData(decision, selected, item, discoveryBudget)).toList(),
                 applied,
                 reminders.findByDecisionIdOrderByDueAtAsc(decision.id()).stream().map(item -> new ReminderData(
                         item.id(), item.dueAt(), item.status().name(), item.channel().name())).toList());
@@ -675,5 +684,11 @@ public class DecisionService {
     private PreferenceData preferenceData(PreferenceMemory item) {
         return new PreferenceData(item.id(), item.templateKey(), item.criterionName(), item.statement(), item.strength(),
                 item.status().name(), item.confidence().name(), item.sourceDecisionId());
+    }
+    private CandidateSuggestionData candidateData(Decision decision, java.util.Map<String, String> selected, CandidateSuggestion item, BigDecimal discoveryBudget) {
+        var checks = requirementChecks(decision, selected, item.facts());
+        return new CandidateSuggestionData(item.id(), item.name(), item.url(), item.reason(), item.status().name(), item.facts(), item.fetchedAt(),
+                item.sourceExcerpt(), checks, item.officialOffer(), OfficialStorePolicy.sourceKind(item.url(), item.officialOffer() != null),
+                DiscoveryRanking.group(item.officialOffer(), checks, discoveryBudget));
     }
 }

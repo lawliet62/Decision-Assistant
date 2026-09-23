@@ -197,6 +197,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/discovery/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["refreshDiscovery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/preferences/{preferenceId}": {
         parameters: {
             query?: never;
@@ -533,6 +549,22 @@ export interface components {
             /** Format: uuid */
             executionId?: string;
             emptyReason?: string;
+            /** Format: int32 */
+            generation?: number;
+            /** Format: int32 */
+            displayedGeneration?: number;
+            history?: components["schemas"]["DiscoveryHistoryData"][];
+        };
+        DiscoveryHistoryData: {
+            /** Format: int32 */
+            generation?: number;
+            status?: string;
+            error?: string;
+            emptyReason?: string;
+            policyVersion?: string;
+            /** Format: date-time */
+            completedAt?: string;
+            candidates?: components["schemas"]["CandidateSuggestionData"][];
         };
         DiscoveryRequest: {
             templateVersion: string;
@@ -1283,6 +1315,32 @@ export interface operations {
         };
     };
     retryDiscovery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryDiscoveryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    refreshDiscovery: {
         parameters: {
             query?: never;
             header?: never;

@@ -33,6 +33,7 @@ public class CandidateSuggestion {
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
     @Column(name = "official_offer", columnDefinition = "jsonb") private DiscoveryContracts.OfficialOffer officialOffer;
     @Column(name = "product_identity", length = 500) private String productIdentity;
+    @Column(nullable = false) private int generation;
 
     protected CandidateSuggestion() {}
     public CandidateSuggestion(UUID decisionId, String name, String url, String reason, String provider, Instant now) {
@@ -50,6 +51,8 @@ public class CandidateSuggestion {
     public Instant fetchedAt() { return fetchedAt; }
     public DiscoveryContracts.OfficialOffer officialOffer() { return officialOffer; }
     public String productIdentity() { return productIdentity; }
+    public int generation() { return generation; }
+    public void generation(int value) { generation = value; }
     public void officialProduct(DiscoveryContracts.OfficialProduct product) { officialOffer = product.offer(); productIdentity = product.identity(); }
     public void refreshDiscovery(CandidateSuggestion source) {
         reason = source.reason; url = source.url; facts = source.facts;

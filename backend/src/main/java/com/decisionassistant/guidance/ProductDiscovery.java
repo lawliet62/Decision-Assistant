@@ -28,6 +28,10 @@ public class ProductDiscovery {
     @Column(length = 30) private String stage;
     @Column(name = "policy_version", length = 50) private String policyVersion;
     @Column(name = "empty_reason", length = 50) private String emptyReason;
+    @Column(nullable = false) private int generation;
+    @Column(name = "displayed_generation", nullable = false) private int displayedGeneration;
+    public record Round(int generation, String status, String error, String emptyReason, String policyVersion, Instant completedAt) {}
+    @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false, columnDefinition = "jsonb") private java.util.List<Round> history = java.util.List.of();
     protected ProductDiscovery() {}
     public ProductDiscovery(UUID decisionId, DiscoveryContracts.DiscoveryRequest conditions) {
         this.decisionId = decisionId; this.conditions = conditions; pending();
@@ -35,8 +39,16 @@ public class ProductDiscovery {
     public void pending() { status = Status.PENDING; error = null; emptyReason = null; stage = "QUEUED"; executionId = UUID.randomUUID(); policyVersion = OfficialStorePolicy.VERSION; updatedAt = Instant.now(); }
     public void running() { status = Status.RUNNING; stage = "CONFIGURATION"; if (executionId == null) executionId = UUID.randomUUID(); policyVersion = OfficialStorePolicy.VERSION; updatedAt = Instant.now(); }
     public void stage(DiscoveryFailure.Stage stage) { this.stage = stage.name(); updatedAt = Instant.now(); }
-    public void finish(Status status, String error) { this.status = status; this.error = error; stage = null; updatedAt = Instant.now(); }
+    public void finish(Status status, String error) { this.status = status; this.error = error; stage = null; updatedAt = Instant.now(); remember(); }
     public void empty(String reason) { emptyReason = reason; finish(Status.SUCCEEDED, null); }
+    public void refresh() { remember(); generation++; pending(); }
+    public void displayCurrentGeneration() { displayedGeneration = generation; }
+    private void remember() {
+        if (status == Status.PENDING || status == Status.RUNNING) return;
+        var records = new java.util.ArrayList<>(history.stream().filter(item -> item.generation() != generation).toList());
+        records.add(new Round(generation, status.name(), error, emptyReason, policyVersion, updatedAt));
+        history = java.util.List.copyOf(records);
+    }
     public void usage(String provider, String model, long input, long output, long latency) {
         promptVersion = DiscoveryContracts.PROMPT_VERSION;
         this.provider = provider; this.model = model; inputTokens = input; outputTokens = output; latencyMs = latency;
@@ -51,4 +63,7 @@ public class ProductDiscovery {
     public String stage() { return stage; }
     public String policyVersion() { return policyVersion; }
     public String emptyReason() { return emptyReason; }
+    public int generation() { return generation; }
+    public int displayedGeneration() { return displayedGeneration; }
+    public java.util.List<Round> history() { return history; }
 }
