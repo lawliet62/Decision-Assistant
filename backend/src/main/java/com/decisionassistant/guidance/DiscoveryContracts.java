@@ -41,14 +41,15 @@ public final class DiscoveryContracts {
                                  List<String> factNames, List<SourcePage> pages, List<MinimumCondition> minimumRequirements) {}
     public record MinimumCondition(String id, String label, String requiredValue) {}
     public enum RequirementStatus { MEETS, BELOW, UNKNOWN }
+    public enum UnknownReason { MISSING, AMBIGUOUS, CONFLICT }
     public record RequirementCheck(String id, String label, String requiredValue, RequirementStatus status,
-                                   List<ProductFact> facts) {}
+                                   List<ProductFact> facts, UnknownReason unknownReason) {}
     public record ProposedFact(String name, String value, String sourceUrl, String quote) {}
     public record ProposedProduct(String name, String sourceUrl, String modelQuote, String reason,
                                   List<ProposedFact> facts) {}
     public record DiscoveryProposal(List<ProposedProduct> products) {}
     public interface ProductDiscoverer { AiResult<DiscoveryProposal> discover(DiscoveryInput input); }
-    public static final String PROMPT_VERSION = "discovery-v3";
+    public static final String PROMPT_VERSION = "discovery-v4";
     public static final String PROMPT = """
             선택한 여러 용도를 하나의 추천 목록에서 함께 고려한다. 용도별 별도 목록이나 임의 점수를 만들지 않는다.
             minimumRequirements는 사용자가 선택한 최소 사양이다. 가능한 해당 조건의 후보와 근거를 찾아 설명한다.
@@ -57,7 +58,8 @@ public final class DiscoveryContracts {
             검색 순위를 추천 순위로 바꾸지 않는다. 한국어로 간결하게 작성한다. 실제로 식별되는 제품/모델만 반환한다.
             sourceUrl은 제공된 페이지 URL만 사용한다. modelQuote는 제품명/모델이 나오는 페이지 원문 그대로 인용한다.
             facts는 제공된 factNames의 객관적 사양만 반환한다. value는 quote에서 그대로 찾을 수 있는 값과 단위로 작성한다.
-            quote는 제품명과 값이 함께 나오는 원문 그대로 인용한다. 가격에는 원문 통화와 제품 구성/옵션을 유지하며 환산하지 않는다.
+            quote는 값을 포함한 원문 그대로 인용한다. 제품명이 quote에 없으면 해당 제품명이 제목에 있는 동일 섹션의 사양만 사용한다.
+            다른 제품의 섹션이나 추천 상품 영역을 연결하지 않는다. 가격에는 원문 통화와 제품 구성/옵션을 유지하며 환산하지 않는다.
             정보가 없으면 facts에서 생략한다. 배경지식으로 사양이나 주관적인 만족도를 만들지 않는다.
             reason은 선택 조건과 확인된 사양의 관계 및 미확인 사항을 설명하되 최적 구매나 조건 충족을 보장하지 않는다.
             서로 다른 세대/용량/구성을 합치지 않는다. 같은 제품은 한 번만 반환한다. URL을 직접 조회하지 않는다.

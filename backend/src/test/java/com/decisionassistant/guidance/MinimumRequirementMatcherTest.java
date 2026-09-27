@@ -16,6 +16,12 @@ import static com.decisionassistant.decision.DecisionTypes.TemplateKey.*;
 import static org.assertj.core.api.Assertions.*;
 
 class MinimumRequirementMatcherTest {
+    @ParameterizedTest
+    @CsvSource({"적응형 ANC 탑재,MEETS", "액티브 노이즈 캔슬링 지원,MEETS", "ANC 미지원,BELOW", "통화 소음 억제,UNKNOWN", "ANC 지원 여부 미확인,UNKNOWN"})
+    void recognizesExplicitFeaturePhrasesWithoutInventingSupport(String value, RequirementStatus expected) {
+        var fact = new ProductFact("ANC 지원", value, "https://example.com/product", value, Instant.now(), "UNREVIEWED");
+        assertThat(check(EARBUDS, "anc", "required", fact).status()).isEqualTo(expected);
+    }
     private ProductFact fact(String name, String value) {
         return new ProductFact(name, value, "https://example.com/spec", "Model A " + name + " " + value,
                 Instant.parse("2026-09-24T00:00:00Z"), "UNREVIEWED");

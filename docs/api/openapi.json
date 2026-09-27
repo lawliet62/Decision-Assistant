@@ -1591,6 +1591,10 @@
             "items" : {
               "$ref" : "#/components/schemas/ProductFact"
             }
+          },
+          "unknownReason" : {
+            "type" : "string",
+            "enum" : [ "MISSING", "AMBIGUOUS", "CONFLICT" ]
           }
         }
       },

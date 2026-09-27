@@ -8,6 +8,16 @@ import static com.decisionassistant.guidance.DiscoveryContracts.*;
 import static org.assertj.core.api.Assertions.*;
 
 class DiscoveryWorkerTest {
+    @Test void productHeadingBindsFollowingSpecificationButNotAnotherProduct() {
+        var source = new SourcePage("https://example.com/spec", "제품 비교",
+                "## Buds A\n적응형 ANC 탑재\n\n## Buds B\n무게 5 g", Instant.now());
+        var input = new DiscoveryInput("이어폰", List.of(), null, null, List.of("ANC 지원", "무게"), List.of(source), List.of());
+        var proposal = new DiscoveryProposal(List.of(new ProposedProduct("Buds A", source.url(), "Buds A", "", List.of(
+                new ProposedFact("ANC 지원", "적응형 ANC 탑재", source.url(), "적응형 ANC 탑재"),
+                new ProposedFact("무게", "5 g", source.url(), "무게 5 g")))));
+        assertThat(DiscoveryWorker.validateProducts(UUID.randomUUID(), proposal, input).getFirst().facts())
+                .extracting(ProductFact::name).containsExactly("ANC 지원");
+    }
     private final SourcePage page = new SourcePage("https://example.com/review", "비교",
             "Buds A 가격 100,000 KRW. Buds B 무게 5 g.", Instant.now());
     private final DiscoveryInput input = new DiscoveryInput("무선 이어폰", List.of("출퇴근"), null, null,

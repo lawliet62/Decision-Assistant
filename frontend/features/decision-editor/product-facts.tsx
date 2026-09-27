@@ -12,19 +12,19 @@ export function RequirementChecks({ checks }: { checks?: Check[] }) {
   if (!checks?.length) return null;
   return <ul aria-label="최소 사양 확인" className="space-y-3 text-sm">{checks.map(check => {
     const confirmed = check.facts?.length && check.facts.every(fact => fact.verificationStatus === "CONFIRMED");
-    const label = check.status === "BELOW" ? "미달" : check.status === "MEETS" ? confirmed ? "확인한 사양상 충족" : "수집 사양상 충족" : "확인 필요";
+    const unknown = check.unknownReason === "CONFLICT" ? "근거가 상충함" : check.unknownReason === "AMBIGUOUS" || check.facts?.length ? "표현이 모호함" : "근거 없음";
+    const label = check.status === "BELOW" ? "미달" : check.status === "MEETS" ? confirmed ? "확인한 사양상 충족" : "수집 사양상 충족" : unknown;
     return <li key={check.id} className="rounded-xl bg-zinc-50 p-3">
-      <p className="font-medium">{check.label} · {check.requiredValue}</p>
+      <p className="font-medium">{check.label}: {check.requiredValue}</p>
       <p className={check.status === "BELOW" ? "text-red-700" : check.status === "MEETS" ? "text-emerald-800" : "text-amber-800"}>{label}</p>
-      {!!check.facts?.length ? check.facts.map((fact, index) => <div key={index} className="mt-2"><FactValue fact={fact} /></div>) : <p className="mt-1 text-zinc-500">사양 미확인</p>}
-      {check.status === "UNKNOWN" && !!check.facts?.length && <p className="mt-1 text-xs text-zinc-500">값·단위·구성 또는 상충하는 근거를 확인해 주세요.</p>}
+      {check.facts?.map((fact, index) => <div key={index} className="mt-2"><FactValue fact={fact} compact /></div>)}
     </li>;
   })}</ul>;
 }
 
-export function FactValue({ fact }: { fact?: Fact }) {
+export function FactValue({ fact, compact = false }: { fact?: Fact; compact?: boolean }) {
   if (!fact) return <span className="text-zinc-400">미확인</span>;
-  return <div className="space-y-1"><span className="font-medium">{fact.value}</span><span className="block text-xs text-amber-800">{fact.verificationStatus === "CONFIRMED" ? "확인됨" : fact.verificationStatus === "DISPUTED" ? "이견 있음" : "확인 필요"}</span>
+  return <div className="space-y-1"><span className="font-medium">{fact.value}</span>{(!compact || fact.verificationStatus !== "UNREVIEWED") && <span className="block text-xs text-amber-800">{fact.verificationStatus === "CONFIRMED" ? "확인됨" : fact.verificationStatus === "DISPUTED" ? "이견 있음" : "사용자 확인 전"}</span>}
     {fact.sourceUrl && <details className="text-xs text-zinc-500"><summary className="cursor-pointer">출처·조회 시점</summary><a href={fact.sourceUrl} target="_blank" rel="noreferrer" className="block break-all text-emerald-800">원문 보기 ↗</a><time>{fact.fetchedAt ? new Date(fact.fetchedAt).toLocaleString("ko-KR") : "조회 시점 미확인"}</time><p className="mt-1">{fact.quote}</p></details>}</div>;
 }
 

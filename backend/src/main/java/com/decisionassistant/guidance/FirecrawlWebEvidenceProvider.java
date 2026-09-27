@@ -17,7 +17,11 @@ public class FirecrawlWebEvidenceProvider implements WebEvidenceProvider, WebSea
 
     public FirecrawlWebEvidenceProvider(WebProperties properties, RestClient.Builder builder) {
         this.properties = properties;
-        this.client = builder.baseUrl(properties.baseUrl())
+        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(java.net.http.HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(3)).version(java.net.http.HttpClient.Version.HTTP_1_1)
+                .followRedirects(java.net.http.HttpClient.Redirect.NEVER).build());
+        factory.setReadTimeout((properties.timeout() == null ? Duration.ofSeconds(45) : properties.timeout()).plusSeconds(5));
+        this.client = builder.requestFactory(factory).baseUrl(properties.baseUrl())
                 .defaultHeader("Authorization", "Bearer " + properties.apiKey())
                 .build();
     }

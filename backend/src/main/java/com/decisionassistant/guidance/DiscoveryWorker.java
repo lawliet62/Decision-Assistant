@@ -22,40 +22,47 @@ public class DiscoveryWorker {
     private final DecisionRepository decisions;
     private final CandidateSuggestionRepository candidates;
     private final ProductLookupService search;
-    private final WebEvidenceProvider web;
+    private final DiscoveryPageCollector collector;
+    private final java.util.concurrent.atomic.AtomicBoolean processing = new java.util.concurrent.atomic.AtomicBoolean();
     private final ProductDiscoverer ai;
     private final AiCallExecutor executor;
     private final AiProperties properties;
     private final DiscoveryService service;
     private final IntakeTemplates templates;
-    private final PublicUrlPolicy urls;
     private final TransactionTemplate tx;
     public DiscoveryWorker(ProductDiscoveryRepository runs, DecisionRepository decisions,
                            CandidateSuggestionRepository candidates, ProductLookupService search,
-                           WebEvidenceProvider web, ObjectProvider<ProductDiscoverer> ai, AiCallExecutor executor,
+                           DiscoveryPageCollector collector, ObjectProvider<ProductDiscoverer> ai, AiCallExecutor executor,
                            AiProperties properties, DiscoveryService service, IntakeTemplates templates,
                            PublicUrlPolicy urls, PlatformTransactionManager manager) {
         this.runs = runs; this.decisions = decisions; this.candidates = candidates; this.search = search;
-        this.web = web; this.ai = ai.getIfAvailable(); this.executor = executor; this.properties = properties;
-        this.service = service; this.templates = templates; this.urls = urls; tx = new TransactionTemplate(manager);
+        this.collector = collector; this.ai = ai.getIfAvailable(); this.executor = executor; this.properties = properties;
+        this.service = service; this.templates = templates; tx = new TransactionTemplate(manager);
     }
     private record Work(UUID id, UUID owner, DecisionTypes.TemplateKey category, DiscoveryRequest conditions, long version) {}
 
-    @Scheduled(fixedDelayString = "${decision-assistant.web.poll-interval:2000}")
+    @Scheduled(scheduler = "discoveryScheduler", fixedDelayString = "${decision-assistant.web.poll-interval:2000}")
     public void processNext() {
+        if (!processing.compareAndSet(false, true)) return;
+        try { runNext(); } finally { processing.set(false); }
+    }
+
+    private void runNext() {
         Work work = tx.execute(status -> {
             runs.failInterrupted(Instant.now().minus(15, ChronoUnit.MINUTES));
             var run = runs.claimNext().orElse(null);
             if (run == null) return null;
             var decision = decisions.findById(run.decisionId()).orElseThrow();
             if (!editable(decision)) { run.finish(ProductDiscovery.Status.FAILED, "종료된 비교입니다."); return null; }
+            log.info("product_event=discovery_queue_timing decision_id={} duration_ms={}", decision.id(),
+                    Math.max(0, java.time.Duration.between(run.updatedAt(), Instant.now()).toMillis()));
             run.running(); runs.flush();
             return new Work(decision.id(), decision.ownerUserId(), decision.templateKey(), run.conditions(), run.version());
         });
         if (work == null) return;
         var start = System.nanoTime();
         var stage = Stage.CONFIGURATION;
-        try {
+        try (var trace = new DiscoveryTrace(work.id())) {
             service.validate(work.category(), work.conditions());
             if (ai == null) throw new IllegalStateException("AI unavailable");
             var template = templates.required(work.category(), work.conditions().templateVersion());
@@ -65,29 +72,18 @@ public class DiscoveryWorker {
                     + (condition.maxBudget() == null ? "" : " " + condition.maxBudget().toPlainString() + "원 이하")
                     + " " + Objects.toString(condition.compatibility(), "")
                     + minimums.stream().map(item -> " " + item.label() + " " + item.requiredValue()).collect(java.util.stream.Collectors.joining());
-            var pages = new ArrayList<SourcePage>();
             stage = Stage.SEARCH;
+            trace.enter(stage);
             var searchResults = search.lookupForOwner(query, work.owner());
             if (searchResults.isEmpty()) {
                 fail(work, new DiscoveryFailure(Stage.SEARCH, Code.SEARCH_NO_RESULTS), null);
                 return;
             }
             stage = Stage.COLLECTION;
-            var collectionFailures = new ArrayList<DiscoveryFailure>();
-            for (var result : searchResults) {
-                try {
-                    var url = urls.validate(result.url());
-                    var page = web.scrape(url);
-                    if (page == null || page.markdown() == null || page.markdown().isBlank()) {
-                        var failure = new DiscoveryFailure(Stage.COLLECTION, Code.COLLECTION_EMPTY);
-                        collectionFailures.add(failure); logFailure("discovery_page_failed", work, failure, null); continue;
-                    }
-                    pages.add(new SourcePage(url, page.title(), truncate(page.markdown(), 6000), Instant.now()));
-                } catch (RuntimeException ex) {
-                    var failure = DiscoveryFailure.classify(Stage.COLLECTION, ex);
-                    collectionFailures.add(failure); logFailure("discovery_page_failed", work, failure, ex);
-                }
-            }
+            trace.enter(stage);
+            var collected = collector.collect(work.id(), searchResults, template.facts());
+            var pages = collected.pages();
+            var collectionFailures = collected.failures();
             if (pages.isEmpty()) {
                 fail(work, collectionFailures.getFirst(), null);
                 return;
@@ -95,11 +91,14 @@ public class DiscoveryWorker {
             var input = new DiscoveryInput(template.label(), condition.uses(), condition.maxBudget(),
                     condition.compatibility(), template.facts(), pages, minimums);
             stage = Stage.AI;
+            trace.enter(stage);
             var result = executor.call(() -> ai.discover(input));
             stage = Stage.VALIDATION;
+            trace.enter(stage);
             var verified = validateProducts(work.id(), result.value(), input);
             var partial = !collectionFailures.isEmpty() || verified.size() < 2;
             stage = Stage.PERSISTENCE;
+            trace.enter(stage);
             tx.executeWithoutResult(status -> {
                 var run = runs.findById(work.id()).orElseThrow();
                 var decision = decisions.lockByIdAndOwner(work.id(), work.owner()).orElseThrow();
@@ -153,6 +152,9 @@ public class DiscoveryWorker {
         input.pages().forEach(page -> pages.put(page.url(), page));
         var result = new ArrayList<CandidateSuggestion>();
         var names = new HashSet<String>();
+        var productNames = proposal.products().stream().filter(Objects::nonNull).map(ProposedProduct::name).filter(Objects::nonNull).toList();
+        var rejected = new TreeMap<String, Integer>();
+        int proposedFacts = 0;
         for (var product : proposal.products()) {
             if (product == null || product.name() == null || product.name().isBlank() || product.name().length() > 200) continue;
             var source = pages.get(product.sourceUrl());
@@ -160,12 +162,17 @@ public class DiscoveryWorker {
             if (!names.add(product.name().strip().toLowerCase(Locale.ROOT))) continue;
             var facts = new LinkedHashSet<ProductFact>();
             if (product.facts() != null) for (var fact : product.facts()) {
+                proposedFacts++;
                 if (fact == null || fact.name() == null || !input.factNames().contains(fact.name()) || fact.value() == null
-                        || fact.value().isBlank() || fact.value().length() > 300) continue;
+                        || fact.value().isBlank() || fact.value().length() > 300) { rejected.merge("INVALID_FIELD", 1, Integer::sum); continue; }
                 var page = pages.get(fact.sourceUrl());
                 if (page == null || !quoted(page, fact.quote()) || !fact.quote().contains(fact.value())
-                        || !fact.quote().contains(product.name())) continue;
-                if ("가격".equals(fact.name()) && !fact.value().matches("(?is).*(KRW|원|₩|USD|\\$|EUR|€|JPY|¥|GBP|£).*$")) continue;
+                        || !DiscoveryEvidence.belongsToProduct(page.excerpt(), product.name(), fact.quote(), productNames)) {
+                    rejected.merge("UNBOUND_EVIDENCE", 1, Integer::sum); continue;
+                }
+                if ("가격".equals(fact.name()) && !fact.value().matches("(?is).*(KRW|원|₩|USD|\\$|EUR|€|JPY|¥|GBP|£).*$")) {
+                    rejected.merge("CURRENCY_MISSING", 1, Integer::sum); continue;
+                }
                 facts.add(new ProductFact(fact.name(), fact.value(), page.url(),
                         fact.quote(), page.fetchedAt(), "UNREVIEWED"));
             }
@@ -175,6 +182,8 @@ public class DiscoveryWorker {
             candidate.sourceEvidence(product.modelQuote(), source.fetchedAt()); result.add(candidate);
             if (result.size() == 5) break;
         }
+        log.info("product_event=discovery_fact_validation decision_id={} proposed={} accepted={} rejected={}", decisionId, proposedFacts,
+                result.stream().mapToInt(item -> item.facts().size()).sum(), rejected);
         return result;
     }
     private static boolean quoted(SourcePage page, String quote) {

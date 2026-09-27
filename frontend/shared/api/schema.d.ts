@@ -642,6 +642,8 @@ export interface components {
             /** @enum {string} */
             status?: "MEETS" | "BELOW" | "UNKNOWN";
             facts?: components["schemas"]["ProductFact"][];
+            /** @enum {string} */
+            unknownReason?: "MISSING" | "AMBIGUOUS" | "CONFLICT";
         };
         ResolutionData: {
             /** Format: uuid */
