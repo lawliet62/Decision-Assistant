@@ -119,7 +119,7 @@
 - **동작:** 지원하는 5개 제품군의 versioned intake template로 하나 이상의 용도·최대 예산·호환성을 선택한다. 선택한 용도는 하나의 추천에서 함께 고려하며 중복을 제거하고 템플릿 순서로 저장한다. 미정·제한 없음도 허용하며 자유 텍스트는 필수가 아니다. 조건·검색/수집/AI 동의·민감 정보 비포함 확인을 저장한다. 기존 동의는 새 경로를 허용하지 않는다.
 - **동작:** 최초 추천은 Serper 조건 검색 1회, 공개 페이지 최대 5개 수집, AI 구조화 최대 1회로 제한한다. 검색은 기존 월·burst 한도를 공유한다. 메모·사용자 identity는 최초 추천 검색·AI 입력에서 제외한다.
 - **동작:** 작업과 후보는 해당 Decision 소유자에게만 보인다. 일부 실패는 확보한 후보를 보존한다. 실패·부분 완료만 현재 작업 version으로 명시적으로 재시도하며 실행 중·성공 상태는 재실행하지 않는다.
-- **동작:** 추천 실패 안내는 검색 한도·검색 결과 없음·페이지 수집·AI 정리·근거 부족·저장 실패를 구분한다. 수집한 내용이 전혀 없으면 AI를 호출하지 않고, 일부 페이지 수집 실패는 나머지 근거로 추천을 계속한다. provider 원문 오류는 사용자에게 전달하지 않는다.
+- **동작:** 추천 실패 안내는 검색 한도·페이지 수집·AI 정리·근거 부족·저장 실패를 구분한다. 공식 검색 결과·비교 가능한 가격이 없는 경우는 별도 빈 결과로 안내한다. 수집한 공식 상품·가격이 없으면 AI를 호출하지 않고, 일부 페이지 수집 실패는 나머지 근거로 추천을 계속한다. provider 원문 오류는 사용자에게 전달하지 않는다.
 - **이유:** 타이핑 부담과 외부 호출 비용을 제한하고 새로고침·실패 후에도 비교를 이어간다.
 
 ### BR-DISC-02: 주요 정보와 평가값은 구분한다
@@ -135,10 +135,19 @@
 - **동작:** 조건을 동일한 검색·AI 호출에 포함한다. 호출 수·동의·quota·메모/identity 제외 정책은 유지하며 조건을 자동 완화하거나 재검색하지 않는다. v1 데이터와 재시도는 기존 조건을 유지한다.
 - **동작:** 사양 누락·모호함·상충은 UNKNOWN이다. 단일 수치·명확한 단위와 지원 표현을 비교하며 저장 공간은 1TB=1,000GB, 해상도는 가로·세로 각각을 기준으로 한다. 자동 사양의 MEETS는 검증 완료가 아니며 UNREVIEWED를 유지한다.
 - **동작:** UNKNOWN에는 근거 없음·표현 모호함·근거 상충의 사유를 표시한다. 명시적인 ANC 탑재·지원 표현을 해석하되 통화 소음 억제나 수동 차음을 ANC 지원으로 취급하지 않는다.
-- **동작:** 하나라도 BELOW면 미달 영역에 분리하고 UNKNOWN은 기본 목록에 남긴다. 영역 내 순서를 유지하며 미달 후보도 사용자가 비교에 추가할 수 있다. 승인 후 비교표에서 조건별 근거를 유지하고 사용자 확인 수치는 표시·판정에 함께 우선한다.
+- **동작:** 공식 판매처 정책이 적용된 후보는 최소 사양을 모두 충족하고 예산 안에 있을 때만 기본 목록에 둔다. 하나라도 BELOW거나 예산 초과이면 미달 영역, UNKNOWN이 있으면 근거 부족 영역에 분리한다. 영역 안에서는 확인 판매가·제품명 순으로 정렬한다. 미달·미확인 후보도 사용자가 비교에 추가할 수 있다. 승인 후 비교표에서 조건별 근거를 유지하고 사용자 확인 수치는 표시·판정에 함께 우선한다.
 - **이유:** 포트폴리오 MVP에서 적은 외부 호출로 조건·근거·판정의 연결을 보여준다. 기존 평가값·가중치·hard Constraint를 자동 변경하지 않는다.
 
+### BR-DISC-04: 공식 판매처와 확인 판매가의 범위를 알린다
+
+- **동작:** [등록 근거가 있는 판매처](official-stores.md)의 한국어 개별 상품 페이지에서 정확한 KRW 판매가를 확인한 제품만 추천한다. HTML의 단일 Product/Offer를 검증하며 가격 범위·조건부 가격·불명확한 구성은 제외한다. 가격은 AI 생성값으로 대체하지 않는다.
+- **동작:** 공식 제품 이미지는 확인한 이미지 호스트에서 브라우저가 referrer 없이 직접 불러온다. 이미지가 없거나 실패하면 대체 영역을 표시한다. 입력 화면에서 이미지 서버로 IP가 전달됨을 알린다.
+- **동작:** 홈·조건 입력·결과에 공식 판매처 기준과 다른 판매·할인 경로가 더 저렴할 수 있음을 본문으로 표시한다. 실행의 정책 버전과 개별 공식 offer를 저장하며 기존 추천·직접 추가를 공식 추천으로 소급하지 않는다.
+- **이유:** 추천 범위와 가격 정렬의 의미를 명확히 하되 제품 안전성·품질·정품·최저가를 인증하지 않는다.
+
 ### BR-EVD-03: 제품명 검색은 사용자 선택을 돕는 URL lookup이다
+
+공식 추천의 추가 규칙은 BR-DISC-04를 따른다. 직접 제품명 검색·URL 추가는 공식 추천과 구분한다.
 
 - **동작:** 인증된 사용자가 제품명 전송에 동의한 요청만 Serper로 보낸다. 요청마다 최대 200자의 query 하나만 전달하며 Decision의 의도·메모·사용자 identity를 보내지 않는다. 응답은 공개 HTTP(S) 페이지 최대 5개이며 부적절한 URL과 중복 URL을 제외하므로 3개 미만일 수도 있다.
 - **동작:** 검색 결과는 서버에 저장하지 않는다. 사용자가 선택한 이름·URL만 기존 Option에 연결하고 검색 발췌를 검증 값으로 저장하지 않는다. 동일 URL 추가는 중복 후보를 만들지 않는다. 5개 한도, ownership, 수정 가능한 상태, 별도 웹 수집 동의를 그대로 적용한다. URL 직접 입력은 검색 장애·비활성·한도 초과 시에도 동작한다.
@@ -187,6 +196,7 @@
 | BR-EVD-03, BR-COST-01 | `ProductLookupServiceTest`, `SerperSearchProviderTest`, `SearchQuotaIntegrationTest`, `ProductLookupApiIntegrationTest`, `DecisionApiIntegrationTest.lookupRequiresAuthenticationCsrfAndExplicitConsentEvenWhenDisabled` |
 | BR-DISC-01~02 | `DiscoveryWorkerTest`, `DiscoveryFailureTest`, `ProviderResponseConversionTest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-DISC-03 | `MinimumRequirementMatcherTest`, `DiscoveryApiIntegrationTest.minimumRequirementsPersistAndRemainAdvisoryWithBoundedExternalCalls`, `DiscoveryApiIntegrationTest.invalidMinimumRequirementsAndLegacyVersionCannotTriggerProviders`, `frontend/e2e/minimum-requirements.spec.ts` |
+| BR-DISC-04 | `OfficialProductParserTest`, `ProviderResponseConversionTest.productScrapeConvertsHtmlAndFinalUrlWithOneRequest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-TPL-01 | `DecisionApiIntegrationTest.earbudsAndSelectedSourcesReuseExistingLifecycle`, `EvidenceWorkflowWorkerTest.earbudsNeverAutoFillSubjectiveRatings` |
 | BR-DEC-02, BR-EVD-03 | `frontend/e2e/guided-decision.spec.ts` (선택→평가→회고·한도 fallback·polling/충돌 입력 보존·수집 재시도) |
 

@@ -24,13 +24,19 @@ public class ProductDiscovery {
     @Column(name = "latency_ms") private Long latencyMs;
     @Column(name = "prompt_version", nullable = false, length = 50) private String promptVersion = DiscoveryContracts.PROMPT_VERSION;
     @Column(name = "schema_version", nullable = false, length = 50) private String schemaVersion = "discovery-v1";
+    @Column(name = "execution_id") private UUID executionId;
+    @Column(length = 30) private String stage;
+    @Column(name = "policy_version", length = 50) private String policyVersion;
+    @Column(name = "empty_reason", length = 50) private String emptyReason;
     protected ProductDiscovery() {}
     public ProductDiscovery(UUID decisionId, DiscoveryContracts.DiscoveryRequest conditions) {
         this.decisionId = decisionId; this.conditions = conditions; pending();
     }
-    public void pending() { status = Status.PENDING; error = null; updatedAt = Instant.now(); }
-    public void running() { status = Status.RUNNING; updatedAt = Instant.now(); }
-    public void finish(Status status, String error) { this.status = status; this.error = error; updatedAt = Instant.now(); }
+    public void pending() { status = Status.PENDING; error = null; emptyReason = null; stage = "QUEUED"; executionId = UUID.randomUUID(); policyVersion = OfficialStorePolicy.VERSION; updatedAt = Instant.now(); }
+    public void running() { status = Status.RUNNING; stage = "CONFIGURATION"; if (executionId == null) executionId = UUID.randomUUID(); policyVersion = OfficialStorePolicy.VERSION; updatedAt = Instant.now(); }
+    public void stage(DiscoveryFailure.Stage stage) { this.stage = stage.name(); updatedAt = Instant.now(); }
+    public void finish(Status status, String error) { this.status = status; this.error = error; stage = null; updatedAt = Instant.now(); }
+    public void empty(String reason) { emptyReason = reason; finish(Status.SUCCEEDED, null); }
     public void usage(String provider, String model, long input, long output, long latency) {
         promptVersion = DiscoveryContracts.PROMPT_VERSION;
         this.provider = provider; this.model = model; inputTokens = input; outputTokens = output; latencyMs = latency;
@@ -41,4 +47,8 @@ public class ProductDiscovery {
     public Status status() { return status; }
     public String error() { return error; }
     public Instant updatedAt() { return updatedAt; }
+    public UUID executionId() { return executionId; }
+    public String stage() { return stage; }
+    public String policyVersion() { return policyVersion; }
+    public String emptyReason() { return emptyReason; }
 }

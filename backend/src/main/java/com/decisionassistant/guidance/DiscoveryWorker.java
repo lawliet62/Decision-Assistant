@@ -34,12 +34,12 @@ public class DiscoveryWorker {
                            CandidateSuggestionRepository candidates, ProductLookupService search,
                            DiscoveryPageCollector collector, ObjectProvider<ProductDiscoverer> ai, AiCallExecutor executor,
                            AiProperties properties, DiscoveryService service, IntakeTemplates templates,
-                           PublicUrlPolicy urls, PlatformTransactionManager manager) {
+                           PlatformTransactionManager manager) {
         this.runs = runs; this.decisions = decisions; this.candidates = candidates; this.search = search;
         this.collector = collector; this.ai = ai.getIfAvailable(); this.executor = executor; this.properties = properties;
         this.service = service; this.templates = templates; tx = new TransactionTemplate(manager);
     }
-    private record Work(UUID id, UUID owner, DecisionTypes.TemplateKey category, DiscoveryRequest conditions, long version) {}
+    private record Work(UUID id, UUID owner, DecisionTypes.TemplateKey category, DiscoveryRequest conditions, UUID executionId) {}
 
     @Scheduled(scheduler = "discoveryScheduler", fixedDelayString = "${decision-assistant.web.poll-interval:2000}")
     public void processNext() {
@@ -57,7 +57,7 @@ public class DiscoveryWorker {
             log.info("product_event=discovery_queue_timing decision_id={} duration_ms={}", decision.id(),
                     Math.max(0, java.time.Duration.between(run.updatedAt(), Instant.now()).toMillis()));
             run.running(); runs.flush();
-            return new Work(decision.id(), decision.ownerUserId(), decision.templateKey(), run.conditions(), run.version());
+            return new Work(decision.id(), decision.ownerUserId(), decision.templateKey(), run.conditions(), run.executionId());
         });
         if (work == null) return;
         var start = System.nanoTime();
@@ -68,41 +68,51 @@ public class DiscoveryWorker {
             var template = templates.required(work.category(), work.conditions().templateVersion());
             var condition = work.conditions().normalized(template);
             var minimums = MinimumRequirementMatcher.conditions(template.minimumRequirements(), condition.selectedRequirements());
-            var query = template.label() + " 제품 비교 한국 " + String.join(" ", condition.uses())
+            var query = OfficialStorePolicy.searchScope(work.category()) + " " + template.label() + " 구매 " + String.join(" ", condition.uses())
                     + (condition.maxBudget() == null ? "" : " " + condition.maxBudget().toPlainString() + "원 이하")
                     + " " + Objects.toString(condition.compatibility(), "")
                     + minimums.stream().map(item -> " " + item.label() + " " + item.requiredValue()).collect(java.util.stream.Collectors.joining());
             stage = Stage.SEARCH;
             trace.enter(stage);
+            progress(work, stage);
             var searchResults = search.lookupForOwner(query, work.owner());
             if (searchResults.isEmpty()) {
-                fail(work, new DiscoveryFailure(Stage.SEARCH, Code.SEARCH_NO_RESULTS), null);
+                empty(work, "NO_OFFICIAL_RESULTS", false);
                 return;
             }
+            var officialResults = searchResults.stream().filter(item -> OfficialStorePolicy.store(item.url()).isPresent()).toList();
+            if (officialResults.isEmpty()) { empty(work, "NO_OFFICIAL_RESULTS", false); return; }
             stage = Stage.COLLECTION;
             trace.enter(stage);
-            var collected = collector.collect(work.id(), searchResults, template.facts());
-            var pages = collected.pages();
+            progress(work, stage);
+            var collected = collector.collect(work.id(), officialResults, template.facts());
             var collectionFailures = collected.failures();
-            if (pages.isEmpty()) {
+            if (collected.pages().isEmpty()) {
                 fail(work, collectionFailures.getFirst(), null);
                 return;
             }
+            var pages = collected.pages().stream().filter(page -> page.officialProduct() != null).toList();
+            log.info("product_event=discovery_offer_validation decision_id={} collected={} eligible={} rejected={}",
+                    work.id(), collected.pages().size(), pages.size(), collected.pages().size() - pages.size());
+            if (pages.isEmpty()) { empty(work, "NO_VERIFIED_OFFERS", !collectionFailures.isEmpty()); return; }
             var input = new DiscoveryInput(template.label(), condition.uses(), condition.maxBudget(),
                     condition.compatibility(), template.facts(), pages, minimums);
             stage = Stage.AI;
             trace.enter(stage);
+            progress(work, stage);
             var result = executor.call(() -> ai.discover(input));
             stage = Stage.VALIDATION;
             trace.enter(stage);
-            var verified = validateProducts(work.id(), result.value(), input);
-            var partial = !collectionFailures.isEmpty() || verified.size() < 2;
+            progress(work, stage);
+            var verified = validateOfficialProducts(work.id(), result.value(), input);
+            var partial = !collectionFailures.isEmpty();
             stage = Stage.PERSISTENCE;
             trace.enter(stage);
+            progress(work, stage);
             tx.executeWithoutResult(status -> {
                 var run = runs.findById(work.id()).orElseThrow();
                 var decision = decisions.lockByIdAndOwner(work.id(), work.owner()).orElseThrow();
-                if (run.status() != ProductDiscovery.Status.RUNNING || run.version() != work.version()) return;
+                if (!active(run, work)) return;
                 if (!editable(decision)) { run.finish(ProductDiscovery.Status.FAILED, "종료된 비교입니다."); return; }
                 var existing = candidates.findByDecisionIdOrderByCreatedAtAsc(work.id());
                 var names = new HashMap<String, CandidateSuggestion>();
@@ -134,9 +144,46 @@ public class DiscoveryWorker {
         logFailure("discovery_failed", work, failure, cause);
         tx.executeWithoutResult(status -> {
             var run = runs.findById(work.id()).orElseThrow();
-            if (run.status() == ProductDiscovery.Status.RUNNING && run.version() == work.version())
+            if (active(run, work))
                 run.finish(ProductDiscovery.Status.FAILED, failure.message());
         });
+    }
+
+    private static boolean active(ProductDiscovery run, Work work) {
+        return run.status() == ProductDiscovery.Status.RUNNING && Objects.equals(run.executionId(), work.executionId());
+    }
+    private void progress(Work work, Stage stage) {
+        tx.executeWithoutResult(status -> {
+            var run = runs.findById(work.id()).orElseThrow();
+            if (!active(run, work)) throw new IllegalStateException("추천 실행이 변경되었습니다.");
+            run.stage(stage);
+        });
+    }
+    private void empty(Work work, String reason, boolean partial) {
+        tx.executeWithoutResult(status -> {
+            var run = runs.findById(work.id()).orElseThrow();
+            if (!active(run, work)) return;
+            run.empty(reason);
+            if (partial) run.finish(ProductDiscovery.Status.PARTIAL, "일부 페이지를 가져오지 못했습니다. 다시 시도할 수 있습니다.");
+        });
+    }
+
+    static List<CandidateSuggestion> validateOfficialProducts(UUID id, DiscoveryProposal proposal, DiscoveryInput input) {
+        var products = new HashMap<String, OfficialProduct>();
+        input.pages().stream().filter(page -> page.officialProduct() != null).forEach(page -> products.put(page.url(), page.officialProduct()));
+        var accepted = new ArrayList<CandidateSuggestion>();
+        for (var candidate : validateProducts(id, proposal, input)) {
+            var product = products.get(candidate.url());
+            if (product == null || !product.name().equals(candidate.name())) continue;
+            candidate.officialProduct(product);
+            var facts = new ArrayList<>(candidate.facts().stream().filter(fact -> !"가격".equals(fact.name())).toList());
+            var offer = product.offer();
+            facts.addFirst(new ProductFact("가격", offer.price().stripTrailingZeros().toPlainString() + " KRW", offer.purchaseUrl(),
+                    product.name() + " · " + offer.priceBasis() + " " + offer.price().toPlainString() + " KRW", offer.fetchedAt(), "UNREVIEWED"));
+            candidate.discovered(facts);
+            accepted.add(candidate);
+        }
+        return accepted.stream().sorted(DiscoveryRanking.byPrice()).toList();
     }
 
     private static void logFailure(String event, Work work, DiscoveryFailure failure, Throwable cause) {

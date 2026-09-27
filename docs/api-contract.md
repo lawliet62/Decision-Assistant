@@ -26,7 +26,13 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 
 `DiscoveryRequest.uses`는 카테고리에서 제공하는 용도 배열(최대 4개)이다. 빈 배열은 용도 미정이며 중복은 제거하고 템플릿 순서로 정규화한다. 새 화면은 `uses`만 보낸다. 기존 `use`는 deprecated 호환 필드로, `uses`가 없거나 null일 때만 사용한다. 두 필드가 함께 있으면 빈 배열을 포함해 `uses`가 우선한다. 기존 JSONB 데이터도 같은 규칙으로 조회·재시도하며 일괄 재작성이나 템플릿 버전 변경은 하지 않는다.
 
-추천 작업의 기존 `discovery.error`는 실패 단계에 맞는 안전한 한국어 안내를 반환한다. 검색 한도·결과 없음, 페이지 수집·응답 변환, AI 처리, 근거 부족, 저장 실패를 구분하되 provider 원문 오류는 반환하지 않는다. 화면은 이 문자열을 표시하고 분기에는 기존 `status`를 사용한다. 진단용 `stage`·`code`는 서버 로그에만 기록하며 API 필드나 상태 enum을 추가하지 않는다.
+추천 작업의 `discovery.error`는 실패 단계에 맞는 안전한 한국어 안내를 반환한다. 검색 한도, 페이지 수집·응답 변환, AI 처리, 근거 부족, 저장 실패를 구분하되 provider 원문 오류는 반환하지 않는다. 처리 중인 `stage`는 대기·검색·수집·정리·검증·저장의 화면 안내에 사용한다. 상세 실패 code는 서버 로그에만 기록한다.
+
+`LookupCapabilities.discoveryPolicy`는 현재 추천 정책을 알린다. `DiscoveryData.policyVersion`은 해당 실행의 정책이며 과거 데이터는 null이다. `executionId`는 한 실행에서 진행 단계가 바뀌어 version이 증가해도 유지되고 명시적 재시도마다 바뀐다. 늦게 끝난 이전 실행은 새 실행의 결과를 덮어쓰지 않는다.
+
+공식 검색 결과가 없으면 `SUCCEEDED` + `emptyReason=NO_OFFICIAL_RESULTS`, 수집했으나 공식 상품·비교 가능한 가격을 확인하지 못하면 `NO_VERIFIED_OFFERS`를 반환한다. 일부 페이지 수집이 실패했다면 `PARTIAL`을 유지한다. 자동 추가 검색은 없다.
+
+`CandidateSuggestionData`와 `ProductFactsData`의 nullable `officialOffer`는 공식 구매 URL·판매처·KRW 가격·선택적 이미지·조회 시점·가격 기준·정책 버전을 포함한다. `sourceKind`는 `VIDEO|BLOG|OFFICIAL_STORE|WEB`이다. 공식 offer가 없는 기존 자료에는 공식 판매처 표시를 부여하지 않는다. 후보의 `recommendationGroup`은 `RECOMMENDED|UNKNOWN|BELOW|LEGACY`이며 기본 추천은 모든 최소 사양과 예산을 충족한 제품을 가격·이름 순으로 표시한다.
 
 ## 최소 사양 선택
 

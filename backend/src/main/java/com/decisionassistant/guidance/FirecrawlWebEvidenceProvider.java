@@ -28,20 +28,26 @@ public class FirecrawlWebEvidenceProvider implements WebEvidenceProvider, WebSea
 
     @Override
     public Page scrape(String url) {
+        return scrape(url, false);
+    }
+    @Override public Page scrapeProduct(String url) { return scrape(url, true); }
+    private Page scrape(String url, boolean product) {
         requireConfigured();
-        JsonNode response = client.post().uri("/scrape").contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of(
+        var request = new java.util.HashMap<String, Object>(Map.of(
                         "url", url,
-                        "formats", List.of("markdown"),
+                        "formats", product ? List.of("markdown", "rawHtml") : List.of("markdown"),
                         "onlyMainContent", true,
                         "storeInCache", false,
                         "removeBase64Images", true,
-                        "timeout", millis(properties.timeout(), Duration.ofSeconds(45))))
+                        "timeout", millis(properties.timeout(), Duration.ofSeconds(45))));
+        if (product) request.put("maxAge", 0);
+        JsonNode response = client.post().uri("/scrape").contentType(MediaType.APPLICATION_JSON).body(request)
                 .retrieve().body(JsonNode.class);
         var data = successfulData(response);
         if (!data.path("markdown").isString()) throw new WebEvidenceException(WebEvidenceException.Reason.RESPONSE_INVALID);
         var title = data.path("metadata").path("title").asText("");
-        return new Page(title, data.path("markdown").asText(""));
+        return new Page(title, data.path("markdown").asText(""), data.path("rawHtml").asText(null),
+                data.path("metadata").path("url").asText(null));
     }
 
     @Override

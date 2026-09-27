@@ -35,6 +35,7 @@ dependencies {
     implementation 'org.springframework.session:spring-session-jdbc'
     implementation 'org.flywaydb:flyway-database-postgresql'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-api:3.0.3'
+    implementation 'org.jsoup:jsoup:1.23.2'
     implementation 'org.springframework.ai:spring-ai-starter-model-openai'
     implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => { await page.route("https://qcystore.co.kr/web/product/fixture.jpg", route => route.fulfill({ status: 404, body: "" })); });
+
 async function consent(page: Page) {
   await page.getByLabel("선택 조건을 Serper").check();
   await page.getByLabel("검색된 공개 페이지를 후보 선택 전에 Firecrawl").check();
@@ -12,8 +14,10 @@ for (const [key, name, use] of [["LAPTOP", "노트북", "학업"], ["PHONE", "�
     if (key === "EARBUDS") await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "나에게 맞는 제품 찾기" })).toBeVisible();
+    await expect(page.getByText("공식 판매처 기준으로 추천합니다.", { exact: true })).toBeVisible();
     await page.getByRole("navigation", { name: "제품군 선택" }).getByRole("link", { name, exact: false }).click();
     await expect(page.getByRole("button", { name, exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("complementary", { name: "공식 판매처 추천 기준" })).toContainText("다른 판매 경로가 더 저렴할 수 있습니다.");
     await page.getByRole("button", { name: use, exact: true }).click();
     const secondUse = key === "EARBUDS" ? "운동" : key === "TABLET" ? "그림" : "게임";
     await page.getByRole("button", { name: secondUse, exact: true }).click();
@@ -24,6 +28,7 @@ for (const [key, name, use] of [["LAPTOP", "노트북", "학업"], ["PHONE", "�
     await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
     expect((await sent).postDataJSON()).toMatchObject({ templateKey: key, discovery: { uses: [use, secondUse], searchConsent: true } });
     await expect(page.getByRole("heading", { name: "추천 제품", exact: true })).toBeVisible();
+    await expect(page.getByRole("complementary", { name: "공식 판매처 추천 기준" })).toContainText("확인한 판매가 낮은 순");
     await page.reload();
     for (let index = 0; index < 2; index++) await page.getByRole("button", { name: "비교에 추가", exact: true }).first().click();
     await page.getByRole("button", { name: "후보 비교로 이동", exact: true }).click();
@@ -72,6 +77,24 @@ test("추천 비활성화여도 직접 추가 가능", async ({ page }) => {
   await expect(page.getByText("현재 추천 서비스가 꺼져 있습니다.", { exact: false })).toBeVisible();
   await page.getByRole("button", { name: "제품 직접 추가", exact: true }).click();
   await expect(page.getByLabel("제품명", { exact: true })).toBeVisible();
+});
+
+test("공식 가격과 구매 링크를 표시하고 이미지 실패를 복구하며 직접 추가에는 공식 표시를 붙이지 않는다", async ({ page }) => {
+  let referrer: string | undefined;
+  await page.route("https://qcystore.co.kr/web/product/fixture.jpg", route => {
+    referrer = route.request().headers()["referer"];
+    return route.fulfill({ status: 404, body: "" });
+  });
+  await page.goto("/decisions/new"); await consent(page);
+  await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
+  const alpha = page.getByRole("article", { name: "무선 이어폰 Alpha", exact: true });
+  await expect(alpha).toContainText("100,000원");
+  await expect(alpha.getByText("제품 이미지 없음")).toBeVisible();
+  await expect(alpha.getByRole("link", { name: "QCY 공식몰에서 구매 정보 보기 ↗" })).toHaveAttribute("href", "https://qcystore.co.kr/product/fixture/100/");
+  expect(referrer).toBeUndefined();
+  await page.goto("/decisions/new");
+  await page.getByRole("button", { name: "제품 직접 추가", exact: true }).click();
+  await expect(page.getByRole("complementary", { name: "공식 판매처 추천 기준" })).toHaveCount(0);
 });
 
 test("추천 부분 실패 표시와 명시적 재시도", async ({ page }) => {

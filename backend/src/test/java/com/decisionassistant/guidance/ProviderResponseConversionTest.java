@@ -61,6 +61,28 @@ class ProviderResponseConversionTest {
         assertThat(calls).hasValue(1);
     }
 
+    @Test void productScrapeConvertsHtmlAndFinalUrlWithOneRequest() {
+        var request = new java.util.concurrent.atomic.AtomicReference<String>();
+        server.createContext("/scrape", exchange -> {
+            calls.incrementAndGet(); request.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            // JSON serializer로 실제 HTML 문자열의 이스케이프를 구성한다.
+            var body = new tools.jackson.databind.ObjectMapper().writeValueAsBytes(java.util.Map.of("success", true, "data", java.util.Map.of(
+                    "markdown", "Buds ANC 지원", "rawHtml", "<script type='application/ld+json'>{\"@type\":\"Product\"}</script>",
+                    "metadata", java.util.Map.of("title", "Buds", "url", "https://qcystore.co.kr/product/buds/1/"))));
+            exchange.getResponseHeaders().add("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            try (var stream = exchange.getResponseBody()) { stream.write(body); }
+            exchange.close();
+        });
+        context.run(app -> {
+            var page = provider(app.getBean(RestClient.Builder.class)).scrapeProduct("https://qcystore.co.kr/product/buds/1/");
+            assertThat(page.html()).contains("application/ld+json", "\"@type\":\"Product\"");
+            assertThat(page.resolvedUrl()).isEqualTo("https://qcystore.co.kr/product/buds/1/");
+        });
+        assertThat(request.get()).contains("rawHtml", "markdown", "storeInCache");
+        assertThat(new tools.jackson.databind.ObjectMapper().readTree(request.get()).path("maxAge").asInt(-1)).isZero();
+        assertThat(calls).hasValue(1);
+    }
+
     @Test void resendConvertsSuccessfulHttpJson() {
         respond("/emails", 200, "{\"id\":\"fixture-message-id\"}");
         context.run(app -> {

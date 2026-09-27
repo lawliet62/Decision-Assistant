@@ -67,19 +67,82 @@ class DiscoveryApiIntegrationTest {
         when(ai.enabled()).thenReturn(true); when(ai.provider()).thenReturn("gemini");
         when(ai.model()).thenReturn("test"); when(ai.timeout()).thenReturn(Duration.ofSeconds(3));
         when(ai.usesGemini()).thenReturn(true);
-        when(search.search(anyString(), eq(5))).thenReturn(List.of(new WebSearchProvider.SearchResult("비교", "https://example.com/compare", "untrusted snippet")));
-        when(web.scrape("https://example.com/compare")).thenReturn(new WebEvidenceProvider.Page("비교", "Buds A 가격 100,000 KRW. Buds B 가격 150,000 KRW."));
+        when(search.search(anyString(), eq(5))).thenReturn(results());
+        when(web.scrapeProduct(anyString())).thenAnswer(call -> defaultPage(call.getArgument(0), 100000, 150000));
         when(discoverer.discover(any())).thenReturn(new AiContracts.AiResult<>(new DiscoveryProposal(List.of(
                 product("Buds A", "100,000 KRW"), product("Buds B", "150,000 KRW"))), 100, 50));
     }
     private ProposedProduct product(String name, String price) {
-        return new ProposedProduct(name, "https://example.com/compare", name, "가격과 사양을 비교하세요.",
-                List.of(new ProposedFact("가격", price, "https://example.com/compare", name + " 가격 " + price + ".")));
+        return new ProposedProduct(name, url(name), name, "가격과 사양을 비교하세요.",
+                List.of(new ProposedFact("가격", price, url(name), name + " 가격 " + price + ".")));
+    }
+    private String url(String name) { return "https://qcystore.co.kr/product/" + name.replace(" ", "-") + "/" + (100 + name.charAt(name.length() - 1)) + "/"; }
+    private List<WebSearchProvider.SearchResult> results() {
+        return List.of(new WebSearchProvider.SearchResult("상품", url("Buds A"), "untrusted snippet"),
+                new WebSearchProvider.SearchResult("상품", url("Buds B"), "untrusted snippet"));
+    }
+    private WebEvidenceProvider.Page defaultPage(String url, int a, int b) {
+        var name = url.equals(url("Buds A")) ? "Buds A" : "Buds B";
+        return page(url, name, name.endsWith("A") ? a : b, "");
+    }
+    private WebEvidenceProvider.Page page(String url, String name, int price, String facts) {
+        var html = "<script type='application/ld+json'>" + mapper.writeValueAsString(Map.of("@type", "Product", "name", name,
+                "sku", name, "url", url, "offers", Map.of("@type", "Offer", "priceCurrency", "KRW", "price", price))) + "</script>";
+        return new WebEvidenceProvider.Page(name, name + " 가격 " + price + " KRW. " + facts, html, url);
     }
     private RequestPostProcessor user() {
         var principal = new AppUserPrincipal(UUID.randomUUID(), UUID.randomUUID() + "@example.com", "Test");
         users.save(new ApplicationUser(principal.userId(), principal.email(), principal.email(), "Test", Instant.now()));
         return authentication(UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
+    }
+
+    @Test void policyOfferSortingAndExecutionProgressArePersistedWithoutChangingExecutionIdentity() throws Exception {
+        var id = create();
+        var queued = runs.findById(UUID.fromString(id)).orElseThrow();
+        var execution = queued.executionId(); var version = queued.version();
+        when(discoverer.discover(any())).thenAnswer(call -> {
+            var running = runs.findById(UUID.fromString(id)).orElseThrow();
+            assertThat(running.executionId()).isEqualTo(execution);
+            assertThat(running.version()).isGreaterThan(version);
+            assertThat(running.stage()).isEqualTo("AI");
+            return new AiContracts.AiResult<>(new DiscoveryProposal(List.of(product("Buds B", "150,000 KRW"), product("Buds A", "100,000 KRW"))), 10, 10);
+        });
+        worker.processNext();
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.discovery.policyVersion").value(OfficialStorePolicy.VERSION))
+                .andExpect(jsonPath("$.discovery.executionId").value(execution.toString()))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].name").value("Buds A"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer.price").value(100000))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].sourceKind").value("OFFICIAL_STORE"));
+    }
+
+    @Test void unverifiedOfficialClaimAndMissingPriceReturnEmptyWithoutExtraSearchOrAi() throws Exception {
+        when(search.search(anyString(), eq(5))).thenReturn(List.of(new WebSearchProvider.SearchResult("공식이라고 주장", "https://unverified.example/buds", "")));
+        var id = create(); worker.processNext();
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.discovery.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.discovery.emptyReason").value("NO_OFFICIAL_RESULTS"));
+        verifyNoInteractions(web, discoverer);
+        when(search.search(anyString(), eq(5))).thenReturn(results());
+        when(web.scrapeProduct(anyString())).thenReturn(new WebEvidenceProvider.Page("제품", "가격 미확인"));
+        var missing = create(); worker.processNext();
+        mvc.perform(get("/api/v1/decisions/" + missing).with(owner))
+                .andExpect(jsonPath("$.discovery.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.discovery.emptyReason").value("NO_VERIFIED_OFFERS"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(0));
+        verify(search, times(2)).search(anyString(), eq(5)); verify(web, times(2)).scrapeProduct(anyString()); verifyNoInteractions(discoverer);
+    }
+
+    @Test void legacyRecordsAreNotRetroactivelyCertified() throws Exception {
+        var id = create(); worker.processNext();
+        jdbc.update("UPDATE product_discoveries SET policy_version = NULL, execution_id = NULL WHERE decision_id = ?", UUID.fromString(id));
+        jdbc.update("UPDATE candidate_suggestions SET official_offer = NULL, product_identity = NULL, url = 'https://youtu.be/legacy' WHERE decision_id = ?", UUID.fromString(id));
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.discovery.policyVersion").doesNotExist())
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer").doesNotExist())
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].sourceKind").value("VIDEO"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("LEGACY"));
     }
     private String create() throws Exception {
         return create(BODY);
@@ -159,7 +222,7 @@ class DiscoveryApiIntegrationTest {
                 .content("{\"kind\":\"CHOSEN\",\"selectedOptionId\":\"" + selected + "\"}"))
                 .andExpect(status().isCreated());
         verify(search, times(1)).search(argThat(query -> query.contains("200000") && !query.contains("서버에만")), eq(5));
-        verify(web, times(1)).scrape(anyString()); verify(discoverer, times(1)).discover(any());
+        verify(web, times(2)).scrapeProduct(anyString()); verify(discoverer, times(1)).discover(any());
     }
 
     @Test void consentAuthenticationCsrfAndTemplateValidationBlockExternalCalls() throws Exception {
@@ -180,7 +243,7 @@ class DiscoveryApiIntegrationTest {
         // 기존 JSONB에는 uses 없이 단일 use만 저장돼 있다.
         jdbc.update("UPDATE product_discoveries SET conditions = (conditions - 'uses' - 'minimumRequirements') || '{\"use\":\"출퇴근\"}'::jsonb WHERE decision_id = ?", UUID.fromString(id));
         assertThat(runs.findById(UUID.fromString(id)).orElseThrow().conditions().uses()).isNull();
-        when(web.scrape(anyString())).thenThrow(new IllegalStateException("provider failure"));
+        when(web.scrapeProduct(anyString())).thenThrow(new IllegalStateException("provider failure"));
         worker.processNext(); worker.processNext();
         var run = runs.findById(UUID.fromString(id)).orElseThrow();
         assertThat(run.status()).isEqualTo(ProductDiscovery.Status.FAILED);
@@ -190,7 +253,7 @@ class DiscoveryApiIntegrationTest {
         mvc.perform(post(path).with(user()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNotFound());
         mvc.perform(post(path).with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
         mvc.perform(post(path).with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isConflict());
-        doReturn(new WebEvidenceProvider.Page("비교", "Buds A 가격 100,000 KRW. Buds B 가격 150,000 KRW.")).when(web).scrape(anyString());
+        doAnswer(call -> defaultPage(call.getArgument(0), 100000, 150000)).when(web).scrapeProduct(anyString());
         worker.processNext();
         assertThat(runs.findById(UUID.fromString(id)).orElseThrow().status()).isEqualTo(ProductDiscovery.Status.SUCCEEDED);
         verify(discoverer).discover(argThat(input -> input.uses().equals(List.of("출퇴근")) && input.minimumRequirements().isEmpty()));
@@ -199,9 +262,9 @@ class DiscoveryApiIntegrationTest {
     @Test void concurrentWorkersClaimOnceAndPartialRetryKeepsAcceptedFacts() throws Exception {
         var id = create();
         when(search.search(anyString(), eq(5))).thenReturn(List.of(
-                new WebSearchProvider.SearchResult("비교", "https://example.com/compare", ""),
-                new WebSearchProvider.SearchResult("실패", "https://example.com/failed", "")));
-        when(web.scrape("https://example.com/failed")).thenThrow(new IllegalStateException("failed"));
+                results().getFirst(), results().getLast(),
+                new WebSearchProvider.SearchResult("실패", url("Buds C"), "")));
+        when(web.scrapeProduct(url("Buds C"))).thenThrow(new IllegalStateException("failed"));
         try (var pool = java.util.concurrent.Executors.newFixedThreadPool(2)) {
             var first = pool.submit(worker::processNext); var second = pool.submit(worker::processNext);
             first.get(10, java.util.concurrent.TimeUnit.SECONDS); second.get(10, java.util.concurrent.TimeUnit.SECONDS);
@@ -215,27 +278,28 @@ class DiscoveryApiIntegrationTest {
         mvc.perform(post("/api/v1/decisions/" + id + "/discovery/retry").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"expectedVersion\":" + json.get("discovery").get("version").asLong() + "}"))
                 .andExpect(status().isOk());
-        doReturn(new WebEvidenceProvider.Page("비교", "Buds A 가격 90,000 KRW. Buds B 가격 140,000 KRW.")).when(web).scrape(anyString());
+        when(search.search(anyString(), eq(5))).thenReturn(results());
+        doAnswer(call -> defaultPage(call.getArgument(0), 90000, 140000)).when(web).scrapeProduct(anyString());
         when(discoverer.discover(any())).thenReturn(new AiContracts.AiResult<>(new DiscoveryProposal(List.of(
                 product("Buds A", "90,000 KRW"), product("Buds B", "140,000 KRW"))), 100, 50));
         worker.processNext();
         mvc.perform(get("/api/v1/decisions/" + id).with(owner)).andExpect(jsonPath("$.discovery.status").value("SUCCEEDED"))
                 .andExpect(jsonPath("$.options.length()").value(1))
-                .andExpect(jsonPath("$.productFacts[0].facts[0].value").value("100,000 KRW"))
+                .andExpect(jsonPath("$.productFacts[0].facts[0].value").value("100000 KRW"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(1))
-                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].facts[0].value").value("140,000 KRW"));
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].facts[0].value").value("140000 KRW"));
     }
 
     @Test void minimumRequirementsPersistAndRemainAdvisoryWithBoundedExternalCalls() throws Exception {
-        var source = "https://example.com/compare";
         var text = "Buds A ANC 지원. Buds B ANC 미지원. Buds C 제품 소개.";
         when(search.search(anyString(), eq(5))).thenReturn(java.util.stream.IntStream.range(0, 8)
-                .mapToObj(index -> new WebSearchProvider.SearchResult("비교", index == 0 ? source : "https://example.com/page" + index, "")).toList());
-        when(web.scrape(anyString())).thenReturn(new WebEvidenceProvider.Page("비교", text));
+                .mapToObj(index -> new WebSearchProvider.SearchResult("상품", url("Buds " + (char) ('A' + index)), "")).toList());
+        when(web.scrapeProduct(anyString())).thenAnswer(call -> page(call.getArgument(0),
+                java.net.URI.create(call.getArgument(0)).getPath().split("/")[2].replace("-", " "), 100000, text));
         when(discoverer.discover(any())).thenReturn(new AiContracts.AiResult<>(new DiscoveryProposal(List.of(
-                new ProposedProduct("Buds A", source, "Buds A", "근거 확인", List.of(new ProposedFact("ANC 지원", "지원", source, "Buds A ANC 지원."))),
-                new ProposedProduct("Buds B", source, "Buds B", "근거 확인", List.of(new ProposedFact("ANC 지원", "미지원", source, "Buds B ANC 미지원."))),
-                new ProposedProduct("Buds C", source, "Buds C", "근거 확인", List.of()))), 100, 50));
+                new ProposedProduct("Buds A", url("Buds A"), "Buds A", "근거 확인", List.of(new ProposedFact("ANC 지원", "지원", url("Buds A"), "Buds A ANC 지원."))),
+                new ProposedProduct("Buds B", url("Buds B"), "Buds B", "근거 확인", List.of(new ProposedFact("ANC 지원", "미지원", url("Buds B"), "Buds B ANC 미지원."))),
+                new ProposedProduct("Buds C", url("Buds C"), "Buds C", "근거 확인", List.of()))), 100, 50));
         var body = BODY.replace("intake-v1", "intake-v2").replace("\"use\":\"출퇴근\"", "\"uses\":[\"출퇴근\"],\"minimumRequirements\":{\"anc\":\"required\"}");
         var id = create(body);
         assertThat(runs.findById(UUID.fromString(id)).orElseThrow().conditions().minimumRequirements()).containsEntry("anc", "required");
@@ -255,7 +319,7 @@ class DiscoveryApiIntegrationTest {
         mvc.perform(get("/api/v1/decisions/" + id).with(owner))
                 .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].status").value("BELOW"));
         verify(search, times(1)).search(argThat(query -> query.contains("ANC 지원 지원 필수") && !query.contains("서버에만")), eq(5));
-        verify(web, times(5)).scrape(anyString());
+        verify(web, times(5)).scrapeProduct(anyString());
         verify(discoverer, times(1)).discover(argThat(input -> input.minimumRequirements().equals(List.of(new MinimumCondition("anc", "ANC 지원", "지원 필수")))
                 && input.pages().size() == 5 && !mapper.writeValueAsString(input).contains("서버에만")));
     }
@@ -280,8 +344,9 @@ class DiscoveryApiIntegrationTest {
     @Test void confirmedNumericEditUpdatesDisplayedFactsAndRequirementChecksTogether() throws Exception {
         var body = BODY.replace("EARBUDS", "LAPTOP").replace("intake-v1", "intake-v2")
                 .replace("\"use\":\"출퇴근\"", "\"uses\":[],\"minimumRequirements\":{\"memory\":\"16\",\"storage\":\"1000\"}");
-        var source = "https://example.com/compare";
-        when(web.scrape(source)).thenReturn(new WebEvidenceProvider.Page("노트북", "Laptop A 메모리 8GB. Laptop A 저장공간 256GB."));
+        var source = url("Laptop A");
+        when(search.search(anyString(), eq(5))).thenReturn(List.of(new WebSearchProvider.SearchResult("노트북", source, "")));
+        when(web.scrapeProduct(source)).thenReturn(page(source, "Laptop A", 150000, "Laptop A 메모리 8GB. Laptop A 저장공간 256GB."));
         when(discoverer.discover(any())).thenReturn(new AiContracts.AiResult<>(new DiscoveryProposal(List.of(new ProposedProduct(
                 "Laptop A", source, "Laptop A", "구성을 확인하세요", List.of(
                         new ProposedFact("메모리", "8GB", source, "Laptop A 메모리 8GB."),
@@ -311,7 +376,7 @@ class DiscoveryApiIntegrationTest {
                 .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].status").value("MEETS"))
                 .andExpect(jsonPath("$.productFacts[0].requirementChecks[1].status").value("MEETS"))
                 .andExpect(jsonPath("$.productFacts[0].requirementChecks[1].facts[0].value").value("1024 GB"))
-                .andExpect(jsonPath("$.productFacts[0].facts[1].value").value("1024 GB"));
+                .andExpect(jsonPath("$.productFacts[0].facts[?(@.name == '저장공간')].value").value(org.hamcrest.Matchers.hasItem("1024 GB")));
         mvc.perform(get("/api/v1/decisions/" + id).with(owner))
                 .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].facts[0].verificationStatus").value("CONFIRMED"));
         verify(search, times(1)).search(anyString(), eq(5));
@@ -339,8 +404,8 @@ class DiscoveryApiIntegrationTest {
         switch (scenario) {
             case "quota" -> when(search.search(anyString(), eq(5))).thenThrow(new com.decisionassistant.lookup.LookupException(429, "SEARCH_MONTHLY_LIMIT", secret));
             case "noResults" -> when(search.search(anyString(), eq(5))).thenReturn(List.of());
-            case "collectionJson" -> when(web.scrape(anyString())).thenThrow(new org.springframework.http.converter.HttpMessageConversionException(secret, new IllegalArgumentException(secret)));
-            case "emptyPage" -> when(web.scrape(anyString())).thenReturn(new WebEvidenceProvider.Page("empty", " "));
+            case "collectionJson" -> when(web.scrapeProduct(anyString())).thenThrow(new org.springframework.http.converter.HttpMessageConversionException(secret, new IllegalArgumentException(secret)));
+            case "emptyPage" -> when(web.scrapeProduct(anyString())).thenReturn(new WebEvidenceProvider.Page("empty", " "));
             case "aiJson" -> when(discoverer.discover(any())).thenThrow(new org.springframework.http.converter.HttpMessageConversionException(secret));
             case "aiTimeout" -> when(discoverer.discover(any())).thenThrow(new AiInvocationException(secret, new java.util.concurrent.TimeoutException(secret)));
             case "aiFailed" -> when(discoverer.discover(any())).thenThrow(new IllegalStateException(secret));
@@ -349,6 +414,17 @@ class DiscoveryApiIntegrationTest {
         }
         var id = create(); worker.processNext(); worker.processNext();
         var run = runs.findById(UUID.fromString(id)).orElseThrow();
+        if (scenario.equals("noResults")) {
+            assertThat(run.status()).isEqualTo(ProductDiscovery.Status.SUCCEEDED);
+            assertThat(run.emptyReason()).isEqualTo("NO_OFFICIAL_RESULTS");
+            assertThat(run.error()).isNull();
+            mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                    .andExpect(jsonPath("$.discovery.emptyReason").value("NO_OFFICIAL_RESULTS"))
+                    .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(0));
+            verify(search, times(1)).search(anyString(), eq(5)); verifyNoInteractions(web, discoverer);
+            assertThat(output.getAll()).doesNotContain(secret);
+            return;
+        }
         assertThat(run.status()).isEqualTo(ProductDiscovery.Status.FAILED);
         assertThat(run.error()).contains(message).doesNotContain(secret);
         mvc.perform(get("/api/v1/decisions/" + id).with(owner))
@@ -359,7 +435,7 @@ class DiscoveryApiIntegrationTest {
         verify(search, times(1)).search(anyString(), eq(5));
         if (stage.equals("SEARCH")) verifyNoInteractions(web, discoverer);
         else {
-            verify(web, times(1)).scrape(anyString());
+            verify(web, times(2)).scrapeProduct(anyString());
             verify(discoverer, times(stage.equals("COLLECTION") ? 0 : 1)).discover(any());
         }
     }
@@ -367,15 +443,14 @@ class DiscoveryApiIntegrationTest {
     @Test @ExtendWith(OutputCaptureExtension.class)
     void conversionFailureKeepsSuccessfulPagesAndCandidates(CapturedOutput output) throws Exception {
         when(search.search(anyString(), eq(5))).thenReturn(List.of(
-                new WebSearchProvider.SearchResult("오류", "https://example.com/bad", ""),
-                new WebSearchProvider.SearchResult("비교", "https://example.com/compare", "")));
-        when(web.scrape("https://example.com/bad")).thenThrow(new org.springframework.http.converter.HttpMessageConversionException("fixture-private-provider-body"));
+                new WebSearchProvider.SearchResult("오류", url("Buds C"), ""), results().getFirst(), results().getLast()));
+        when(web.scrapeProduct(url("Buds C"))).thenThrow(new org.springframework.http.converter.HttpMessageConversionException("fixture-private-provider-body"));
         var id = create(); worker.processNext(); worker.processNext();
         mvc.perform(get("/api/v1/decisions/" + id).with(owner))
                 .andExpect(jsonPath("$.discovery.status").value("PARTIAL"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(2));
-        verify(discoverer, times(1)).discover(argThat(input -> input.pages().size() == 1));
-        verify(search, times(1)).search(anyString(), eq(5)); verify(web, times(2)).scrape(anyString());
+        verify(discoverer, times(1)).discover(argThat(input -> input.pages().size() == 2));
+        verify(search, times(1)).search(anyString(), eq(5)); verify(web, times(3)).scrapeProduct(anyString());
         assertThat(output.getAll()).contains("product_event=discovery_page_failed", "code=COLLECTION_RESPONSE_INVALID")
                 .doesNotContain("fixture-private-provider-body");
     }
