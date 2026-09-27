@@ -52,11 +52,11 @@ Repository Settings → Environments에서 `restack` 환경을 만든다.
 
 - Deployment branches/tags를 **Selected branches and tags → Branch: main**으로 제한한다. Tag 허용 규칙은 만들지 않는다.
 - 자동 실행이 목적이므로 이 환경에 매 실행 reviewer 승인을 요구하지 않는다.
-- 환경 secret `RESTACK_APP_PRIVATE_KEY`에 App private key를 저장한다. 같은 이름의 repository secret은 만들지 않는다. 이 경계가 PR workflow에서 private key를 읽지 못하게 한다.
-- Repository Actions variables에 `RESTACK_APP_CLIENT_ID`(문자열 Client ID), `RESTACK_APP_ID`(숫자 App ID), `RESTACK_ENABLED=false`를 등록한다. 설치 ID와 App slug는 token action이 알아낸다.
+- 환경 secret `STACKKEEPER_PRIVATE_KEY`에 App private key를 저장한다. 같은 이름의 repository secret은 만들지 않는다. 이 경계가 PR workflow에서 private key를 읽지 못하게 한다.
+- Repository Actions variables에 `STACKKEEPER_CLIENT_ID`(문자열 Client ID)와 `RESTACK_ENABLED=false`를 등록한다. App 식별자는 Client ID 하나만 설정한다. 숫자 App ID·설치 ID는 등록하지 않는다. 설치 ID와 App slug는 token action이 알아내고, check 소유권은 이 단계가 반환한 App slug로 확인한다.
 - key를 repository·PR·로그에 넣지 않는다. 키 교체 시 새 키 등록 후 이전 키를 App 설정에서 폐기한다. 이는 앱 런타임의 GCP secret 경로와 독립적인 GitHub 운영용 인증이다.
 
-예를 들어 `gh secret set RESTACK_APP_PRIVATE_KEY --env restack`의 대화형 입력으로 저장할 수 있다. 인증 값을 명령행 인수에 직접 넣지 않는다.
+예를 들어 `gh secret set STACKKEEPER_PRIVATE_KEY --env restack`의 대화형 입력으로 저장할 수 있다. 인증 값을 명령행 인수에 직접 넣지 않는다. 이미 `STACKKEEPER_CLIENT_ID`를 repository variable로 등록했다면 그대로 사용한다. `STACKKEEPER_PRIVATE_KEY`를 repository secret으로 먼저 등록했다면 보관 중인 키를 위 환경에 다시 등록하고 확인한 뒤 `gh secret delete STACKKEEPER_PRIVATE_KEY`로 repository 범위의 복사본을 삭제한다. GitHub secret의 저장된 값은 다시 읽어 옮길 수 없다. Client ID는 private key를 대체하지 않으며 OAuth client secret을 대신 넣지 않는다.
 
 ### 3. main과 상태 브랜치 보호
 

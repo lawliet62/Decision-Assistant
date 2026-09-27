@@ -273,7 +273,7 @@ test("충돌을 수동 해결한 뒤에는 main에 병합된 prefix만 빼고 �
 test("일반 main 보호만으로 활성화하지 않고 App의 main 갱신 제한까지 확인한다", async () => {
   let rules = [{ type: "pull_request" }, { type: "required_status_checks", parameters: { required_status_checks: [{ context: "validate" }] } }];
   let bypass = "never";
-  const api = new GitHub({ repository: "owner/repo", token: "fixture", appId: 7, appSlug: "restack",
+  const api = new GitHub({ repository: "owner/repo", token: "fixture", appSlug: "restack",
     request: async url => ({ ok: true, json: async () => url.endsWith("/rules/branches/main") ? rules : url.includes("/rulesets/") ?
       { enforcement: "active", current_user_can_bypass: bypass } :
       { default_branch: "main", allow_squash_merge: true, allow_merge_commit: false, allow_rebase_merge: false } }) });
@@ -324,7 +324,7 @@ test("현재 head/base의 최신 CI만 신뢰하고 재실행 중·실패를 통
   const jobs = [{ name: "validate", conclusion: "success", steps: [
     { name: `Restack snapshot ${head} ${base} main`, conclusion: "success" },
   ] }];
-  const api = new GitHub({ repository: "owner/repo", token: "fixture", appId: 1, appSlug: "restack",
+  const api = new GitHub({ repository: "owner/repo", token: "fixture", appSlug: "restack",
     request: async url => ({ ok: true, json: async () => url.includes("/jobs?") ? { jobs } : { workflow_runs: runs } }) });
   assert.equal(await api.validation(pull), "success");
   assert.equal(await api.validation({ ...pull, base: { ...pull.base, sha: "c".repeat(40) } }), "pending");
@@ -340,11 +340,14 @@ test("현재 head/base의 최신 CI만 신뢰하고 재실행 중·실패를 통
 
 test("GitHub 상태는 App 소유 check/comment만 수정하고 토큰을 메시지에 노출하지 않는다", async () => {
   const requests = [];
-  const api = new GitHub({ repository: "owner/repo", token: "fixture-secret", appId: 7, appSlug: "restack",
+  const api = new GitHub({ repository: "owner/repo", token: "fixture-secret", appSlug: "restack",
     request: async (url, options) => {
       requests.push({ url, options });
       return { ok: true, json: async () => url.includes("check-runs?") ? { check_runs: [
-        { id: 1, app: { id: 9 }, external_id: "2" }, { id: 2, app: { id: 7 }, external_id: "2" },
+        { id: 1, app: { id: 9, slug: "other-app" }, external_id: "2" },
+        { id: 2, app: { slug: "restack" }, external_id: "2" },
+        { id: 3, app: { slug: "restack" }, external_id: "3" },
+        { id: 4, app: { id: 7 }, external_id: "2" },
       ] } : url.endsWith("comments?per_page=100&page=1") ? [
         { id: 3, user: { login: "human" }, body: "<!-- decision-assistant:stack-status -->" },
       ] : {} };
@@ -354,6 +357,27 @@ test("GitHub 상태는 App 소유 check/comment만 수정하고 토큰을 메시
   assert.ok(requests.some(r => r.url.endsWith("/check-runs/2") && r.options.method === "PATCH"));
   assert.ok(requests.some(r => r.url.endsWith("/issues/2/comments") && r.options.method === "POST"));
   assert.ok(requests.every(r => !r.options.body?.includes("fixture-secret")));
+});
+
+test("App ID 없이 slug로 새 check를 생성하고 누락된 App identity는 거부한다", async () => {
+  for (const appSlug of [undefined, "", "../restack"]) {
+    assert.throws(() => new GitHub({ repository: "owner/repo", token: "fixture", appSlug }), /App slug/);
+  }
+  const requests = [];
+  const api = new GitHub({ repository: "owner/repo", token: "fixture", appSlug: "restack",
+    request: async (url, options) => {
+      requests.push({ url, options });
+      return { ok: true, json: async () => ({ check_runs: [
+        { id: 1, app: { slug: "other-app" }, external_id: "2" },
+        { id: 2, app: { slug: "restack" }, external_id: "3" },
+      ] }) };
+    } });
+  await api.report({ number: 2, head: { sha: "a".repeat(40) } }, { ready: true, title: "준비", summary: "준비" });
+  const writes = requests.filter(r => r.options.method !== "GET");
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].options.method, "POST");
+  assert.ok(writes[0].url.endsWith("/check-runs"));
+  assert.equal(JSON.parse(writes[0].options.body).head_sha, "a".repeat(40));
 });
 
 test("권한 있는 실행은 main 코드만 사용하며 PR 코드·artifact를 실행하지 않는다", () => {

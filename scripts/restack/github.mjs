@@ -2,12 +2,12 @@ const CHECK_NAME = "stack-ready";
 const MARKER = "<!-- decision-assistant:stack-status -->";
 
 export class GitHub {
-  constructor({ repository, token, appId, appSlug, request = fetch }) {
+  constructor({ repository, token, appSlug, request = fetch }) {
     if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository ?? "")) throw new Error("유효하지 않은 repository");
     this.repository = repository;
     this.token = token;
-    this.appId = Number(appId);
-    if (!Number.isSafeInteger(this.appId) || this.appId < 1 || !/^[a-z0-9-]+$/.test(appSlug ?? "")) throw new Error("GitHub App ID/slug 설정이 필요합니다");
+    if (!/^[a-z0-9-]+$/.test(appSlug ?? "")) throw new Error("토큰 발급 단계의 GitHub App slug가 필요합니다");
+    this.appSlug = appSlug;
     this.bot = `${appSlug}[bot]`;
     this.request = request;
     this.root = `/repos/${repository}`;
@@ -59,7 +59,8 @@ export class GitHub {
 
   async report(pull, { ready, title, summary }) {
     const checks = await this.pages(`${this.root}/commits/${pull.head.sha}/check-runs?check_name=${CHECK_NAME}`, "check_runs");
-    const existing = checks.filter(c => c.app?.id === this.appId && c.external_id === String(pull.number))
+    // 신뢰한 token action의 App slug로 소유권을 확인하여 별도 숫자 App ID 설정을 없앤다.
+    const existing = checks.filter(c => c.app?.slug === this.appSlug && c.external_id === String(pull.number))
       .sort((a, b) => b.id - a.id)[0];
     const body = { name: CHECK_NAME, external_id: String(pull.number), status: "completed",
       conclusion: ready ? "success" : "failure", output: { title, summary } };

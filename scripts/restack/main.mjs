@@ -11,7 +11,7 @@ async function main() {
   const dryRun = action === "dry-run";
   if (!dryRun && process.env.RESTACK_ENABLED !== "true") throw new Error("RESTACK_ENABLED가 true가 아닙니다");
   const github = new GitHub({ repository: process.env.GITHUB_REPOSITORY, token: process.env.RESTACK_TOKEN,
-    appId: process.env.RESTACK_APP_ID, appSlug: process.env.RESTACK_APP_SLUG });
+    appSlug: process.env.RESTACK_APP_SLUG });
   if (process.env.GITHUB_EVENT_NAME === "workflow_dispatch") {
     const actor = process.env.GITHUB_TRIGGERING_ACTOR;
     if (!/^[A-Za-z0-9-]+$/.test(actor ?? "")) throw new Error("실행자 확인 실패");

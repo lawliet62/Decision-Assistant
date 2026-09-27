@@ -53,8 +53,8 @@ jobs:
         id: app
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ vars.RESTACK_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RESTACK_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.STACKKEEPER_CLIENT_ID }}
+          private-key: ${{ secrets.STACKKEEPER_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
@@ -67,6 +67,5 @@ jobs:
           RESTACK_ACTION: ${{ inputs.action || 'reconcile' }}
           RESTACK_PRS: ${{ inputs.prs }}
           RESTACK_ENABLED: ${{ vars.RESTACK_ENABLED }}
-          RESTACK_APP_ID: ${{ vars.RESTACK_APP_ID }}
           RESTACK_APP_SLUG: ${{ steps.app.outputs.app-slug }}
           RESTACK_TOKEN: ${{ steps.app.outputs.token }}
