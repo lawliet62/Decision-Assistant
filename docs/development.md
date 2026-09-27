@@ -83,6 +83,10 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 
 ### Commit and Pull Request
 
+독립 작업은 최신 `origin/main`에서 분기한다. 의존 작업을 별도 PR로 검토할 때는 일렬 stacked PR로 구성할 수 있다. 첫 PR의 base는 `main`, 후속 PR의 base는 직전 head로 명시하고 완료 보고에 head/base와 병합 순서를 포함한다. 자동화의 설치·활성 상태를 확인한 후 [stack 등록 절차](stacked-prs.md)를 수행한다. 활성화 전에는 사람이 선행 PR을 병합한 뒤 후속 기반 정리·재검증을 별도 수행한다.
+
+등록 후 head는 동결하며 review 수정 시 전체 후속 이력을 수동 정리하고 다시 등록한다. 승인된 restack workflow만 등록 branch를 atomic push와 명시적 lease로 재작성할 수 있다. 일반 agent의 무단 history rewrite 금지는 유지한다. human은 `stack-ready`와 `validate`를 확인한 뒤 기반부터 squash merge한다. 원격 restack 이후 로컬 branch에는 미반영 작업이 있을 수 있으므로 다음 작업 전에 fetch·diff로 확인한다.
+
 - commit type은 기본적으로 `feat`, `fix`, `docs`, `test`, `refactor`, `chore`를 사용하고 summary는 변경 결과를 간결하게 설명한다.
 - commit은 review 가능한 논리 단위로 만들되 파일별로 기계적으로 분할하지 않는다. secret, credential, local-only 설정은 commit하지 않는다.
 - 긴 작업은 논리 단위가 완성되고 관련 검증이 통과한 시점에만 checkpoint commit·push한다. 컴파일되지 않거나 중간 상태만 담은 WIP commit을 자동 생성하지 않는다.
@@ -103,7 +107,7 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 
 ## Repository protection target
 
-GitHub Pro 활성화 전에는 default branch 보호가 문서화된 soft boundary임을 인지한다. 보호 기능이 없다는 점을 default branch push 권한으로 해석하지 않는다. 요금제 업그레이드 후 human administrator는 `main`에 다음 보호를 적용한다.
+실제 적용 상태는 GitHub ruleset으로 확인한다. 현재 저장소에는 main의 PR 경유·선형 이력·삭제/force push 금지·`validate` 요구 규칙이 있다. 아래는 추가적인 보호 목표이며 이미 모두 적용됐다는 뜻은 아니다. 보호가 부족해도 default branch push 권한으로 해석하지 않는다. stacked PR 자동화 활성화 시 [별도 main 갱신 제한과 App 검사 설정](stacked-prs.md)을 적용한다.
 
 - Pull Request를 통한 변경만 허용하고 approving review 1개를 요구한다.
 - 새 commit이 push되면 stale approval을 dismiss하고, 가장 최근 push는 PR 작성자가 아닌 human이 승인하게 한다.

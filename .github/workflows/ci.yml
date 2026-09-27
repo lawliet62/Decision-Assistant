@@ -2,6 +2,7 @@ name: CI
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review]
   push:
     branches: [main, master]
 
@@ -15,6 +16,13 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      # Step names belong to the immutable job attempt, unlike mutable PR data in run.pull_requests.
+      - name: Restack snapshot ${{ github.event.pull_request.head.sha }} ${{ github.event.pull_request.base.sha }} ${{ github.base_ref }}
+        if: github.event_name == 'pull_request'
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
 
       - name: Set up Java
         uses: actions/setup-java@v4

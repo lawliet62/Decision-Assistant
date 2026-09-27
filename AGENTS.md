@@ -21,11 +21,13 @@
 - 변경 작업은 repository의 canonical default branch가 아닌 작업별 branch에서 수행하고, default branch에 직접 commit하거나 push하지 않는다.
 - 작업 전에 current branch, upstream, working tree를 확인하고, 사용자의 미커밋·untracked·unrelated change를 임의로 discard, overwrite, stash, stage, commit하지 않는다.
 - `reset --hard`, `clean -fd`, 강제 checkout, history rewrite, force push 등 복구 위험이 큰 Git 작업은 agent가 독자적으로 실행하지 않는다.
+- 예외적으로 [stacked PR 자동화](docs/stacked-prs.md)에 명시 등록된 stack은 승인된 restack workflow가 후속 branch를 명시적 lease와 atomic push로 재작성한다. 일반 agent의 임의 rebase·force push나 PR merge를 허용하는 예외는 아니다.
 - repository를 변경하는 구현 작업은 별도 요청이 없어도 검증된 변경의 commit, 작업 branch push, Pull Request 생성, CI 확인까지를 기본 완료 조건으로 한다. 분석·진단·review처럼 변경이 요청되지 않은 작업은 제외한다.
 - agent는 자신의 PR을 merge하거나 auto-merge하지 않는다. 최종 수용과 squash merge는 human이 수행한다.
 - CI는 우회하거나 test·quality gate를 약화하지 않는다. 자기 변경으로 인한 실패는 원인을 분석하고 정상적인 수정으로 해결한다.
 - PR을 준비할 때 승인된 경계 안에서 자율적으로 구현한 선택 중 향후 기술 리뷰 가치가 높은 비자명한 선택만 `Technical review candidates`로 선별한다. 이는 non-blocking review pointer이며 Human Decision Gate나 ADR을 대체하지 않는다. 0개면 생략하고 보통 최대 3개만 남기며, 상세 기준과 형식은 [Development workflow](docs/development.md#technical-review-candidates)를 따른다.
 - branch, commit, push, Pull Request, CI 대응의 상세 절차는 [Development workflow](docs/development.md)를 따른다.
+- 독립 작업은 최신 `origin/main`에서 분기한다. 의존 작업을 stacked PR로 구성하면 head/base·병합 순서를 보고하고 [등록 절차](docs/stacked-prs.md)를 따른다. 자동화가 비활성이면 자동 restack이 된다고 안내하지 않는다.
 
 ## 구현 전 Human Decision Gate
 
