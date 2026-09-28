@@ -6,6 +6,8 @@
 - [System architecture](architecture.md): runtime/data/security 경계
 - [API contract](api-contract.md): OpenAPI 생성·소비 workflow
 - [Development workflow](development.md): golden commands와 변경 절차
+- [Stacked PR 운영](stacked-prs.md): App 초기 설정·등록·순차 squash merge·restack 복구
+- [Stacked PR 자동화 결정](decisions/0012-stacked-pr-restack.md): 사람의 병합과 AI 없는 후속 기반 정리
 - [Deployment runbook](deployment.md): MVP 설정·검색 비용 한도·장애 대응·staging smoke
 - [Known limitations](known-limitations.md): 배포 blocker와 deferred decision
 - [클릭 중심 추천](decisions/0009-click-first-product-discovery.md): 템플릿 진입·외부 동의·표시용 사양 경계

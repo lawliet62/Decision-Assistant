@@ -5,6 +5,7 @@
     "dev": "node scripts/dev.mjs",
     "check": "node scripts/validate.mjs full",
     "check:quick": "node scripts/validate.mjs quick",
+    "test:restack": "node --test scripts/restack/restack.test.mjs",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:lint": "npm --prefix frontend run lint",
     "frontend:typecheck": "npm --prefix frontend run typecheck",
