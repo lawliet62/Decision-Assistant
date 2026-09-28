@@ -34,6 +34,10 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 
 `CandidateSuggestionData`와 `ProductFactsData`의 nullable `officialOffer`는 공식 구매 URL·판매처·KRW 가격·선택적 이미지·조회 시점·가격 기준·정책 버전을 포함한다. `sourceKind`는 `VIDEO|BLOG|OFFICIAL_STORE|WEB`이다. 공식 offer가 없는 기존 자료에는 공식 판매처 표시를 부여하지 않는다. 후보의 `recommendationGroup`은 `RECOMMENDED|UNKNOWN|BELOW|LEGACY`이며 기본 추천은 모든 최소 사양과 예산을 충족한 제품을 가격·이름 순으로 표시한다.
 
+`POST /decisions/{decisionId}/discovery/refresh`는 `{expectedVersion}`으로 같은 비교·같은 저장 조건의 새 추천 묶음을 만든다. 소유권·CSRF·편집 가능한 상태·현재 추천 version을 검사한다. 진행 중이거나 오래된 version이면 409다. `retry`는 실패·부분 완료인 현재 묶음을 복구하고 generation을 증가시키지 않는다.
+
+`DiscoveryData.generation`은 시도 중인 묶음(최초 0), `displayedGeneration`은 현재 보이는 후보 묶음이다. 실패·새 제품 없음(`NO_NEW_PRODUCTS`)에는 표시 중인 묶음을 변경하지 않는다. `history`는 표시 중인 묶음을 제외한 추천 묶음의 최종 상태·정책·후보를 담으며 승인·제외 상태도 보존한다. 진행/상태와 후보 저장은 executionId를 확인한 트랜잭션으로 처리한다. 추천 그룹의 예산 기준은 편집한 context가 아니라 최초 저장한 추천 조건이다.
+
 ## 최소 사양 선택
 
 - `GET /api/v1/intake-templates`는 `intake-v2`와 `minimumRequirements` 정의를 반환한다. 항목 ID·라벨·사양 이름·비교 규칙·선택지가 서버의 source of truth다.

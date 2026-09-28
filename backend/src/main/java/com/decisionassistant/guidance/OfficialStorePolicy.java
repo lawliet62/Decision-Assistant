@@ -14,7 +14,7 @@ public final class OfficialStorePolicy {
     private static final List<Store> STORES = List.of(
             new Store("samsung-kr", "삼성닷컴", "www.samsung.com", "/sec/(buds|smartphones|tablets|galaxybook|monitors)/[^/]+/[^/]+/?", Set.of("images.samsung.com")),
             new Store("apple-kr", "Apple 공식 스토어", "www.apple.com", "/kr/shop/(buy-[^/]+|product)/.+", Set.of("store.storeimages.cdn-apple.com", "www.apple.com")),
-            new Store("lg-kr", "LG전자", "www.lge.co.kr", "/(?:product/)?(?:monitors|notebook)/[^/]+/?", Set.of("www.lge.co.kr", "www.lge.com", "gscs.lge.com")),
+            new Store("lg-kr", "LG전자", "www.lge.co.kr", "/(?:product/)?(?:monitors|notebook)/[^/]+/?", Set.of("www.lge.co.kr")),
             new Store("qcy-kr", "QCY 공식몰", "qcystore.co.kr", "/product/(?:detail.html|[^/]+/[0-9]+(?:/.*)?)", Set.of("qcystore.co.kr")),
             new Store("qcy-naver", "QCY 공식 스마트스토어", "smartstore.naver.com", "/ylintl/products/[0-9]+/?", Set.of("shop-phinf.pstatic.net")));
 

@@ -50,6 +50,11 @@ public class DecisionController {
         return service.retryDiscovery(decisionId, request);
     }
 
+    @PostMapping("/{decisionId}/discovery/refresh")
+    public DecisionResponse refreshDiscovery(@PathVariable UUID decisionId, @Valid @RequestBody RetryDiscoveryRequest request) {
+        return service.refreshDiscovery(decisionId, request);
+    }
+
     @PostMapping("/{decisionId}/sources")
     @ResponseStatus(HttpStatus.CREATED)
     public DecisionResponse addSource(@PathVariable UUID decisionId, @Valid @RequestBody AddSourceRequest request) {

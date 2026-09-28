@@ -35,6 +35,8 @@ const questions = [
 ].map(([kind, targetKey, prompt]) => ({ id: randomUUID(), kind, targetKey, prompt,
   impact: "비교 참고 정보입니다.", options: kind === "SINGLE_CHOICE" ? criteria.map(item => item.name) : [], status: "OPEN" }));
 let current;
+let discoveryHistoryCandidates = [];
+let pendingCandidates;
 const option = (source) => ({ id: randomUUID(), name: source.name || "후보 · example.com", sourceUrl: source.url });
 function create(body) {
   return { id: decisionId, version: 0, title: body.intentText, templateKey: body.templateKey,
@@ -53,7 +55,7 @@ function create(body) {
 function createDiscovery(body) {
   const template = templates.find(item => item.key === body.templateKey);
   const result = create({ ...body, intentText: template.label + " 비교", selectedSources: [] });
-  result.discovery = { version: 1, status: "PENDING", policyVersion: "official-kr-v1", conditions: body.discovery, updatedAt: new Date().toISOString() };
+  result.discovery = { version: 1, status: "PENDING", policyVersion: "official-kr-v1", generation: 0, displayedGeneration: 0, history: [], conditions: body.discovery, updatedAt: new Date().toISOString() };
   result.productFacts = [];
   result.guidance.questions = [];
   result.guidance.candidateSuggestions = ["Alpha", "Beta", "Gamma"].map((name, index) => ({
@@ -100,13 +102,22 @@ const server = http.createServer(async (request, response) => {
   }
   if (request.method === "POST" && request.url === "/api/v1/decisions") {
     current = body.discovery ? createDiscovery(body) : create(body);
+    discoveryHistoryCandidates = current.guidance.candidateSuggestions; pendingCandidates = undefined;
     if (body.webConsent) current.guidance.evidence = current.options.map(item => ({
       id: randomUUID(), optionId: item.id, url: item.sourceUrl, status: "FAILED", error: "수집 실패", stale: false,
     }));
     return send(201, current);
   }
   if (request.method === "GET" && request.url === `/api/v1/decisions/${decisionId}`) {
-    if (current?.discovery?.status === "PENDING") current.discovery.status = "SUCCEEDED";
+    if (current?.discovery?.status === "PENDING") {
+      current.discovery.status = "SUCCEEDED";
+      if (pendingCandidates) {
+        current.guidance.candidateSuggestions = pendingCandidates;
+        discoveryHistoryCandidates = pendingCandidates;
+        current.discovery.displayedGeneration = current.discovery.generation;
+        pendingCandidates = undefined;
+      }
+    }
     return send(200, current);
   }
   if (request.url === "/api/v1/ai/capabilities") return send(200, { enabled: true, provider: "gemini", model: "test", requiresSensitiveDataAcknowledgement: true });
@@ -118,11 +129,21 @@ const server = http.createServer(async (request, response) => {
       const added = option(candidate); current.options.push(added);
       current.productFacts.push({ optionId: added.id, facts: candidate.facts, requirementChecks: candidate.requirementChecks, officialOffer: candidate.officialOffer, sourceKind: candidate.sourceKind });
     }
+    if (candidate) candidate.status = body.action === "ACCEPT" ? "ACCEPTED" : "DISMISSED";
     current.guidance.candidateSuggestions = current.guidance.candidateSuggestions.filter(item => item.id !== id);
     current.version++; return send(200, current);
   }
   if (request.method === "POST" && request.url.endsWith("/discovery/retry")) {
     current.discovery = { ...current.discovery, version: current.discovery.version + 1, status: "PENDING", error: null };
+    return send(200, current);
+  }
+  if (request.method === "POST" && request.url.endsWith("/discovery/refresh")) {
+    if (body.expectedVersion !== current.discovery.version || ["PENDING", "RUNNING"].includes(current.discovery.status)) return send(409, { detail: "추천 상태가 변경되었습니다." });
+    const generation = current.discovery.generation + 1;
+    current.discovery.history.push({ generation: current.discovery.displayedGeneration, status: "SUCCEEDED", policyVersion: current.discovery.policyVersion, candidates: structuredClone(discoveryHistoryCandidates) });
+    pendingCandidates = createDiscovery({ templateKey: current.templateKey, discovery: current.discovery.conditions }).guidance.candidateSuggestions;
+    pendingCandidates.forEach(candidate => { candidate.name += ` 추가 ${generation}`; });
+    current.discovery = { ...current.discovery, generation, version: current.discovery.version + 1, status: "PENDING", stage: "SEARCH", error: null };
     return send(200, current);
   }
   if (request.method === "POST" && request.url.endsWith("/sources")) {

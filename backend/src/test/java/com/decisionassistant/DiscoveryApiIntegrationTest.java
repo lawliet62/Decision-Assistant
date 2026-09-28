@@ -144,6 +144,121 @@ class DiscoveryApiIntegrationTest {
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].sourceKind").value("VIDEO"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("LEGACY"));
     }
+
+    @Test void refreshExcludesAllPreviousProductsAndPreservesAcceptedInputAndHistory() throws Exception {
+        var id = create(); worker.processNext();
+        var initial = mapper.readTree(mvc.perform(get("/api/v1/decisions/" + id).with(owner)).andReturn().getResponse().getContentAsString());
+        var a = initial.path("guidance").path("candidateSuggestions").get(0).path("id").asText();
+        var b = initial.path("guidance").path("candidateSuggestions").get(1).path("id").asText();
+        var accepted = mapper.readTree(mvc.perform(patch("/api/v1/decisions/" + id + "/candidate-suggestions/" + a).with(owner).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"ACCEPT\"}")).andReturn().getResponse().getContentAsString());
+        var optionId = accepted.path("options").get(0).path("id").asText();
+        var draft = Map.of("expectedVersion", accepted.path("version").asLong(), "title", "직접 편집한 비교",
+                "context", Map.of("intendedUse", "유지할 입력", "notes", "메모 유지", "currency", "KRW", "budget", 200000),
+                "options", accepted.path("options"), "criteria", accepted.path("criteria"), "constraints", accepted.path("constraints"),
+                "constraintResults", List.of(), "values", List.of(Map.of("optionId", optionId, "criterionId", accepted.path("criteria").get(0).path("id").asText(),
+                        "numericValue", 77777, "certainty", "CONFIRMED", "origin", "USER", "verificationStatus", "CONFIRMED")));
+        mvc.perform(put("/api/v1/decisions/" + id + "/draft").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(draft))).andExpect(status().isOk());
+        mvc.perform(patch("/api/v1/decisions/" + id + "/candidate-suggestions/" + b).with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"DISMISS\"}")).andExpect(status().isOk());
+        var before = runs.findById(UUID.fromString(id)).orElseThrow();
+        var pending = mapper.readTree(mvc.perform(post("/api/v1/decisions/" + id + "/discovery/refresh").with(owner).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":" + before.version() + "}"))
+                .andExpect(jsonPath("$.discovery.generation").value(1)).andExpect(jsonPath("$.discovery.displayedGeneration").value(0))
+                .andExpect(jsonPath("$.context.notes").value("메모 유지")).andReturn().getResponse().getContentAsString());
+        assertThat(pending.path("discovery").path("executionId").asText()).isNotEqualTo(before.executionId().toString());
+        assertThat(runs.findById(UUID.fromString(id)).orElseThrow().conditions()).isEqualTo(before.conditions());
+        var next = List.of("Buds C", "Buds D", "Buds E", "Buds F");
+        var results = new ArrayList<WebSearchProvider.SearchResult>(); results.add(results().getFirst());
+        next.forEach(name -> results.add(new WebSearchProvider.SearchResult(name, url(name), "")));
+        when(search.search(anyString(), eq(5))).thenReturn(results);
+        when(web.scrapeProduct(anyString())).thenAnswer(call -> page(call.getArgument(0), java.net.URI.create(call.getArgument(0)).getPath().split("/")[2].replace("-", " "), 100000, ""));
+        when(discoverer.discover(any())).thenReturn(new AiContracts.AiResult<>(new DiscoveryProposal(next.stream().map(name -> product(name, "100000 KRW")).toList()), 10, 10));
+        worker.processNext();
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.options.length()").value(1)).andExpect(jsonPath("$.options[0].id").value(optionId))
+                .andExpect(jsonPath("$.values[0].numericValue").value(77777)).andExpect(jsonPath("$.title").value("직접 편집한 비교"))
+                .andExpect(jsonPath("$.discovery.displayedGeneration").value(1))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(4))
+                .andExpect(jsonPath("$.discovery.history[0].candidates.length()").value(2))
+                .andExpect(jsonPath("$.discovery.history[0].candidates[0].status").value("ACCEPTED"))
+                .andExpect(jsonPath("$.discovery.history[0].candidates[1].status").value("DISMISSED"));
+        assertThat(jdbc.queryForObject("select count(*) from candidate_suggestions where decision_id = ?", Integer.class, UUID.fromString(id))).isEqualTo(6);
+        verify(web, times(1)).scrapeProduct(url("Buds A"));
+        verify(search).search(argThat(query -> query.contains("-\"Buds A\"") && query.contains("-\"Buds B\"") && !query.contains("메모 유지")), eq(5));
+        verify(discoverer, times(2)).discover(any());
+    }
+
+    @Test void failedRefreshKeepsPreviousListAndRetryUsesSameGeneration() throws Exception {
+        var id = create(); worker.processNext();
+        var before = runs.findById(UUID.fromString(id)).orElseThrow();
+        var path = "/api/v1/decisions/" + id + "/discovery/refresh";
+        var body = "{\"expectedVersion\":" + before.version() + "}";
+        mvc.perform(post(path).with(user()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNotFound());
+        mvc.perform(post(path).with(owner).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        mvc.perform(post(path).with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
+        mvc.perform(post(path).with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isConflict());
+        var queued = runs.findById(UUID.fromString(id)).orElseThrow();
+        mvc.perform(post(path).with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":" + queued.version() + "}")).andExpect(status().isConflict());
+        when(search.search(anyString(), eq(5))).thenThrow(new com.decisionassistant.lookup.LookupException(429, "SEARCH_MONTHLY_LIMIT", "fixture"));
+        worker.processNext();
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner)).andExpect(jsonPath("$.discovery.status").value("FAILED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(2)).andExpect(jsonPath("$.discovery.displayedGeneration").value(0));
+        var failed = runs.findById(UUID.fromString(id)).orElseThrow();
+        mvc.perform(post("/api/v1/decisions/" + id + "/discovery/retry").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedVersion\":" + failed.version() + "}")).andExpect(status().isOk()).andExpect(jsonPath("$.discovery.generation").value(1));
+        doReturn(results()).when(search).search(anyString(), eq(5));
+        worker.processNext();
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner)).andExpect(jsonPath("$.discovery.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.discovery.emptyReason").value("NO_NEW_PRODUCTS"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(2)).andExpect(jsonPath("$.discovery.displayedGeneration").value(0));
+        verify(discoverer, times(1)).discover(any()); verify(web, times(2)).scrapeProduct(anyString());
+    }
+
+    @Test void concurrentRefreshRequestsCreateOneNewGeneration() throws Exception {
+        var id = create(); worker.processNext();
+        var version = runs.findById(UUID.fromString(id)).orElseThrow().version();
+        try (var pool = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            java.util.concurrent.Callable<Integer> refresh = () -> mvc.perform(post("/api/v1/decisions/" + id + "/discovery/refresh")
+                    .with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":" + version + "}"))
+                    .andReturn().getResponse().getStatus();
+            var first = pool.submit(refresh); var second = pool.submit(refresh);
+            assertThat(List.of(first.get(10, java.util.concurrent.TimeUnit.SECONDS), second.get(10, java.util.concurrent.TimeUnit.SECONDS))).containsExactlyInAnyOrder(200, 409);
+        }
+        assertThat(runs.findById(UUID.fromString(id)).orElseThrow().generation()).isEqualTo(1);
+        worker.processNext();
+        verify(search, times(2)).search(anyString(), eq(5)); verify(discoverer, times(1)).discover(any());
+    }
+
+    @Test @Timeout(20) void lateAiCompletionCannotOverwriteANewerExecution() throws Exception {
+        var id = create();
+        var entered = new java.util.concurrent.CountDownLatch(1); var release = new java.util.concurrent.CountDownLatch(1);
+        when(ai.timeout()).thenReturn(Duration.ofSeconds(10));
+        when(discoverer.discover(any())).thenAnswer(call -> {
+            entered.countDown();
+            if (!release.await(8, java.util.concurrent.TimeUnit.SECONDS)) throw new AssertionError("새 실행을 만들지 못했습니다.");
+            return new AiContracts.AiResult<>(new DiscoveryProposal(List.of(product("Buds A", "100000 KRW"))), 1, 1);
+        });
+        try (var pool = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var future = pool.submit(worker::processNext);
+            try {
+                assertThat(entered.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                // 중단 감지가 완료된 상황을 재현한다. 이전 AI 응답은 아직 실행 중이다.
+                jdbc.update("UPDATE product_discoveries SET status = 'FAILED', version = version + 1 WHERE decision_id = ?", UUID.fromString(id));
+                var interrupted = runs.findById(UUID.fromString(id)).orElseThrow();
+                mvc.perform(post("/api/v1/decisions/" + id + "/discovery/retry").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expectedVersion\":" + interrupted.version() + "}")).andExpect(status().isOk());
+                var next = runs.findById(UUID.fromString(id)).orElseThrow();
+                assertThat(next.executionId()).isNotEqualTo(interrupted.executionId());
+                release.countDown(); future.get(5, java.util.concurrent.TimeUnit.SECONDS);
+                var untouched = runs.findById(UUID.fromString(id)).orElseThrow();
+                assertThat(untouched.status()).isEqualTo(ProductDiscovery.Status.PENDING);
+                assertThat(untouched.executionId()).isEqualTo(next.executionId());
+                assertThat(jdbc.queryForObject("select count(*) from candidate_suggestions where decision_id = ?", Integer.class, UUID.fromString(id))).isZero();
+            } finally { release.countDown(); }
+        }
+        worker.processNext();
+        assertThat(runs.findById(UUID.fromString(id)).orElseThrow().status()).isEqualTo(ProductDiscovery.Status.SUCCEEDED);
+    }
     private String create() throws Exception {
         return create(BODY);
     }

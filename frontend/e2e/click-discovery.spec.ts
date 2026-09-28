@@ -115,3 +115,40 @@ test("추천 부분 실패 표시와 명시적 재시도", async ({ page }) => {
   await page.getByRole("button", { name: "추천 다시 시도", exact: true }).click();
   await expect(page.getByText("제품 정보를 찾고 있습니다…", { exact: true })).toBeVisible();
 });
+
+test("같은 조건으로 다른 제품을 찾아도 비교 선택과 이전 추천 이력을 유지한다", async ({ page }) => {
+  await page.goto("/decisions/new"); await consent(page);
+  await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
+  await expect(page).toHaveURL(/\/decisions\/[0-9a-f-]+$/);
+  const originalUrl = page.url();
+  await page.getByRole("article", { name: "무선 이어폰 Alpha", exact: true }).getByRole("button", { name: "비교에 추가", exact: true }).click();
+  let refreshCalls = 0;
+  await page.route("**/discovery/refresh", async route => { refreshCalls++; await route.continue(); });
+  await page.getByRole("button", { name: "같은 조건으로 다른 제품 찾기", exact: true }).click();
+  await expect(page.getByRole("button", { name: "같은 조건으로 다른 제품 찾기", exact: true })).toBeDisabled();
+  await expect(page.getByText("새 추천을 확보할 때까지 이전 추천 목록과 비교 내용을 유지합니다.")).toBeVisible();
+  await expect(page.getByRole("article", { name: "무선 이어폰 Alpha 추가 1", exact: true })).toBeVisible();
+  expect(page.url()).toBe(originalUrl); expect(refreshCalls).toBe(1);
+  await expect(page.getByText("비교에 추가한 제품 1/5", { exact: true })).toBeVisible();
+  await page.getByText("추천 이력 (1)", { exact: true }).click();
+  const history = page.getByRole("region", { name: "추천 묶음 1", exact: true });
+  await expect(history.getByRole("article", { name: "무선 이어폰 Alpha", exact: true })).toContainText("비교에 추가됨");
+  await page.reload();
+  await expect(page.getByText("비교에 추가한 제품 1/5", { exact: true })).toBeVisible();
+  await expect(page.getByRole("article", { name: "무선 이어폰 Alpha 추가 1", exact: true })).toBeVisible();
+});
+
+test("재탐색 실패 안내가 와도 이전 후보와 비교를 유지한다", async ({ page }) => {
+  await page.goto("/decisions/new"); await consent(page);
+  await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
+  await page.route("**/discovery/refresh", async route => {
+    const response = await page.request.get(page.url().replace("/decisions/", "/api/v1/decisions/"));
+    const data = await response.json();
+    data.discovery = { ...data.discovery, generation: 1, displayedGeneration: 0, status: "FAILED", error: "이번 달 제품 검색 한도에 도달했습니다." };
+    await route.fulfill({ json: data });
+  });
+  await page.getByRole("button", { name: "같은 조건으로 다른 제품 찾기", exact: true }).click();
+  await expect(page.getByText("이번 달 제품 검색 한도에 도달했습니다.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("article", { name: "무선 이어폰 Alpha", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "추천 다시 시도", exact: true })).toBeVisible();
+});

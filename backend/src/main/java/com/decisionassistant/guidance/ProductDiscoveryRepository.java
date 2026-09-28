@@ -8,6 +8,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface ProductDiscoveryRepository extends JpaRepository<ProductDiscovery, UUID> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select d from ProductDiscovery d where d.decisionId = :id")
+    Optional<ProductDiscovery> lockById(UUID id);
     @Query(value = "select * from product_discoveries where status = 'PENDING' order by updated_at limit 1 for update skip locked", nativeQuery = true)
     Optional<ProductDiscovery> claimNext();
     @Modifying

@@ -8,6 +8,20 @@ import static com.decisionassistant.guidance.DiscoveryContracts.*;
 import static org.assertj.core.api.Assertions.*;
 
 class DiscoveryWorkerTest {
+    @Test void officialPriceAndMinimumFactsCannotComeFromDifferentConfigurationsWithSameFamilyName() {
+        var now = Instant.now();
+        var firstUrl = "https://www.samsung.com/sec/galaxybook/book/model8/";
+        var secondUrl = "https://www.samsung.com/sec/galaxybook/book/model32/";
+        var official = new OfficialProduct("Laptop A", "model8", new OfficialOffer(firstUrl, "삼성닷컴", new java.math.BigDecimal("1000000"), "KRW", null, now, "판매가", OfficialStorePolicy.VERSION), "");
+        var pages = List.of(new SourcePage(firstUrl, "Laptop A", "Laptop A 메모리 8GB", now, official),
+                new SourcePage(secondUrl, "Laptop A", "Laptop A 메모리 32GB", now));
+        var input = new DiscoveryInput("노트북", List.of(), null, null, List.of("메모리", "가격"), pages, List.of());
+        var proposal = new DiscoveryProposal(List.of(new ProposedProduct("Laptop A", firstUrl, "Laptop A", "", List.of(
+                new ProposedFact("메모리", "32GB", secondUrl, "Laptop A 메모리 32GB")))));
+        var accepted = DiscoveryWorker.validateOfficialProducts(UUID.randomUUID(), proposal, input);
+        assertThat(accepted).hasSize(1);
+        assertThat(accepted.getFirst().facts()).extracting(ProductFact::name).containsExactly("가격");
+    }
     @Test void productHeadingBindsFollowingSpecificationButNotAnotherProduct() {
         var source = new SourcePage("https://example.com/spec", "제품 비교",
                 "## Buds A\n적응형 ANC 탑재\n\n## Buds B\n무게 5 g", Instant.now());

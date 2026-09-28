@@ -468,6 +468,43 @@
         }
       }
     },
+    "/api/v1/decisions/{decisionId}/discovery/refresh" : {
+      "post" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "refreshDiscovery",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RetryDiscoveryRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/preferences/{preferenceId}" : {
       "delete" : {
         "tags" : [ "preference-controller" ],
@@ -1277,6 +1314,51 @@
           },
           "emptyReason" : {
             "type" : "string"
+          },
+          "generation" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "displayedGeneration" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "history" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DiscoveryHistoryData"
+            }
+          }
+        }
+      },
+      "DiscoveryHistoryData" : {
+        "type" : "object",
+        "properties" : {
+          "generation" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "error" : {
+            "type" : "string"
+          },
+          "emptyReason" : {
+            "type" : "string"
+          },
+          "policyVersion" : {
+            "type" : "string"
+          },
+          "completedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "candidates" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CandidateSuggestionData"
+            }
           }
         }
       },
