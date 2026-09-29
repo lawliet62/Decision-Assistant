@@ -52,12 +52,17 @@ public class ProductLookupService {
             admit(ownerId, Instant.now());
             quota.reserve();
             var results = new LinkedHashMap<String, WebSearchProvider.SearchResult>();
-            for (var item : provider.search(query, 5)) {
+            var returned = provider.search(query, 5);
+            int publicCount = 0;
+            for (var item : returned) {
                 try {
                     var url = urls.validate(item.url());
+                    publicCount++;
                     results.putIfAbsent(url, new WebSearchProvider.SearchResult(item.title(), url, item.description()));
                 } catch (InvalidDecisionException ignored) { /* Never offer private or non-HTTP URLs. */ }
             }
+            log.info("product_event=product_lookup_results decision_id={} returned={} public={} unique={}",
+                    org.slf4j.MDC.get("discoveryDecisionId"), returned.size(), publicCount, Math.min(5, results.size()));
             return results.values().stream().limit(5).toList();
         } catch (LookupException exception) {
             outcome = exception.code();
@@ -69,7 +74,8 @@ public class ProductLookupService {
             if (acquired) concurrent.release();
             metrics.counter("product.lookup.requests", "outcome", outcome).increment();
             metrics.timer("product.lookup.duration", "outcome", outcome).record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
-            log.info("product_event=product_lookup_finished outcome={} duration_ms={}", outcome,
+            log.info("product_event=product_lookup_finished outcome={} decision_id={} duration_ms={}", outcome,
+                    org.slf4j.MDC.get("discoveryDecisionId"),
                     TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
         }
     }

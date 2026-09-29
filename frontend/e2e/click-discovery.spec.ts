@@ -152,3 +152,28 @@ test("재탐색 실패 안내가 와도 이전 후보와 비교를 유지한다"
   await expect(page.getByRole("article", { name: "무선 이어폰 Alpha", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "추천 다시 시도", exact: true })).toBeVisible();
 });
+
+for (const [reason, message] of [
+  ["NO_OFFICIAL_RESULTS", "이번 검색에서 공식 판매처의 제품 페이지를 찾지 못했습니다."],
+  ["NO_VERIFIED_OFFERS", "찾은 공식 판매처 페이지에서 제품과 비교 가능한 가격을 확인하지 못했습니다."],
+  ["NO_NEW_PRODUCTS", "이번 검색에서는 이전 추천을 제외한 새 제품을 찾지 못했습니다."],
+]) {
+  test(`빈 결과의 원인을 구분하고 이전 비교를 보존한다: ${reason}`, async ({ page }) => {
+    await page.goto("/decisions/new"); await consent(page);
+    await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
+    const alpha = page.getByRole("article", { name: "무선 이어폰 Alpha", exact: true });
+    await alpha.getByRole("button", { name: "비교에 추가", exact: true }).click();
+    await page.route("**/discovery/refresh", async route => {
+      const response = await page.request.get(page.url().replace("/decisions/", "/api/v1/decisions/"));
+      const data = await response.json();
+      data.discovery = { ...data.discovery, generation: 1, displayedGeneration: 0, status: "SUCCEEDED", emptyReason: reason };
+      await route.fulfill({ json: data });
+    });
+    await page.getByRole("button", { name: "같은 조건으로 다른 제품 찾기", exact: true }).click();
+    await expect(page.getByRole("status").filter({ hasText: message })).toBeVisible();
+    await expect(page.getByText("비교에 추가한 제품 1/5", { exact: true })).toBeVisible();
+    await expect(page.getByRole("article", { name: "무선 이어폰 Beta", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "후보 비교로 이동", exact: true }).click();
+    await expect(page.getByRole("table")).toContainText("무선 이어폰 Alpha");
+  });
+}

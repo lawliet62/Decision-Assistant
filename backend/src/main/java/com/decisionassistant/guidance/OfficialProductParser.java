@@ -15,11 +15,28 @@ final class OfficialProductParser {
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private OfficialProductParser() {}
 
+    enum Rejection {
+        UNREGISTERED_STORE, HTML_MISSING, HTML_TOO_LARGE, RESOLVED_URL_MISMATCH,
+        PRODUCT_MISSING, PRODUCT_AMBIGUOUS, PRODUCT_NAME_INVALID, VARIANT_UNSUPPORTED,
+        OFFER_MISSING, OFFER_TYPE_UNSUPPORTED, CURRENCY_UNSUPPORTED, CONDITIONAL_PRICE,
+        UNAVAILABLE, NOT_NEW, OFFER_URL_MISMATCH, PRICE_EXPIRED, PRICE_INVALID,
+        PRICE_AMBIGUOUS, IDENTITY_INVALID
+    }
+    record Result(OfficialProduct product, Rejection rejection) {
+        private static Result rejected(Rejection reason) { return new Result(null, reason); }
+    }
+
     static OfficialProduct parse(String requestedUrl, WebEvidenceProvider.Page page, Instant fetchedAt) {
+        return inspect(requestedUrl, page, fetchedAt).product();
+    }
+
+    static Result inspect(String requestedUrl, WebEvidenceProvider.Page page, Instant fetchedAt) {
         var store = OfficialStorePolicy.store(requestedUrl).orElse(null);
-        if (store == null || page.html() == null || page.html().length() > 2_000_000) return null;
+        if (store == null) return Result.rejected(Rejection.UNREGISTERED_STORE);
+        if (page.html() == null) return Result.rejected(Rejection.HTML_MISSING);
+        if (page.html().length() > 2_000_000) return Result.rejected(Rejection.HTML_TOO_LARGE);
         // provider가 최종 URL을 확인하지 못하거나 다른 상품으로 이동했다면 공식 상품으로 승격하지 않는다.
-        if (!samePage(requestedUrl, page.resolvedUrl())) return null;
+        if (!samePage(requestedUrl, page.resolvedUrl())) return Result.rejected(Rejection.RESOLVED_URL_MISMATCH);
         var doc = Jsoup.parse(page.html(), requestedUrl);
         var products = new ArrayList<JsonNode>();
         for (var script : doc.select("script[type=application/ld+json]")) {
@@ -30,54 +47,56 @@ final class OfficialProductParser {
                 || samePage(requestedUrl, product.path("@id").asText(""))).toList();
         // 여러 모델·관련 상품이 있으면 현재 페이지에 명시적으로 연결된 단일 상품만 사용한다.
         var candidates = matching.isEmpty() ? products : matching;
-        if (candidates.size() != 1) return null;
+        if (candidates.size() != 1) return Result.rejected(candidates.isEmpty() ? Rejection.PRODUCT_MISSING : Rejection.PRODUCT_AMBIGUOUS);
         var product = candidates.getFirst();
         var name = product.path("name").asText("").strip();
-        if (name.isBlank() || name.length() > 200) return null;
+        if (name.isBlank() || name.length() > 200) return Result.rejected(Rejection.PRODUCT_NAME_INVALID);
         var variants = type(product, "ProductGroup") ? iterable(product.path("hasVariant")) : List.of(product);
         if (type(product, "ProductGroup")) {
             var varies = product.path("variesBy");
             var dimensions = varies.isArray() ? iterable(varies) : List.of(varies);
-            if (dimensions.isEmpty() || dimensions.stream().anyMatch(item -> !Set.of("color", "https://schema.org/color", "http://schema.org/color").contains(item.asText("")))) return null;
+            if (dimensions.isEmpty() || dimensions.stream().anyMatch(item -> !Set.of("color", "https://schema.org/color", "http://schema.org/color").contains(item.asText("")))) return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
         }
         var rows = new ArrayList<JsonNode>();
         for (var variant : variants) {
             var offers = variant.path("offers");
             rows.addAll(offers.isArray() ? iterable(offers) : List.of(offers));
         }
-        if (rows.isEmpty()) return null;
+        if (rows.isEmpty()) return Result.rejected(Rejection.OFFER_MISSING);
         var prices = new TreeSet<BigDecimal>();
         for (var row : rows) {
-            if (!type(row, "Offer") || !"KRW".equals(row.path("priceCurrency").asText())
-                    || row.has("priceSpecification") || row.has("eligibleCustomerType") || row.has("eligibleQuantity")
-                    || row.has("validForMemberTier") || row.has("businessFunction")) return null;
+            if (row.isMissingNode() || row.isNull()) return Result.rejected(Rejection.OFFER_MISSING);
+            if (!type(row, "Offer")) return Result.rejected(Rejection.OFFER_TYPE_UNSUPPORTED);
+            if (!"KRW".equals(row.path("priceCurrency").asText())) return Result.rejected(Rejection.CURRENCY_UNSUPPORTED);
+            if (row.has("priceSpecification") || row.has("eligibleCustomerType") || row.has("eligibleQuantity")
+                    || row.has("validForMemberTier") || row.has("businessFunction")) return Result.rejected(Rejection.CONDITIONAL_PRICE);
             var availability = row.path("availability").asText("");
-            if (!availability.isBlank() && !availability.endsWith("/InStock") && !availability.endsWith("/OnlineOnly")) return null;
+            if (!availability.isBlank() && !availability.endsWith("/InStock") && !availability.endsWith("/OnlineOnly")) return Result.rejected(Rejection.UNAVAILABLE);
             var condition = row.path("itemCondition").asText("");
-            if (!condition.isBlank() && !condition.endsWith("/NewCondition")) return null;
-            if (row.has("url") && !samePage(requestedUrl, row.path("url").asText())) return null;
+            if (!condition.isBlank() && !condition.endsWith("/NewCondition")) return Result.rejected(Rejection.NOT_NEW);
+            if (row.has("url") && !samePage(requestedUrl, row.path("url").asText())) return Result.rejected(Rejection.OFFER_URL_MISMATCH);
             try {
-                if (row.has("priceValidUntil") && LocalDate.parse(row.path("priceValidUntil").asText()).isBefore(LocalDate.now(java.time.ZoneOffset.UTC))) return null;
+                if (row.has("priceValidUntil") && LocalDate.parse(row.path("priceValidUntil").asText()).isBefore(LocalDate.now(java.time.ZoneOffset.UTC))) return Result.rejected(Rejection.PRICE_EXPIRED);
                 var raw = row.path("price").asText("");
-                if (!raw.matches("[0-9]+(?:\\.0+)?")) return null;
+                if (!raw.matches("[0-9]+(?:\\.0+)?")) return Result.rejected(Rejection.PRICE_INVALID);
                 var price = new BigDecimal(raw);
-                if (price.signum() <= 0 || price.compareTo(new BigDecimal("100000000")) > 0) return null;
+                if (price.signum() <= 0 || price.compareTo(new BigDecimal("100000000")) > 0) return Result.rejected(Rejection.PRICE_INVALID);
                 prices.add(price);
-            } catch (RuntimeException ignored) { return null; }
+            } catch (RuntimeException ignored) { return Result.rejected(Rejection.PRICE_INVALID); }
         }
-        if (prices.size() != 1) return null;
+        if (prices.size() != 1) return Result.rejected(Rejection.PRICE_AMBIGUOUS);
         var price = prices.first();
         var images = product.has("image") ? product.path("image") : variants.getFirst().path("image");
         var first = images.isArray() ? images.path(0) : images;
         var image = OfficialStorePolicy.image(store, requestedUrl, first.isObject() ? first.path("url").asText("") : first.asText(""));
         if (first.isMissingNode() || first.isNull() || first.asText("").isBlank() && !first.isObject()) image = null;
         var sku = product.path("sku").asText(product.path("productGroupID").asText("")).strip();
-        if (sku.length() > 300) return null;
+        if (sku.length() > 300) return Result.rejected(Rejection.IDENTITY_INVALID);
         var identity = store.id() + ":" + (sku.isBlank() ? name.replaceAll("[\\s\\p{Punct}]", "").toLowerCase(Locale.ROOT) : sku.toLowerCase(Locale.ROOT));
         var description = Jsoup.parse(product.path("description").asText("")).text();
         if (description.length() > 1500) description = description.substring(0, 1500);
-        return new OfficialProduct(name, identity, new OfficialOffer(requestedUrl, store.name(), price, "KRW", image,
-                fetchedAt, "상품 구조화 데이터의 판매가", OfficialStorePolicy.VERSION), description);
+        return new Result(new OfficialProduct(name, identity, new OfficialOffer(requestedUrl, store.name(), price, "KRW", image,
+                fetchedAt, "상품 구조화 데이터의 판매가", OfficialStorePolicy.VERSION), description), null);
     }
 
     private static List<JsonNode> iterable(JsonNode node) { var items = new ArrayList<JsonNode>(); node.forEach(items::add); return items; }

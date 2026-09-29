@@ -1,0 +1,84 @@
+{
+  "variant": "baseline",
+  "startedAt": "2026-09-29T20:38:19.614Z",
+  "commit": "1bdc554fc9c1a572782167b7a1d60c033450be9b",
+  "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "jarSha256": "4bc45a21e3312e5d89eb256eb916caa591dc7c028a8ee8ce8e02c11fadf984ee",
+  "casesSha256": "30f97ad9151457ba8ee8dcc8728bd814bf89673c72460d795a7ba04bd0533a28",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "maxRuns": 15,
+  "maxSearchCalls": 15,
+  "maxCollectionCalls": 75,
+  "maxAiCalls": 15,
+  "completed": 15,
+  "unexecuted": [],
+  "finishedAt": "2026-09-29T20:42:07.745Z",
+  "comparisonValid": false,
+  "invalidationReason": "SHARED_QUEUE_COMPETING_WORKER",
+  "created": [
+    {
+      "caseId": "earbuds-1",
+      "decisionId": "b7d02c19-99c7-4563-8864-0c7d23c7b6c9"
+    },
+    {
+      "caseId": "earbuds-2",
+      "decisionId": "8f682b80-b672-4379-9984-a227364a36e3"
+    },
+    {
+      "caseId": "earbuds-3",
+      "decisionId": "6ffb834f-fdf9-4e4f-922e-bbfa72f99f57"
+    },
+    {
+      "caseId": "laptop-1",
+      "decisionId": "2cf5f70c-1080-49cd-bc8a-52c0a7af5148"
+    },
+    {
+      "caseId": "laptop-2",
+      "decisionId": "8e8ef4d3-be0f-4d98-b647-2c4ab6fe7f2a"
+    },
+    {
+      "caseId": "laptop-3",
+      "decisionId": "31581c0b-d964-4065-a4a4-e386c17d8278"
+    },
+    {
+      "caseId": "phone-1",
+      "decisionId": "5df5ce5e-5804-4ad0-b160-b0f115c030fb"
+    },
+    {
+      "caseId": "phone-2",
+      "decisionId": "07253868-d591-42e7-a7f3-37121bd4b063"
+    },
+    {
+      "caseId": "phone-3",
+      "decisionId": "70672dca-23ba-4698-8427-accd457a7800"
+    },
+    {
+      "caseId": "tablet-1",
+      "decisionId": "673c024e-94cc-4fd5-acdf-74b46e7e110b"
+    },
+    {
+      "caseId": "tablet-2",
+      "decisionId": "bb150f15-0f71-4f4e-9889-306d6a7e4d72"
+    },
+    {
+      "caseId": "tablet-3",
+      "decisionId": "a09bc7eb-cdc0-4448-adbe-e845581e4101"
+    },
+    {
+      "caseId": "monitor-1",
+      "decisionId": "3d6ae3ec-bd18-416f-ba19-8d0e508b7f10"
+    },
+    {
+      "caseId": "monitor-2",
+      "decisionId": "a5921bdb-517d-4540-bc1d-ff9ca6d955e9"
+    },
+    {
+      "caseId": "monitor-3",
+      "decisionId": "6cd9a837-95d8-46bf-9809-6cb4ae065dd0"
+    }
+  ],
+  "observedCompleted": 15,
+  "completeInstrumentation": 6,
+  "stopReason": "기존 개발 backend가 동일 DB 작업을 처리하여 초기 비교를 무효 처리함. A 중단 후 추가 외부 호출은 승인 대기."
+}

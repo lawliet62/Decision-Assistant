@@ -48,6 +48,8 @@ public class SerperSearchProvider implements WebSearchProvider {
                     .POST(HttpRequest.BodyPublishers.ofString(json.writeValueAsString(
                             Map.of("q", query, "num", Math.min(5, Math.max(1, limit)), "gl", "kr", "hl", "ko"))))
                     .build();
+            org.slf4j.LoggerFactory.getLogger(SerperSearchProvider.class).info(
+                    "product_event=discovery_provider_call decision_id={} provider=serper", org.slf4j.MDC.get("discoveryDecisionId"));
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) throw unavailable();
             var root = json.readTree(response.body());
