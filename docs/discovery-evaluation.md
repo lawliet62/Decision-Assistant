@@ -17,7 +17,11 @@ node scripts/discovery-evaluation/run.mjs --execute-live --variant baseline --so
 node scripts/discovery-evaluation/run.mjs --execute-live --variant a --source-commit 994dd90 --jar backend/build/discovery-evaluation/a.jar --output backend/build/discovery-evaluation/a
 ```
 
-실행기는 빈 포트 `127.0.0.1:18080`에서 JAR를 실행하고 local 인증·CSRF·동의·quota를 거쳐 API로 비교를 생성한다. 같은 포트를 사용하는 E2E와 동시에 실행하지 않는다. 생성 간격은 최소 13초이며 호출 실패를 자동 재시도하지 않는다. 한도 응답이면 중단하고 미실행 사례를 남긴다. 완료 후 자신이 실행한 JVM만 종료한다. 기존 결과 디렉터리는 덮어쓰지 않는다.
+실행기는 빈 포트 `127.0.0.1:18080`에서 JAR를 실행하고 local 인증·CSRF·동의·quota를 거쳐 API로 비교를 생성한다. 같은 포트를 사용하는 E2E와 동시에 실행하지 않는다. 생성 간격은 기본 65초(`--min-interval-ms`, 최소 13초)이며 호출 실패를 자동 재시도하지 않는다. 한도 응답이면 중단하고 미실행 사례를 남긴다. 완료 후 자신이 실행한 JVM만 종료한다. 기존 결과 디렉터리는 덮어쓰지 않는다.
+
+2026-09-30 재실험에서 초기 13초 간격은 수집이 이어질 때 Firecrawl 429를 유발했다. [공식 한도 문서](https://docs.firecrawl.dev/rate-limits)는 Free의 `/scrape`를 분당 10회로 설명한다. 실제 계정 플랜·429의 상세 원인을 확정한 것은 아니지만, 보수적으로 생성 간격을 늘린다. 이 간격은 서로 다른 평가 조건 사이에만 적용되며 개별 요청의 대기 시간에는 포함하지 않는다. 전체 실험 시간에는 포함한다.
+
+한도 상태를 검토한 뒤 승인된 호출 예산 안에서 미실행 조건만 이어갈 때는 `--resume-from <이전 결과 디렉터리>`와 새로운 `--output`을 명시한다. 이전 manifest/JAR/입력 hash·완료 계측·생성 기록을 검사하며, 실패·부분 성공을 포함해 이미 결과가 나온 조건은 재실행하지 않는다. 이어간 결과는 이전 결과와 합칠 때 조건 ID 중복 없이 합치고 실행 구간과 생성 간격 변경을 보고한다. 호출 상한은 구간마다 새 예산으로 해석하지 않고 원래 15개 조건 전체에 적용한다.
 
 각 방식 최대 검색 15회·수집 75페이지·AI 15회다. 120초는 관찰 기준이며 실행 중단 조건이 아니다. UI/평가 runner의 관찰 timeout과 실제 provider 사용량은 다르며, 취소가 과금 취소를 뜻하지 않는다.
 

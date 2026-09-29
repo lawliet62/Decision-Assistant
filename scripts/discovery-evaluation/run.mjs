@@ -7,17 +7,22 @@ import { once } from "node:events";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs } from "node:util";
 import { backendEnvironment } from "../backend-env.mjs";
+import { selectRemaining } from "./plan.mjs";
 
 // 수동 Dev 실험 전용. API를 통해 동의·소유권·quota를 그대로 적용한다.
 const { values } = parseArgs({ options: {
   "execute-live": { type: "boolean", default: false },
   variant: { type: "string" }, jar: { type: "string" }, output: { type: "string" },
   "source-commit": { type: "string" },
+  "resume-from": { type: "string" }, "min-interval-ms": { type: "string", default: "65000" },
 } });
 if (!values["execute-live"] || !["baseline", "a"].includes(values.variant) || !values.jar || !values.output) {
   throw new Error("명시적 실행 필요: --execute-live --variant baseline|a --jar <bootJar> --output <새 결과 디렉터리>");
 }
-const cases = JSON.parse(readFileSync(new URL("./cases.json", import.meta.url), "utf8"));
+const allCases = JSON.parse(readFileSync(new URL("./cases.json", import.meta.url), "utf8"));
+let cases = allCases;
+const minIntervalMs = Number(values["min-interval-ms"]);
+if (!Number.isSafeInteger(minIntervalMs) || minIntervalMs < 13000) throw new Error("생성 간격은 13000ms 이상 정수여야 합니다.");
 const jar = resolve(values.jar);
 const output = resolve(values.output);
 const env = backendEnvironment(["bootRun"]);
@@ -41,11 +46,21 @@ const manifest = {
   commit: execFileSync("git", ["rev-parse", values["source-commit"] ?? "HEAD"], { encoding: "utf8" }).trim(),
   runnerCommit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   diffSha256: sha256(execFileSync("git", ["diff", "HEAD"])), jarSha256: sha256(readFileSync(jar)),
-  casesSha256: sha256(JSON.stringify(cases)),
+  casesSha256: sha256(JSON.stringify(allCases)),
   provider: env.DECISION_ASSISTANT_AI_PROVIDER ?? "gemini",
   model: env.DECISION_ASSISTANT_AI_MODEL ?? env.GEMINI_MODEL ?? "gemini-3.5-flash-lite",
-  maxRuns: 15, maxSearchCalls: 15, maxCollectionCalls: 75, maxAiCalls: 15,
+  minIntervalMs,
 };
+if (values["resume-from"]) {
+  const previousOutput = resolve(values["resume-from"]);
+  const readRows = name => readFileSync(resolve(previousOutput, name), "utf8").split(/\r?\n/).filter(Boolean).map(JSON.parse);
+  const previous = JSON.parse(readFileSync(resolve(previousOutput, "manifest.json"), "utf8"));
+  cases = selectRemaining(allCases, previous, readRows("results.jsonl"), readRows("created.jsonl"), manifest);
+  manifest.resumedFrom = previousOutput;
+  manifest.previousManifestSha256 = sha256(readFileSync(resolve(previousOutput, "manifest.json")));
+}
+Object.assign(manifest, {caseIds: cases.map(item => item.id), maxRuns: cases.length,
+  maxSearchCalls: cases.length, maxCollectionCalls: cases.length * 5, maxAiCalls: cases.length});
 writeFileSync(resolve(output, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 const java = spawn("java", ["-jar", jar], {
   env: { ...env, SERVER_PORT: String(port), SERVER_ADDRESS: "127.0.0.1" },
@@ -123,7 +138,7 @@ try {
   }
   if (!ready) throw new Error("서버 시작 대기 초과");
   for (const scenario of cases) {
-    await delay(Math.max(0, previousStart + 13000 - Date.now()));
+    await delay(Math.max(0, previousStart + minIntervalMs - Date.now()));
     const body = {
       title: `[탐색 평가 ${values.variant}] ${scenario.id}`, templateKey: scenario.category,
       discovery: { templateVersion: "intake-v2", uses: scenario.uses, maxBudget: scenario.budget,
