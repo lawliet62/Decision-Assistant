@@ -38,11 +38,15 @@ public class DiscoveryPageCollector {
         var start = System.nanoTime();
         try {
             var url = urls.validate(result.url());
+            log.info("product_event=discovery_provider_call decision_id={} provider=firecrawl", id);
             var page = web.scrapeProduct(url);
             if (page == null || page.markdown() == null || page.markdown().isBlank())
                 return failed(id, new DiscoveryFailure(Stage.COLLECTION, Code.COLLECTION_EMPTY), null);
             var fetchedAt = Instant.now();
-            var product = OfficialProductParser.parse(url, page, fetchedAt);
+            var inspection = OfficialProductParser.inspect(url, page, fetchedAt);
+            log.info("product_event=discovery_offer_inspection decision_id={} outcome={}", id,
+                    inspection.rejection() == null ? "ACCEPTED" : inspection.rejection().name());
+            var product = inspection.product();
             var excerpt = DiscoveryEvidence.excerpt(page.markdown(), facts);
             // 구조화 데이터의 제품명도 수집 원문이다. 생성한 사양은 추가하지 않는다.
             if (product != null) {

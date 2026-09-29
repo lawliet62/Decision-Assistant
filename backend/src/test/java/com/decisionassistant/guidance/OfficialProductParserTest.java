@@ -26,6 +26,20 @@ class OfficialProductParserTest {
         assertThat(product.offer().policyVersion()).isEqualTo(OfficialStorePolicy.VERSION);
         assertThat(parse(product(OFFER).replace("/web/product/buds.jpg", "https://unverified.example/image.jpg")).offer().imageUrl()).isNull();
     }
+
+    @Test void reportsRejectionWithoutChangingAcceptanceOrRetainingPageContent() {
+        var html = "<script type='application/ld+json'>" + product(OFFER) + "</script>";
+        var valid = new WebEvidenceProvider.Page("Buds", "Buds", html, URL);
+        assertThat(OfficialProductParser.inspect(URL, valid, Instant.now()).rejection()).isNull();
+        assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", null, URL), Instant.now()).rejection())
+                .isEqualTo(OfficialProductParser.Rejection.HTML_MISSING);
+        assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", html, null), Instant.now()).rejection())
+                .isEqualTo(OfficialProductParser.Rejection.RESOLVED_URL_MISMATCH);
+        assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", "<p>21900원</p>", URL), Instant.now()).rejection())
+                .isEqualTo(OfficialProductParser.Rejection.PRODUCT_MISSING);
+        assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", html.replace("KRW", "USD"), URL), Instant.now()).rejection())
+                .isEqualTo(OfficialProductParser.Rejection.CURRENCY_UNSUPPORTED);
+    }
     @ParameterizedTest @ValueSource(strings = {
             "\"offers\":{\"@type\":\"AggregateOffer\",\"lowPrice\":1,\"priceCurrency\":\"KRW\"}",
             "\"offers\":{\"@type\":\"Offer\",\"price\":1,\"priceCurrency\":\"USD\"}",

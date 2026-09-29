@@ -86,6 +86,7 @@ public class DiscoveryWorker {
                 return;
             }
             var officialResults = searchResults.stream().filter(item -> OfficialStorePolicy.store(item.url()).isPresent()).toList();
+            log.info("product_event=discovery_search_filter decision_id={} public={} official={}", work.id(), searchResults.size(), officialResults.size());
             if (officialResults.isEmpty()) { empty(work, "NO_OFFICIAL_RESULTS", false); return; }
             var unseen = officialResults.stream().filter(item -> !work.excluded().containsUrl(item.url())).toList();
             if (unseen.isEmpty()) { empty(work, "NO_NEW_PRODUCTS", false); return; }
@@ -94,6 +95,8 @@ public class DiscoveryWorker {
             progress(work, stage);
             var collected = collector.collect(work.id(), unseen, template.facts());
             var collectionFailures = collected.failures();
+            log.info("product_event=discovery_collection_results decision_id={} attempted={} collected={} failed={}",
+                    work.id(), unseen.size(), collected.pages().size(), collectionFailures.size());
             if (collected.pages().isEmpty()) {
                 fail(work, collectionFailures.getFirst(), null);
                 return;
@@ -108,11 +111,25 @@ public class DiscoveryWorker {
             stage = Stage.AI;
             trace.enter(stage);
             progress(work, stage);
-            var result = executor.call(() -> ai.discover(input));
+            var result = executor.call(() -> {
+                log.info("product_event=discovery_provider_call decision_id={} provider=ai model={}", work.id(), properties.model());
+                return ai.discover(input);
+            });
+            log.info("product_event=discovery_ai_usage decision_id={} provider={} model={} input_tokens={} output_tokens={}",
+                    work.id(), properties.provider(), properties.model(), result.inputTokens(), result.outputTokens());
             stage = Stage.VALIDATION;
             trace.enter(stage);
             progress(work, stage);
             var verified = validateOfficialProducts(work.id(), result.value(), input);
+            var groups = new EnumMap<DiscoveryRanking.Group, Integer>(DiscoveryRanking.Group.class);
+            for (var candidate : verified) {
+                var checks = MinimumRequirementMatcher.check(template.minimumRequirements(), condition.selectedRequirements(), candidate.facts());
+                groups.merge(DiscoveryRanking.group(candidate.officialOffer(), checks, condition.maxBudget()), 1, Integer::sum);
+            }
+            log.info("product_event=discovery_candidate_validation decision_id={} proposed={} verified={} recommended={} unknown={} below={}",
+                    work.id(), result.value() == null || result.value().products() == null ? 0 : result.value().products().size(), verified.size(),
+                    groups.getOrDefault(DiscoveryRanking.Group.RECOMMENDED, 0), groups.getOrDefault(DiscoveryRanking.Group.UNKNOWN, 0),
+                    groups.getOrDefault(DiscoveryRanking.Group.BELOW, 0));
             var partial = !collectionFailures.isEmpty();
             stage = Stage.PERSISTENCE;
             trace.enter(stage);

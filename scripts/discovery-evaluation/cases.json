@@ -1,0 +1,17 @@
+[
+  {"id":"earbuds-1","category":"EARBUDS","uses":["출퇴근","운동","통화","음악"],"budget":null,"compatibility":"Android","requirements":{"anc":"required"}},
+  {"id":"earbuds-2","category":"EARBUDS","uses":["출퇴근","통화"],"budget":100000,"compatibility":"Android","requirements":{"anc":"required"}},
+  {"id":"earbuds-3","category":"EARBUDS","uses":["음악"],"budget":300000,"compatibility":"iOS","requirements":{}},
+  {"id":"laptop-1","category":"LAPTOP","uses":["학업","사무"],"budget":1500000,"compatibility":"Windows","requirements":{"memory":"16","storage":"512"}},
+  {"id":"laptop-2","category":"LAPTOP","uses":["창작"],"budget":3000000,"compatibility":"macOS","requirements":{"memory":"16","storage":"512"}},
+  {"id":"laptop-3","category":"LAPTOP","uses":["게임"],"budget":2000000,"compatibility":"Windows","requirements":{"memory":"32","storage":"1000"}},
+  {"id":"phone-1","category":"PHONE","uses":["일상","사진"],"budget":1000000,"compatibility":"Android","requirements":{"storage":"256"}},
+  {"id":"phone-2","category":"PHONE","uses":["업무"],"budget":1500000,"compatibility":"iOS","requirements":{"storage":"256"}},
+  {"id":"phone-3","category":"PHONE","uses":["게임"],"budget":1500000,"compatibility":"Android","requirements":{"storage":"256","refreshRate":"120"}},
+  {"id":"tablet-1","category":"TABLET","uses":["필기","영상"],"budget":600000,"compatibility":"Android","requirements":{"storage":"128","pen":"required"}},
+  {"id":"tablet-2","category":"TABLET","uses":["그림"],"budget":1500000,"compatibility":"iPadOS","requirements":{"storage":"256","pen":"required"}},
+  {"id":"tablet-3","category":"TABLET","uses":["업무"],"budget":1000000,"compatibility":"Android","requirements":{"storage":"256","refreshRate":"120"}},
+  {"id":"monitor-1","category":"MONITOR","uses":["사무"],"budget":400000,"compatibility":"HDMI","requirements":{"resolution":"qhd"}},
+  {"id":"monitor-2","category":"MONITOR","uses":["게임"],"budget":700000,"compatibility":"DisplayPort","requirements":{"resolution":"qhd","refreshRate":"144"}},
+  {"id":"monitor-3","category":"MONITOR","uses":["디자인"],"budget":1000000,"compatibility":"USB-C","requirements":{"resolution":"uhd"}}
+]
