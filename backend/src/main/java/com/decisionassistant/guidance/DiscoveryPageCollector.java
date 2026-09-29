@@ -19,7 +19,10 @@ public class DiscoveryPageCollector {
     private record Collected(SourcePage page, DiscoveryFailure failure) {}
 
     Result collect(UUID decisionId, List<WebSearchProvider.SearchResult> results, List<String> facts) {
-        var tasks = results.stream().limit(5).map(result -> (Callable<Collected>) () -> collectOne(decisionId, result, facts)).toList();
+        return collect(decisionId, results, facts, List.of());
+    }
+    Result collect(UUID decisionId, List<WebSearchProvider.SearchResult> results, List<String> facts, List<String> priority) {
+        var tasks = results.stream().limit(5).map(result -> (Callable<Collected>) () -> collectOne(decisionId, result, facts, priority)).toList();
         try {
             var pages = new ArrayList<SourcePage>();
             var failures = new ArrayList<DiscoveryFailure>();
@@ -34,7 +37,7 @@ public class DiscoveryPageCollector {
         } catch (ExecutionException ex) { throw new IllegalStateException("수집 작업에 실패했습니다.", ex.getCause()); }
     }
 
-    private Collected collectOne(UUID id, WebSearchProvider.SearchResult result, List<String> facts) {
+    private Collected collectOne(UUID id, WebSearchProvider.SearchResult result, List<String> facts, List<String> priority) {
         var start = System.nanoTime();
         try {
             var url = urls.validate(result.url());
@@ -48,12 +51,27 @@ public class DiscoveryPageCollector {
                     inspection.rejection() == null ? "ACCEPTED" : inspection.rejection().name());
             var product = inspection.product();
             var excerpt = DiscoveryEvidence.excerpt(page.markdown(), facts);
+            var blocks = new ArrayList<EvidenceBlock>();
+            int remaining = 6000;
             // 구조화 데이터의 제품명도 수집 원문이다. 생성한 사양은 추가하지 않는다.
             if (product != null) {
-                var metadata = "# " + product.name() + "\n" + product.description() + "\n\n<!-- evidence boundary -->\n\n";
-                excerpt = metadata + excerpt.substring(0, Math.min(excerpt.length(), 6000 - metadata.length()));
+                var heading = "# " + product.name() + "\n";
+                remaining -= heading.length() + 32 + Objects.toString(product.priceQuote(), "").length();
+                for (var block : inspection.blocks().stream().filter(b -> facts.contains(b.factName()))
+                        .sorted(Comparator.comparingInt(b -> priority.contains(b.factName()) ? 0 : 1)).toList()) {
+                    int size = block.id().length() + block.productIdentity().length() + block.factName().length()
+                            + block.label().length() + block.value().length() + block.quote().length();
+                    if (size <= remaining) { blocks.add(block); remaining -= size; }
+                    else log.info("product_event=discovery_field_evidence decision_id={} field={} outcome=BUDGET_OMITTED", id, fieldKey(block.factName()));
+                }
+                var description = product.description().substring(0, Math.min(product.description().length(), Math.min(500, remaining)));
+                var metadata = heading + description + "\n\n<!-- evidence boundary -->\n\n";
+                excerpt = metadata + excerpt.substring(0, Math.min(excerpt.length(), remaining - description.length()));
+                product = new OfficialProduct(product.name(), product.identity(), product.offer(), "", product.priceQuote());
             }
-            return new Collected(new SourcePage(url, page.title(), excerpt, fetchedAt, product), null);
+            for (var field : priority) log.info("product_event=discovery_field_evidence decision_id={} field={} outcome={}", id, fieldKey(field),
+                    blocks.stream().anyMatch(b -> b.factName().equals(field)) ? "BLOCK_AVAILABLE" : "BLOCK_MISSING");
+            return new Collected(new SourcePage(url, page.title(), excerpt, fetchedAt, product, List.copyOf(blocks)), null);
         } catch (RuntimeException ex) { return failed(id, classify(Stage.COLLECTION, ex), ex); }
         finally { log.info("product_event=discovery_page_timing decision_id={} duration_ms={}", id, (System.nanoTime() - start) / 1_000_000); }
     }
@@ -63,4 +81,13 @@ public class DiscoveryPageCollector {
         return new Collected(null, failure);
     }
     @PreDestroy void close() { pool.shutdownNow(); }
+    static String fieldKey(String field) {
+        return switch (field) { case "메모리" -> "memory"; case "저장공간" -> "storage"; case "ANC 지원" -> "anc";
+            case "펜 지원" -> "pen"; case "주사율" -> "refresh_rate"; case "해상도" -> "resolution";
+            case "호환성", "OS", "연결 단자" -> "compatibility"; case "가격" -> "price";
+            case "전용 앱" -> "app"; case "기기별 추가 기능" -> "extra_features"; case "CPU/GPU" -> "cpu_gpu";
+            case "배터리" -> "battery"; case "무게" -> "weight"; case "방수" -> "water_resistance";
+            case "화면", "크기" -> "display"; case "형태" -> "form"; case "카메라" -> "camera"; case "패널" -> "panel";
+            default -> "other"; };
+    }
 }

@@ -126,6 +126,8 @@
 ### BR-DISC-02: 주요 정보와 평가값은 구분한다
 
 - **동작:** 제품·사양은 수집한 페이지의 URL·원문 인용과 대조하고 값·통화·조회 시점을 표시한다. 제품명이 같은 인용에 있거나 해당 제품 제목 아래의 동일 근거 블록에 있는 사양만 허용한다. 사양은 미확인 또는 UNREVIEWED이며 OptionValue·만족도 rating을 자동 생성하지 않는다. 원문 전체는 저장하지 않는다.
+- **동작:** `official-kr-v2`는 같은 상품에 연결된 구조화 속성·사양 표의 항목/값을 근거 블록으로 사용할 수 있다. 제품 식별·항목·인용을 서버가 대조하며 다른 제품·구성·리뷰의 근거는 제외한다. 분리된 단위와 기본 장착 사양의 정규화는 원문·정규화 버전을 함께 보존하고 UNREVIEWED를 유지한다.
+- **동작:** 새 추천 설명은 최종 검증을 통과한 가격·사양·조건 판정으로 서버가 구성한다. 미달·미확인과 용도별 검증 한계를 알리며, 제거된 사양이나 AI의 자유 적합성 주장을 설명에 남기지 않는다.
 - **동작:** 같은 비교 글이 여러 제품의 근거가 될 수 있다. 새 추천은 제품명 중복을 제한하고 승인 시 저장된 사양을 Option에 연결한다. 중복 승인으로 Option이 늘어나지 않으며 최대 5개를 유지한다.
 - **동작:** 주요 정보 비교와 실제 선택은 점수 평가 없이 가능하다. 용도 선택은 weight를 변경하지 않으며 선택한 최대 예산은 context와 최대 예산 constraint에 반영한다. 기존 검증된 평가의 완전성 규칙은 유지한다.
 - **이유:** 사용자가 객관적 정보를 직접 비교하면서 AI 추출·개인 만족도·재현 가능한 평가를 구별하게 한다.
@@ -136,12 +138,14 @@
 - **동작:** 최소 조건 중 ANC·전용 펜은 후보 발견용 검색 힌트로 사용하고, 전체 최소 조건은 AI 입력과 근거 기반 서버 판정에 보존한다. 호출 수·동의·quota·메모/identity 제외 정책은 유지하며 조건을 자동 완화하거나 재검색하지 않는다. v1 데이터와 재시도는 기존 조건을 유지한다.
 - **동작:** 사양 누락·모호함·상충은 UNKNOWN이다. 단일 수치·명확한 단위와 지원 표현을 비교하며 저장 공간은 1TB=1,000GB, 해상도는 가로·세로 각각을 기준으로 한다. 자동 사양의 MEETS는 검증 완료가 아니며 UNREVIEWED를 유지한다.
 - **동작:** UNKNOWN에는 근거 없음·표현 모호함·근거 상충의 사유를 표시한다. 명시적인 ANC 탑재·지원 표현을 해석하되 통화 소음 억제나 수동 차음을 ANC 지원으로 취급하지 않는다.
+- **동작:** v2는 선택한 호환성도 기본 추천의 필수 검사에 포함한다. 제공 OS·영상 입력·이어폰 기본 플랫폼 호환의 확인 여부를 최소 사양과 별도 표시한다. 앱 지원은 이어폰의 기본 사용 지원을 대체하지 않으며, 명시적인 미지원 없이 다른 플랫폼을 지원한다는 이유만으로 미달로 처리하지 않는다. 전용 앱·기기별 기능은 근거와 제약이 있을 때 별도 정보로 제공한다.
 - **동작:** 공식 판매처 정책이 적용된 후보는 최소 사양을 모두 충족하고 예산 안에 있을 때만 기본 목록에 둔다. 하나라도 BELOW거나 예산 초과이면 미달 영역, UNKNOWN이 있으면 근거 부족 영역에 분리한다. 영역 안에서는 확인 판매가·제품명 순으로 정렬한다. 미달·미확인 후보도 사용자가 비교에 추가할 수 있다. 승인 후 비교표에서 조건별 근거를 유지하고 사용자 확인 수치는 표시·판정에 함께 우선한다.
 - **이유:** 포트폴리오 MVP에서 적은 외부 호출로 조건·근거·판정의 연결을 보여준다. 기존 평가값·가중치·hard Constraint를 자동 변경하지 않는다.
 
 ### BR-DISC-04: 공식 판매처와 확인 판매가의 범위를 알린다
 
 - **동작:** [등록 근거가 있는 판매처](official-stores.md)의 한국어 개별 상품 페이지에서 정확한 KRW 판매가를 확인한 제품만 추천한다. HTML의 단일 Product/Offer를 검증하며 가격 범위·조건부 가격·불명확한 구성은 제외한다. 가격은 AI 생성값으로 대체하지 않는다.
+- **동작:** v2는 같은 상품 구매 영역의 가격 라벨·금액도 대조한다. 해당 금액의 회원·쿠폰·카드 조건 또는 본문 연결 불명확은 가격 미확인으로 제외한다. 과거 v1 결과에 새 가격·호환성 검증을 소급하지 않는다.
 - **동작:** 공식 제품 이미지는 확인한 이미지 호스트에서 브라우저가 referrer 없이 직접 불러온다. 이미지가 없거나 실패하면 대체 영역을 표시한다. 입력 화면에서 이미지 서버로 IP가 전달됨을 알린다.
 - **동작:** 홈·조건 입력·결과에 공식 판매처 기준과 다른 판매·할인 경로가 더 저렴할 수 있음을 본문으로 표시한다. 실행의 정책 버전과 개별 공식 offer를 저장하며 기존 추천·직접 추가를 공식 추천으로 소급하지 않는다.
 - **이유:** 추천 범위와 가격 정렬의 의미를 명확히 하되 제품 안전성·품질·정품·최저가를 인증하지 않는다.
@@ -206,6 +210,7 @@
 | BR-DISC-01~02 | `DiscoveryWorkerTest`, `DiscoveryFailureTest`, `ProviderResponseConversionTest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-DISC-03 | `MinimumRequirementMatcherTest`, `DiscoveryApiIntegrationTest.minimumRequirementsPersistAndRemainAdvisoryWithBoundedExternalCalls`, `DiscoveryApiIntegrationTest.invalidMinimumRequirementsAndLegacyVersionCannotTriggerProviders`, `frontend/e2e/minimum-requirements.spec.ts` |
 | BR-DISC-04 | `OfficialProductParserTest`, `ProviderResponseConversionTest.productScrapeConvertsHtmlAndFinalUrlWithOneRequest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
+| BR-DISC-02~04 (v2) | `DiscoveryVerificationTest`, `DiscoveryApiIntegrationTest.compatibilityIsRequiredWithoutMinimumSpecsAndLegacyPolicyKeepsItsOriginalMeaning`, `frontend/e2e/minimum-requirements.spec.ts` |
 | BR-DISC-05 | `DiscoveryExclusionsTest`, `DiscoveryApiIntegrationTest.refreshExcludesAllPreviousProductsAndPreservesAcceptedInputAndHistory`, `DiscoveryApiIntegrationTest.failedRefreshKeepsPreviousListAndRetryUsesSameGeneration`, `DiscoveryApiIntegrationTest.concurrentRefreshRequestsCreateOneNewGeneration`, `DiscoveryApiIntegrationTest.lateAiCompletionCannotOverwriteANewerExecution`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-TPL-01 | `DecisionApiIntegrationTest.earbudsAndSelectedSourcesReuseExistingLifecycle`, `EvidenceWorkflowWorkerTest.earbudsNeverAutoFillSubjectiveRatings` |
 | BR-DEC-02, BR-EVD-03 | `frontend/e2e/guided-decision.spec.ts` (선택→평가→회고·한도 fallback·polling/충돌 입력 보존·수집 재시도) |

@@ -11,9 +11,10 @@ import static com.decisionassistant.guidance.DiscoveryContracts.*;
 class OfficialProductParserTest {
     private static final String URL = "https://qcystore.co.kr/product/detail.html?product_no=1033";
     private static final String OFFER = "\"offers\":{\"@type\":\"Offer\",\"price\":21900,\"priceCurrency\":\"KRW\"}";
+    private static final String PURCHASE = "<article itemscope itemtype='https://schema.org/Product'><h1 itemprop='name'>Buds</h1><table><tr><th>판매가</th><td>21,900원</td></tr></table></article>";
     private OfficialProduct parse(String data) { return parse(data, URL); }
     private OfficialProduct parse(String data, String resolved) {
-        return OfficialProductParser.parse(URL, new WebEvidenceProvider.Page("Buds", "Buds ANC 지원", "<script type='application/ld+json'>" + data + "</script>", resolved), Instant.now());
+        return OfficialProductParser.parse(URL, new WebEvidenceProvider.Page("Buds", "Buds ANC 지원", "<script type='application/ld+json'>" + data + "</script>" + PURCHASE, resolved), Instant.now());
     }
     private String product(String offer) { return "{\"@type\":\"Product\",\"name\":\"Buds\",\"sku\":\"buds-1\",\"image\":\"/web/product/buds.jpg\"," + offer + "}"; }
 
@@ -28,7 +29,7 @@ class OfficialProductParserTest {
     }
 
     @Test void reportsRejectionWithoutChangingAcceptanceOrRetainingPageContent() {
-        var html = "<script type='application/ld+json'>" + product(OFFER) + "</script>";
+        var html = "<script type='application/ld+json'>" + product(OFFER) + "</script>" + PURCHASE;
         var valid = new WebEvidenceProvider.Page("Buds", "Buds", html, URL);
         assertThat(OfficialProductParser.inspect(URL, valid, Instant.now()).rejection()).isNull();
         assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", null, URL), Instant.now()).rejection())

@@ -89,7 +89,10 @@ public class DiscoveryWorker {
             stage = Stage.COLLECTION;
             trace.enter(stage);
             progress(work, stage);
-            var collected = collector.collect(work.id(), unseen, template.facts());
+            var priority = new ArrayList<>(template.minimumRequirements().stream().filter(d -> condition.selectedRequirements().containsKey(d.id()))
+                    .map(com.decisionassistant.template.MinimumRequirements.MinimumRequirement::factName).toList());
+            if (condition.compatibility() != null) priority.add(switch (work.category()) { case EARBUDS -> "호환성"; case MONITOR -> "연결 단자"; default -> "OS"; });
+            var collected = collector.collect(work.id(), unseen, template.facts(), priority);
             var collectionFailures = collected.failures();
             log.info("product_event=discovery_collection_results decision_id={} attempted={} collected={} failed={}",
                     work.id(), unseen.size(), collected.pages().size(), collectionFailures.size());
@@ -120,7 +123,13 @@ public class DiscoveryWorker {
             var groups = new EnumMap<DiscoveryRanking.Group, Integer>(DiscoveryRanking.Group.class);
             for (var candidate : verified) {
                 var checks = MinimumRequirementMatcher.check(template.minimumRequirements(), condition.selectedRequirements(), candidate.facts());
-                groups.merge(DiscoveryRanking.group(candidate.officialOffer(), checks, condition.maxBudget()), 1, Integer::sum);
+                var compatibility = CompatibilityMatcher.check(work.category(), condition.compatibility(), candidate.facts(), candidate.officialOffer());
+                var loggedChecks = new ArrayList<>(checks);
+                if (compatibility != null) loggedChecks.add(compatibility);
+                for (var check : loggedChecks) log.info("product_event=discovery_requirement_check decision_id={} field={} status={} reason={}",
+                        work.id(), check.id(), check.status(), check.unknownReason() == null ? "none" : check.unknownReason());
+                candidate.reason(DiscoveryExplanation.explain(input, candidate.officialOffer(), candidate.facts(), checks, compatibility));
+                groups.merge(DiscoveryRanking.group(candidate.officialOffer(), checks, condition.maxBudget(), compatibility), 1, Integer::sum);
             }
             log.info("product_event=discovery_candidate_validation decision_id={} proposed={} verified={} recommended={} unknown={} below={}",
                     work.id(), result.value() == null || result.value().products() == null ? 0 : result.value().products().size(), verified.size(),
@@ -201,9 +210,16 @@ public class DiscoveryWorker {
             candidate.officialProduct(product);
             var facts = new ArrayList<>(candidate.facts().stream()
                     .filter(fact -> !"가격".equals(fact.name()) && candidate.url().equals(fact.sourceUrl())).toList());
+            var source = input.pages().stream().filter(p -> p.url().equals(candidate.url())).findFirst().orElseThrow();
+            for (var block : source.evidenceBlocks()) {
+                if (!block.productIdentity().equals(product.identity()) || !input.factNames().contains(block.factName())) continue;
+                var fact = SpecNormalizer.fact(block, source.url(), source.fetchedAt());
+                if (facts.stream().noneMatch(f -> f.name().equals(fact.name()) && f.quote().equals(fact.quote()))) facts.add(fact);
+                if (fact.normalizationVersion() != null) log.info("product_event=discovery_field_validation decision_id={} field={} outcome=NORMALIZED", id, DiscoveryPageCollector.fieldKey(fact.name()));
+            }
             var offer = product.offer();
             facts.addFirst(new ProductFact("가격", offer.price().stripTrailingZeros().toPlainString() + " KRW", offer.purchaseUrl(),
-                    product.name() + " · " + offer.priceBasis() + " " + offer.price().toPlainString() + " KRW", offer.fetchedAt(), "UNREVIEWED"));
+                    product.priceQuote() == null ? product.name() + " · " + offer.priceBasis() + " " + offer.price().toPlainString() + " KRW" : product.priceQuote(), offer.fetchedAt(), "UNREVIEWED"));
             candidate.discovered(facts);
             accepted.add(candidate);
         }
@@ -237,18 +253,36 @@ public class DiscoveryWorker {
                 if (fact == null || fact.name() == null || !input.factNames().contains(fact.name()) || fact.value() == null
                         || fact.value().isBlank() || fact.value().length() > 300) { rejected.merge("INVALID_FIELD", 1, Integer::sum); continue; }
                 var page = pages.get(fact.sourceUrl());
-                if (page == null || !quoted(page, fact.quote()) || !fact.quote().contains(fact.value())
-                        || !DiscoveryEvidence.belongsToProduct(page.excerpt(), product.name(), fact.quote(), productNames)) {
-                    rejected.merge("UNBOUND_EVIDENCE", 1, Integer::sum); continue;
+                var block = page == null || fact.evidenceId() == null ? null : page.evidenceBlocks().stream()
+                        .filter(b -> b.id().equals(fact.evidenceId())).findFirst().orElse(null);
+                String rejection = page == null ? "SOURCE_MISSING" : null;
+                if (rejection == null && fact.evidenceId() != null) {
+                    if (block == null || !Objects.equals(block.quote(), fact.quote())) rejection = "QUOTE_MISMATCH";
+                    else if (page.officialProduct() == null || !page.officialProduct().name().equals(product.name())
+                            || !page.officialProduct().identity().equals(block.productIdentity()) || !page.url().equals(product.sourceUrl())) rejection = "PRODUCT_MISMATCH";
+                    else if (!block.factName().equals(fact.name())) rejection = "FIELD_MISMATCH";
+                    else if (!block.value().contains(fact.value())) rejection = "VALUE_MISMATCH";
+                } else if (rejection == null) {
+                    if (!quoted(page, fact.quote())) rejection = "QUOTE_MISMATCH";
+                    else if (!fact.quote().contains(fact.value())) rejection = "VALUE_MISMATCH";
+                    else if (!DiscoveryEvidence.belongsToProduct(page.excerpt(), product.name(), fact.quote(), productNames)) rejection = "PRODUCT_MISMATCH";
+                    else if (!SpecNormalizer.fieldMatches(fact.name(), fact.value(), fact.quote())) rejection = "FIELD_MISMATCH";
+                }
+                if (rejection != null) {
+                    rejected.merge(rejection, 1, Integer::sum);
+                    log.info("product_event=discovery_field_validation decision_id={} field={} outcome={}", decisionId, DiscoveryPageCollector.fieldKey(fact.name()), rejection);
+                    continue;
                 }
                 if ("가격".equals(fact.name()) && !fact.value().matches("(?is).*(KRW|원|₩|USD|\\$|EUR|€|JPY|¥|GBP|£).*$")) {
                     rejected.merge("CURRENCY_MISSING", 1, Integer::sum); continue;
                 }
-                facts.add(new ProductFact(fact.name(), fact.value(), page.url(),
-                        fact.quote(), page.fetchedAt(), "UNREVIEWED"));
+                facts.add(block == null ? new ProductFact(fact.name(), fact.value(), page.url(),
+                        fact.quote(), page.fetchedAt(), "UNREVIEWED") : SpecNormalizer.fact(block, page.url(), page.fetchedAt()));
             }
+            for (var field : input.factNames()) if (product.facts() == null || product.facts().stream().filter(Objects::nonNull).noneMatch(f -> field.equals(f.name())))
+                log.info("product_event=discovery_field_validation decision_id={} field={} outcome=AI_OMITTED", decisionId, DiscoveryPageCollector.fieldKey(field));
             var candidate = new CandidateSuggestion(decisionId, product.name().strip(), source.url(),
-                    truncate(Objects.toString(product.reason(), "조건과 주요 정보를 확인해 보세요."), 500), PROMPT_VERSION, Instant.now());
+                    "수집한 조건별 근거를 확인하세요.", PROMPT_VERSION, Instant.now());
             candidate.discovered(new ArrayList<>(facts));
             candidate.sourceEvidence(product.modelQuote(), source.fetchedAt()); result.add(candidate);
             if (result.size() == 5) break;
@@ -260,7 +294,6 @@ public class DiscoveryWorker {
     private static boolean quoted(SourcePage page, String quote) {
         return quote != null && !quote.isBlank() && quote.length() <= 600 && page.excerpt().contains(quote);
     }
-    private static String truncate(String text, int max) { return text.substring(0, Math.min(max, text.length())); }
     private static boolean editable(Decision decision) {
         return decision.status() == DecisionTypes.DecisionStatus.DRAFT || decision.status() == DecisionTypes.DecisionStatus.DEFERRED;
     }

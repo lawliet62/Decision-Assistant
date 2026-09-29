@@ -72,6 +72,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
           <ChoiceGroup title="주로 어떻게 쓰나요? (복수 선택)" options={[{ label: "아직 모르겠어요" }, ...(template.uses ?? []).map(value => ({ value, label: value }))]} selected={uses} onSelect={value => setUses(current => value === undefined ? [] : current.includes(value) ? current.filter(item => item !== value) : [...current, value])} />
           <ChoiceGroup title="최대 예산" options={[{ label: "제한 없음" }, ...(template.budgets ?? []).map(value => ({ value: String(value), label: `${value / 10000}만원` }))]} selected={budget === undefined ? undefined : String(budget)} onSelect={value => setBudget(value ? Number(value) : undefined)} />
           <ChoiceGroup title="필요한 호환성" options={[{ label: "상관없음" }, ...(template.compatibility ?? []).map(value => ({ value, label: value }))]} selected={compatibility} onSelect={setCompatibility} />
+          <p className="text-xs text-zinc-500">선택한 호환성을 확인하지 못한 제품은 별도로 표시합니다.{template.key === "EARBUDS" && " Android·iOS는 기본 연결·음악·통화 사용을 뜻합니다. 전용 앱과 기기별 추가 기능은 근거가 있으면 따로 안내합니다."}</p>
           {!!template.minimumRequirements?.length && <fieldset className="space-y-4 rounded-2xl border border-zinc-200 p-4">
             <legend className="px-1 font-semibold">필요한 최소 사양 (선택)</legend>
             <p className="text-sm text-zinc-600">필요한 항목만 선택하세요. 조건 충족 제품은 판매가 낮은 순으로 보여드리며, 미달하거나 근거가 부족한 제품은 따로 표시합니다.</p>

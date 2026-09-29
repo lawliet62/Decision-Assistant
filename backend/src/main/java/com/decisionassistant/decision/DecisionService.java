@@ -605,7 +605,8 @@ public class DecisionService {
             var facts = ProductFactResolver.resolve(decision, option.id(), source == null ? List.of() : source.facts(), fetchedAt);
             return new ProductFactsData(option.id(), facts, source == null ? fetchedAt : source.fetchedAt(),
                     source == null ? null : source.sourceExcerpt(), requirementChecks(decision, selected, facts),
-                    source == null ? null : source.officialOffer(), OfficialStorePolicy.sourceKind(option.sourceUrl(), source != null && source.officialOffer() != null));
+                    source == null ? null : source.officialOffer(), OfficialStorePolicy.sourceKind(option.sourceUrl(), source != null && source.officialOffer() != null),
+                    compatibilityCheck(decision, run == null ? null : run.conditions().compatibility(), facts, source == null ? null : source.officialOffer()));
         }).toList();
         return new DecisionResponse(
                 decision.id(), decision.version(), decision.title(), decision.templateKey(), decision.templateVersion(),
@@ -687,8 +688,14 @@ public class DecisionService {
     }
     private CandidateSuggestionData candidateData(Decision decision, java.util.Map<String, String> selected, CandidateSuggestion item, BigDecimal discoveryBudget) {
         var checks = requirementChecks(decision, selected, item.facts());
+        var run = discoveries.findById(decision.id()).orElse(null);
+        var compatibility = compatibilityCheck(decision, run == null ? null : run.conditions().compatibility(), item.facts(), item.officialOffer());
         return new CandidateSuggestionData(item.id(), item.name(), item.url(), item.reason(), item.status().name(), item.facts(), item.fetchedAt(),
                 item.sourceExcerpt(), checks, item.officialOffer(), OfficialStorePolicy.sourceKind(item.url(), item.officialOffer() != null),
-                DiscoveryRanking.group(item.officialOffer(), checks, discoveryBudget));
+                DiscoveryRanking.group(item.officialOffer(), checks, discoveryBudget, compatibility), compatibility);
+    }
+    private DiscoveryContracts.RequirementCheck compatibilityCheck(Decision decision, String requested,
+            List<DiscoveryContracts.ProductFact> facts, DiscoveryContracts.OfficialOffer offer) {
+        return com.decisionassistant.guidance.CompatibilityMatcher.check(decision.templateKey(), requested, facts, offer);
     }
 }

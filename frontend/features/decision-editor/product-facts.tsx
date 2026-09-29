@@ -10,9 +10,9 @@ import { ProductOffer } from "@/features/product-lookup/product-offer";
 type Fact = components["schemas"]["ProductFact"];
 type Check = components["schemas"]["RequirementCheck"];
 
-export function RequirementChecks({ checks }: { checks?: Check[] }) {
+export function RequirementChecks({ checks, label = "최소 사양 확인" }: { checks?: Check[]; label?: string }) {
   if (!checks?.length) return null;
-  return <ul aria-label="최소 사양 확인" className="space-y-3 text-sm">{checks.map(check => {
+  return <ul aria-label={label} className="space-y-3 text-sm">{checks.map(check => {
     const confirmed = check.facts?.length && check.facts.every(fact => fact.verificationStatus === "CONFIRMED");
     const unknown = check.unknownReason === "CONFLICT" ? "근거가 상충함" : check.unknownReason === "AMBIGUOUS" || check.facts?.length ? "표현이 모호함" : "근거 없음";
     const label = check.status === "BELOW" ? "미달" : check.status === "MEETS" ? confirmed ? "확인한 사양상 충족" : "수집 사양상 충족" : unknown;
@@ -48,6 +48,10 @@ export function ProductFacts({ decision }: { decision: DecisionResponse }) {
       return <th key={option.id} className="min-w-52 p-3 text-left align-top"><h3 className="font-semibold">{option.name}</h3><ProductOffer offer={source?.officialOffer} name={option.name} />{!source?.officialOffer && <SourceLink url={option.sourceUrl} kind={source?.sourceKind} />}</th>;
     })}</tr></thead>
       <tbody>{hasRequirements && <tr className="border-t border-zinc-100"><th className="sticky left-0 bg-white p-3 text-left align-top font-medium">최소 조건</th>{visible.map(option => <td key={option.id} className="p-3 align-top"><RequirementChecks checks={decision.productFacts?.find(item => item.optionId === option.id)?.requirementChecks} /></td>)}</tr>}
+      {decision.productFacts?.some(item => item.compatibilityCheck) && <tr className="border-t border-zinc-100"><th className="sticky left-0 bg-white p-3 text-left align-top font-medium">필요한 호환성</th>{visible.map(option => {
+        const check = decision.productFacts?.find(item => item.optionId === option.id)?.compatibilityCheck;
+        return <td key={option.id} className="p-3 align-top">{check ? <RequirementChecks checks={[check]} label="호환성 확인" /> : "미확인"}</td>;
+      })}</tr>}
       {names.map(name => <tr key={name} className="border-t border-zinc-100"><th className="sticky left-0 bg-white p-3 text-left font-medium">{name}</th>{visible.map(option => {
         const facts = decision.productFacts?.find(item => item.optionId === option.id)?.facts?.filter(fact => fact.name === name) ?? [];
         return <td key={option.id} className="space-y-3 p-3 align-top">{facts.length ? facts.map((fact, index) => <FactValue key={index} fact={fact} />) : <FactValue />}</td>;

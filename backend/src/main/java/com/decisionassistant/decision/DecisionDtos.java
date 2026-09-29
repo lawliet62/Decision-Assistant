@@ -41,7 +41,8 @@ public final class DecisionDtos {
                                    Instant fetchedAt, String sourceExcerpt,
                                    List<com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck> requirementChecks,
                                    com.decisionassistant.guidance.DiscoveryContracts.OfficialOffer officialOffer,
-                                   com.decisionassistant.guidance.OfficialStorePolicy.SourceKind sourceKind) {}
+                                   com.decisionassistant.guidance.OfficialStorePolicy.SourceKind sourceKind,
+                                   com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck compatibilityCheck) {}
 
     public record DecisionSummary(
             UUID id,
@@ -224,7 +225,8 @@ public final class DecisionDtos {
             List<com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck> requirementChecks,
             com.decisionassistant.guidance.DiscoveryContracts.OfficialOffer officialOffer,
             com.decisionassistant.guidance.OfficialStorePolicy.SourceKind sourceKind,
-            com.decisionassistant.guidance.DiscoveryRanking.Group recommendationGroup
+            com.decisionassistant.guidance.DiscoveryRanking.Group recommendationGroup,
+            com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck compatibilityCheck
     ) {
     }
 

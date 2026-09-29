@@ -36,11 +36,11 @@ for (const scenario of scenarios) {
     const gamma = page.getByRole("article", { name: `${scenario.name} Gamma`, exact: true });
     await expect(alpha.getByText("수집 사양상 충족", { exact: true })).toHaveCount(scenario.choices.length);
     await expect(gamma).not.toBeVisible();
-    await page.getByText("최소 조건의 근거가 부족한 제품 (1)", { exact: true }).click();
+    await page.getByText("최소 조건·호환성의 근거가 부족한 제품 (1)", { exact: true }).click();
     await expect(gamma.getByText("근거 없음", { exact: true })).toHaveCount(scenario.choices.length);
     for (const [label, choice] of scenario.choices) await expect(alpha.getByText(`${label}: ${choice}`, { exact: true })).toBeVisible();
     await expect(beta).not.toBeVisible();
-    await page.getByText("최소 조건·예산에 미달한 제품 (1)", { exact: true }).click();
+    await page.getByText("최소 조건·호환성·예산에 미달한 제품 (1)", { exact: true }).click();
     await expect(beta).toBeVisible();
     await expect(beta.getByText("미달", { exact: true })).toHaveCount(scenario.choices.length);
     await beta.getByRole("list", { name: "최소 사양 확인" }).getByText("출처·조회 시점").first().click();
@@ -72,7 +72,24 @@ test("선택 해제와 제품군 변경은 최소 조건을 초기화한다", as
   const sent = page.waitForRequest(request => request.method() === "POST" && request.url().endsWith("/api/v1/decisions"));
   await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
   expect((await sent).postDataJSON().discovery.minimumRequirements).toEqual({});
-  await expect(page.getByText("최소 조건·예산에 미달한 제품", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("최소 조건·호환성·예산에 미달한 제품", { exact: false })).toHaveCount(0);
+});
+
+test("최소 사양을 선택하지 않아도 기본 호환성을 분리하고 승인 후 유지한다", async ({ page }) => {
+  await page.goto("/decisions/new?category=EARBUDS");
+  await page.getByRole("group", { name: "필요한 호환성", exact: true }).getByRole("button", { name: "iOS", exact: true }).click();
+  await expect(page.getByText("Android·iOS는 기본 연결", { exact: false })).toBeVisible();
+  await consent(page);
+  await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
+  await expect(page.getByRole("article", { name: "무선 이어폰 Alpha", exact: true })).toBeVisible();
+  const unknown = page.getByRole("article", { name: "무선 이어폰 Gamma", exact: true });
+  await expect(unknown).not.toBeVisible();
+  await page.getByText("최소 조건·호환성의 근거가 부족한 제품 (1)", { exact: true }).click();
+  await expect(unknown.getByRole("list", { name: "호환성 확인" })).toContainText("근거 없음");
+  await expect(unknown).toContainText("기본 연결·사용 호환성을 수집 근거로 확인하지 못했습니다.");
+  await unknown.getByRole("button", { name: "비교에 추가", exact: true }).click();
+  await page.getByRole("button", { name: "후보 비교로 이동", exact: true }).click();
+  await expect(page.getByRole("row").filter({ has: page.getByRole("rowheader", { name: "필요한 호환성", exact: true }) })).toContainText("근거 없음");
 });
 
 test("기본 후보가 없으면 자동 재검색 없이 직접 추가와 조건 변경을 안내한다", async ({ page }) => {
@@ -85,7 +102,7 @@ test("기본 후보가 없으면 자동 재검색 없이 직접 추가와 조건
   await page.getByRole("group", { name: "ANC 지원", exact: true }).getByRole("button", { name: "지원 필수" }).click();
   await consent(page);
   await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
-  await page.getByText("최소 조건의 근거가 부족한 제품 (1)", { exact: true }).click();
+  await page.getByText("최소 조건·호환성의 근거가 부족한 제품 (1)", { exact: true }).click();
   for (const name of ["Alpha", "Gamma"]) await page.getByRole("article", { name: `무선 이어폰 ${name}`, exact: true }).getByRole("button", { name: "제외", exact: true }).click();
   await expect(page.getByText("추가할 기본 추천 후보가 없습니다.", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "조건 바꿔 새로 찾기" })).toBeVisible();

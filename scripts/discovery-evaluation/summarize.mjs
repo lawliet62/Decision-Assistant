@@ -49,6 +49,9 @@ export function summarize(rows) {
     queueMs: timings("queueMs"), executionMs: timings("executionMs"),
     offerInspections: countBy(events.filter(event => event.product_event === "discovery_offer_inspection"), "outcome"),
     failures: countBy(events.filter(event => ["discovery_failed", "discovery_page_failed"].includes(event.product_event)), "code"),
+    fieldEvidence: countBy(events.filter(event => event.product_event === "discovery_field_evidence").map(event => ({key: `${event.field}:${event.outcome}`})), "key"),
+    fieldValidation: countBy(events.filter(event => event.product_event === "discovery_field_validation").map(event => ({key: `${event.field}:${event.outcome}`})), "key"),
+    requirementResults: countBy(events.filter(event => event.product_event === "discovery_requirement_check").map(event => ({key: `${event.field}:${event.status}:${event.reason}`})), "key"),
     funnel,
   };
 }

@@ -65,6 +65,7 @@ public class CandidateSuggestion {
     public String name() { return name; }
     public String url() { return url; }
     public String reason() { return reason; }
+    void reason(String value) { reason = value; }
     public Status status() { return status; }
     public String provider() { return provider; }
 }

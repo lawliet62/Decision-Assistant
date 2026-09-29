@@ -20,9 +20,10 @@ final class OfficialProductParser {
         PRODUCT_MISSING, PRODUCT_AMBIGUOUS, PRODUCT_NAME_INVALID, VARIANT_UNSUPPORTED,
         OFFER_MISSING, OFFER_TYPE_UNSUPPORTED, CURRENCY_UNSUPPORTED, CONDITIONAL_PRICE,
         UNAVAILABLE, NOT_NEW, OFFER_URL_MISMATCH, PRICE_EXPIRED, PRICE_INVALID,
-        PRICE_AMBIGUOUS, IDENTITY_INVALID
+        PRICE_AMBIGUOUS, IDENTITY_INVALID, PRICE_CONTEXT_MISSING
     }
-    record Result(OfficialProduct product, Rejection rejection) {
+    record Result(OfficialProduct product, Rejection rejection, List<EvidenceBlock> blocks) {
+        Result(OfficialProduct product, Rejection rejection) { this(product, rejection, List.of()); }
         private static Result rejected(Rejection reason) { return new Result(null, reason); }
     }
 
@@ -86,17 +87,20 @@ final class OfficialProductParser {
         }
         if (prices.size() != 1) return Result.rejected(Rejection.PRICE_AMBIGUOUS);
         var price = prices.first();
+        var sku = product.path("sku").asText(product.path("productGroupID").asText("")).strip();
+        if (sku.length() > 300) return Result.rejected(Rejection.IDENTITY_INVALID);
+        var visible = VisiblePrice.inspect(doc, requestedUrl, name, sku, price);
+        if (visible.rejection() != null) return Result.rejected(visible.rejection());
         var images = product.has("image") ? product.path("image") : variants.getFirst().path("image");
         var first = images.isArray() ? images.path(0) : images;
         var image = OfficialStorePolicy.image(store, requestedUrl, first.isObject() ? first.path("url").asText("") : first.asText(""));
         if (first.isMissingNode() || first.isNull() || first.asText("").isBlank() && !first.isObject()) image = null;
-        var sku = product.path("sku").asText(product.path("productGroupID").asText("")).strip();
-        if (sku.length() > 300) return Result.rejected(Rejection.IDENTITY_INVALID);
         var identity = store.id() + ":" + (sku.isBlank() ? name.replaceAll("[\\s\\p{Punct}]", "").toLowerCase(Locale.ROOT) : sku.toLowerCase(Locale.ROOT));
         var description = Jsoup.parse(product.path("description").asText("")).text();
         if (description.length() > 1500) description = description.substring(0, 1500);
         return new Result(new OfficialProduct(name, identity, new OfficialOffer(requestedUrl, store.name(), price, "KRW", image,
-                fetchedAt, "상품 구조화 데이터의 판매가", OfficialStorePolicy.VERSION), description), null);
+                fetchedAt, "상품 구조화 데이터·구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), description, visible.quote()), null,
+                ProductEvidence.extract(doc, product, requestedUrl, name, identity));
     }
 
     private static List<JsonNode> iterable(JsonNode node) { var items = new ArrayList<JsonNode>(); node.forEach(items::add); return items; }
