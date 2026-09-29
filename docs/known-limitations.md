@@ -22,6 +22,10 @@
 - category를 넘는 preference transfer와 실제 outcome 기반 confidence 승급 정책
 - Google과 이메일 OTP identity의 명시적 account linking
 
+## 실제 평가에서 확인한 결함
+
+- 실제 탐색 평가에서 상품 구조화 Offer에 조건이 없지만 화면에는 회원할인가로 표시된 LG 상품이 가격 검증을 통과했다. BR-DISC-04의 조건부 가격 제외가 완전히 보장되지 않는 결함이며, 사양 미달을 `UNKNOWN`으로 남기는 추출 누락과 근거 없는 용도 적합성 설명도 확인했다. [출처 검토](evaluations/discovery-a-2026-09-30/source-review.md)를 참고한다. 공식 판매처라는 사실을 가격·사양·설명의 정확성 보증으로 취급하지 않는다.
+
 ## 의도적으로 단순화한 부분
 
 - 최소 사양은 포트폴리오용 MVP로 객관적 수치·지원 여부만 비교한다. 사양의 표현이 모호하거나 구성이 섞이면 확인 필요로 남긴다. CPU 성능·음질·배터리 사용 시간과 점수 평가 연동은 보류한다. 자동 인용 검사는 의미 정확성을 보장하지 않으며 실제 제품·구성 확인은 필요하다. [ADR 0010](decisions/0010-minimum-product-requirements.md)을 따른다.

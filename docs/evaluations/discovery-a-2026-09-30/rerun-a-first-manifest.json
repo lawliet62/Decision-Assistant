@@ -1,0 +1,30 @@
+{
+  "variant": "a",
+  "startedAt": "2026-09-29T22:07:52.726Z",
+  "commit": "994dd90c1bef11867afc042e061e3bda4f992929",
+  "runnerCommit": "57b28896ecd8cb3e95e5669ace947b6452cf3711",
+  "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "jarSha256": "a889f88e5160f0438c7b07a5fec73ae0de8c3911b12754c693fb3b04b32cd752",
+  "casesSha256": "30f97ad9151457ba8ee8dcc8728bd814bf89673c72460d795a7ba04bd0533a28",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "maxRuns": 15,
+  "maxSearchCalls": 15,
+  "maxCollectionCalls": 75,
+  "maxAiCalls": 15,
+  "stopReason": "계정 한도 응답으로 실험 중단. 자동 재시도하지 않습니다.",
+  "completed": 5,
+  "unexecuted": [
+    "laptop-3",
+    "phone-1",
+    "phone-2",
+    "phone-3",
+    "tablet-1",
+    "tablet-2",
+    "tablet-3",
+    "monitor-1",
+    "monitor-2",
+    "monitor-3"
+  ],
+  "finishedAt": "2026-09-29T22:10:14.154Z"
+}
