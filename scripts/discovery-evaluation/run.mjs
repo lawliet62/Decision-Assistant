@@ -12,6 +12,7 @@ import { backendEnvironment } from "../backend-env.mjs";
 const { values } = parseArgs({ options: {
   "execute-live": { type: "boolean", default: false },
   variant: { type: "string" }, jar: { type: "string" }, output: { type: "string" },
+  "source-commit": { type: "string" },
 } });
 if (!values["execute-live"] || !["baseline", "a"].includes(values.variant) || !values.jar || !values.output) {
   throw new Error("명시적 실행 필요: --execute-live --variant baseline|a --jar <bootJar> --output <새 결과 디렉터리>");
@@ -23,15 +24,22 @@ const env = backendEnvironment(["bootRun"]);
 if (env.SPRING_PROFILES_ACTIVE !== "local") throw new Error("local 프로필에서만 실행합니다.");
 const port = 18080;
 const base = `http://127.0.0.1:${port}`;
+// 같은 DB의 다른 scheduler가 작업을 claim하면 알고리즘/계측이 섞인다.
+// 일반 개발 서버가 켜져 있으면 실험을 시작하지 않는다. 다른 포트의 worker도 실행 전 중단해야 한다.
+const developmentServerRunning = await fetch("http://127.0.0.1:8080/api/v1/me", { signal: AbortSignal.timeout(1500) })
+  .then(() => true, () => false);
+if (developmentServerRunning) throw new Error("8080 개발 서버가 실행 중입니다. 같은 DB의 다른 backend를 중단한 뒤 평가하세요.");
 const probe = createServer();
 probe.listen(port, "127.0.0.1");
 await once(probe, "listening");
 await new Promise(resolveClose => probe.close(resolveClose));
 mkdirSync(output); // 기존 실험을 덮어쓰거나 자동 재실행하지 않는다.
 const sha256 = data => createHash("sha256").update(data).digest("hex");
+if (values["source-commit"] && !/^[a-f0-9]{7,40}$/.test(values["source-commit"])) throw new Error("source-commit은 Git commit hash여야 합니다.");
 const manifest = {
   variant: values.variant, startedAt: new Date().toISOString(),
-  commit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+  commit: execFileSync("git", ["rev-parse", values["source-commit"] ?? "HEAD"], { encoding: "utf8" }).trim(),
+  runnerCommit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   diffSha256: sha256(execFileSync("git", ["diff", "HEAD"])), jarSha256: sha256(readFileSync(jar)),
   casesSha256: sha256(JSON.stringify(cases)),
   provider: env.DECISION_ASSISTANT_AI_PROVIDER ?? "gemini",
@@ -90,12 +98,16 @@ function metrics(id) {
   const calls = provider => selected.filter(event => event.product_event === "discovery_provider_call" && event.provider === provider).length;
   const event = name => selected.find(item => item.product_event === name);
   const usage = event("discovery_ai_usage");
+  const coverageComplete = Boolean(event("discovery_total_timing"));
   const aiCalls = calls("ai");
   return {
-    searchCalls: calls("serper"), collectionCalls: calls("firecrawl"), aiCalls,
-    inputTokens: usage ? Number(usage.input_tokens) : aiCalls ? null : 0,
-    outputTokens: usage ? Number(usage.output_tokens) : aiCalls ? null : 0,
-    usageKnown: Boolean(usage) || aiCalls === 0,
+    coverageComplete,
+    searchCalls: coverageComplete ? calls("serper") : null,
+    collectionCalls: coverageComplete ? calls("firecrawl") : null,
+    aiCalls: coverageComplete ? aiCalls : null,
+    inputTokens: usage ? Number(usage.input_tokens) : coverageComplete && aiCalls === 0 ? 0 : null,
+    outputTokens: usage ? Number(usage.output_tokens) : coverageComplete && aiCalls === 0 ? 0 : null,
+    usageKnown: Boolean(usage) || coverageComplete && aiCalls === 0,
     queueMs: event("discovery_queue_timing") ? Number(event("discovery_queue_timing").duration_ms) : null,
     executionMs: event("discovery_total_timing") ? Number(event("discovery_total_timing").duration_ms) : null,
     events: selected,
@@ -127,7 +139,8 @@ try {
       await delay(1000);
       decision = await request(`/api/v1/decisions/${decision.id}`);
     }
-    await delay(300); // 최종 transaction 직후의 계측 로그까지 읽는다.
+    // 완료 응답보다 로그가 늦게 도착할 수 있지만, 없으면 0회 호출로 해석하지 않는다.
+    for (let i = 0; i < 20 && !events.some(event => event.decision_id === decision.id && event.product_event === "discovery_total_timing"); i++) await delay(250);
     const result = { caseId: scenario.id, variant: values.variant, decisionId: decision.id,
       observedAt: new Date().toISOString(), wallMs: Date.now() - previousStart,
       discovery: decision.discovery, candidates: decision.guidance.candidateSuggestions, metrics: metrics(decision.id) };
@@ -135,6 +148,7 @@ try {
     completed++;
     console.log(JSON.stringify({ caseId: scenario.id, status: decision.discovery.status, emptyReason: decision.discovery.emptyReason,
       candidates: result.candidates.length, ms: result.wallMs }));
+    if (!result.metrics.coverageComplete) throw new Error("평가 worker의 완료 계측이 없습니다. 다른 backend의 작업 처리 가능성이 있어 실험을 중단합니다.");
     if (result.metrics.events.some(event => event.code === "SEARCH_MONTHLY_LIMIT" || event.http_status === "429")) {
       throw new Error("계정 한도 응답으로 실험 중단. 자동 재시도하지 않습니다.");
     }

@@ -6,13 +6,13 @@
 
 `scripts/discovery-evaluation/cases.json`의 15개 공개·합성 조건을 사용한다. 현재 Dev provider/model·공식 판매처 정책·quota를 유지한다. 기존 Decision을 수정하지 않고 조건마다 새 Decision을 만든다. 기본 CI와 일반 test task에서는 실행하지 않는다.
 
-1. Docker PostgreSQL과 `backend/.env`의 local/GCP Dev 설정, ADC, 검색·수집·AI 활성화를 준비한다. Secret 값은 파일·환경 변수·보고서에 복사하지 않는다.
-2. 평가할 revision에서 `node scripts/gradle.mjs bootJar`를 실행한다. 기준 방식은 공통 계측만 포함한 commit `1bdc554`, A는 이 변경의 최종 revision이다. 기준 측정 후에 A를 측정하며 각각의 commit/JAR hash를 보존한다.
+1. Docker PostgreSQL과 `backend/.env`의 local/GCP Dev 설정, ADC, 검색·수집·AI 활성화를 준비한다. 같은 DB를 소비하는 다른 backend를 중단한다. 포트만 다르게 실행해도 작업 큐는 격리되지 않는다. 실행기는 8080 서버가 응답하거나 자기 worker의 완료 계측이 없으면 중단한다. Secret 값은 파일·환경 변수·보고서에 복사하지 않는다.
+2. 평가할 revision에서 `node scripts/gradle.mjs bootJar`를 실행하고 JAR를 방식별 독립 경로에 복사한다. 실행 중인 JAR를 다시 빌드해 덮어쓰지 않는다. 기준 방식은 공통 계측만 포함한 commit `1bdc554`, A는 이 변경의 최종 revision이다. 기준 측정 후에 A를 측정하며 각각의 commit/JAR hash를 보존한다. 실행기는 이 PR의 최신 버전을 공통으로 사용한다.
 3. `backend/build/discovery-evaluation` 부모 디렉터리를 만들고 다음을 실행한다. variant는 결과의 표지이며 JAR의 알고리즘을 바꾸지 않는다. 반드시 해당 방식으로 빌드한 JAR를 전달한다.
 
 ```text
-node scripts/discovery-evaluation/run.mjs --execute-live --variant baseline --jar backend/build/libs/decision-assistant-api-0.0.1-SNAPSHOT.jar --output backend/build/discovery-evaluation/baseline
-node scripts/discovery-evaluation/run.mjs --execute-live --variant a --jar backend/build/libs/decision-assistant-api-0.0.1-SNAPSHOT.jar --output backend/build/discovery-evaluation/a
+node scripts/discovery-evaluation/run.mjs --execute-live --variant baseline --source-commit 1bdc554 --jar backend/build/discovery-evaluation/baseline.jar --output backend/build/discovery-evaluation/baseline
+node scripts/discovery-evaluation/run.mjs --execute-live --variant a --source-commit 994dd90 --jar backend/build/discovery-evaluation/a.jar --output backend/build/discovery-evaluation/a
 ```
 
 실행기는 빈 포트 `127.0.0.1:18080`에서 JAR를 실행하고 local 인증·CSRF·동의·quota를 거쳐 API로 비교를 생성한다. 같은 포트를 사용하는 E2E와 동시에 실행하지 않는다. 생성 간격은 최소 13초이며 호출 실패를 자동 재시도하지 않는다. 한도 응답이면 중단하고 미실행 사례를 남긴다. 완료 후 자신이 실행한 JVM만 종료한다. 기존 결과 디렉터리는 덮어쓰지 않는다.
@@ -25,6 +25,8 @@ node scripts/discovery-evaluation/run.mjs --execute-live --variant a --jar backe
 - `created.jsonl`: 합성 사례와 생성한 Decision의 대응. 중간 중단 시 기존 실행 확인에 사용한다.
 - `results.jsonl`: 최종 discovery·후보·인용과 단계별 계측. 호출 전 종료는 token 0, AI 호출 후 사용량 응답이 없으면 null이다.
 - `events.jsonl`: 고정 `product_event`의 개수·시간·사유 코드만 보존한다. HTML·Markdown 전체, 일반 SDK 로그, Secret은 보존하지 않는다.
+
+`node scripts/discovery-evaluation/summarize.mjs <results.jsonl>`로 단계별 개수·시간을 집계한다. 완료 계측이 없는 실행은 호출 수를 null로 두고 유효 비교에서 제외한다. 다른 worker가 같은 DB에서 처리한 결과는 요청한 알고리즘의 결과라는 보장이 없다.
 
 평가 보고서에는 아래 기준과 사용자용 빈 평가란을 둔다. API의 `RECOMMENDED`와 외부 검토 결과는 별도로 기록한다. 현재 서버 그룹 판정은 예산·최소 사양 기반이며 호환성 전체를 자동 확정하는 판정기가 아니다.
 
