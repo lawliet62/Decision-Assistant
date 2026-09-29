@@ -1,0 +1,33 @@
+{
+  "variant": "a",
+  "startedAt": "2026-09-29T22:13:37.560Z",
+  "commit": "994dd90c1bef11867afc042e061e3bda4f992929",
+  "runnerCommit": "1fe6411165d56864f63a4d072d98119522070c3d",
+  "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "jarSha256": "a889f88e5160f0438c7b07a5fec73ae0de8c3911b12754c693fb3b04b32cd752",
+  "casesSha256": "30f97ad9151457ba8ee8dcc8728bd814bf89673c72460d795a7ba04bd0533a28",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "minIntervalMs": 65000,
+  "resumedFrom": "C:\\Users\\dlwld\\IdeaProjects\\Decision-Assistant\\backend\\build\\discovery-evaluation\\rerun-a",
+  "previousManifestSha256": "2ac311c4ab8dfbfb845c1cc74919a2e87a94e0957fe3570dffcb349e44edc843",
+  "caseIds": [
+    "laptop-3",
+    "phone-1",
+    "phone-2",
+    "phone-3",
+    "tablet-1",
+    "tablet-2",
+    "tablet-3",
+    "monitor-1",
+    "monitor-2",
+    "monitor-3"
+  ],
+  "maxRuns": 10,
+  "maxSearchCalls": 10,
+  "maxCollectionCalls": 50,
+  "maxAiCalls": 10,
+  "completed": 10,
+  "unexecuted": [],
+  "finishedAt": "2026-09-29T22:23:40.290Z"
+}

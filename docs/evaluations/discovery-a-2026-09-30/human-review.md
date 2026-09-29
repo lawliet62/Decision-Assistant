@@ -1,6 +1,6 @@
 # 사용자 직접 평가표
 
-초기 실험은 worker 혼입으로 비교 무효다. 아래는 유효한 재실험 이후 사용자 평가를 별도로 남길 빈 양식이다. Agent 평가를 사용자 평가로 복사하지 않는다. [조건 원문](../../../scripts/discovery-evaluation/cases.json)과 [평가 기준](../../discovery-evaluation.md)을 함께 사용한다.
+초기 실험은 worker 혼입으로 무효 처리했으며, [재실험 보고서](README.md)와 [agent의 출처 검토](source-review.md)를 별도로 제공한다. 아래는 사용자 평가를 남길 빈 양식이다. Agent 평가를 사용자 평가로 복사하지 않는다. [조건 원문](../../../scripts/discovery-evaluation/cases.json)과 [평가 기준](../../discovery-evaluation.md)을 함께 사용한다.
 
 후보 수는 공식 상품·가격·예산·최소 사양·호환성을 확인한 서로 다른 모델만 센다. 확인 불가능한 사항은 미확인으로 적는다. 앱의 `RECOMMENDED`가 출처 확인을 대신하지 않는다. 비교 후보가 없으면 설명 점수는 해당 없음이다. 설명 점수는 0 근거 없음, 1 사양 반복/일반론, 2 사양과 용도의 연결, 3 연결 설명과 한계·미확인 사항 제시다.
 

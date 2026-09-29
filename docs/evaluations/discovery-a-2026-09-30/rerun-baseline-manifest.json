@@ -1,0 +1,18 @@
+{
+  "variant": "baseline",
+  "startedAt": "2026-09-29T22:03:41.491Z",
+  "commit": "1bdc554fc9c1a572782167b7a1d60c033450be9b",
+  "runnerCommit": "57b28896ecd8cb3e95e5669ace947b6452cf3711",
+  "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "jarSha256": "83a837cf3a4d1217e0be8fb3e65e8357f1d4389cb3c14359e1c8f483f4241fc4",
+  "casesSha256": "30f97ad9151457ba8ee8dcc8728bd814bf89673c72460d795a7ba04bd0533a28",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "maxRuns": 15,
+  "maxSearchCalls": 15,
+  "maxCollectionCalls": 75,
+  "maxAiCalls": 15,
+  "completed": 15,
+  "unexecuted": [],
+  "finishedAt": "2026-09-29T22:07:42.253Z"
+}
