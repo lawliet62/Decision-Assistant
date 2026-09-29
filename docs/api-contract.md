@@ -30,7 +30,7 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 
 `LookupCapabilities.discoveryPolicy`는 현재 추천 정책을 알린다. `DiscoveryData.policyVersion`은 해당 실행의 정책이며 과거 데이터는 null이다. `executionId`는 한 실행에서 진행 단계가 바뀌어 version이 증가해도 유지되고 명시적 재시도마다 바뀐다. 늦게 끝난 이전 실행은 새 실행의 결과를 덮어쓰지 않는다.
 
-공식 검색 결과가 없으면 `SUCCEEDED` + `emptyReason=NO_OFFICIAL_RESULTS`, 수집했으나 공식 상품·비교 가능한 가격을 확인하지 못하면 `NO_VERIFIED_OFFERS`를 반환한다. 일부 페이지 수집이 실패했다면 `PARTIAL`을 유지한다. 자동 추가 검색은 없다.
+공식 검색 결과가 없으면 최초·추가 탐색 모두 `SUCCEEDED` + `emptyReason=NO_OFFICIAL_RESULTS`, 수집했으나 공식 상품·비교 가능한 가격을 확인하지 못하면 `NO_VERIFIED_OFFERS`를 반환한다. `NO_NEW_PRODUCTS`는 이전 추천을 제외하여 새 후보가 없을 때 사용한다. 일부 페이지 수집이 실패했다면 `PARTIAL`을 유지한다. 자동 추가 검색은 없다.
 
 `CandidateSuggestionData`와 `ProductFactsData`의 nullable `officialOffer`는 공식 구매 URL·판매처·KRW 가격·선택적 이미지·조회 시점·가격 기준·정책 버전을 포함한다. `sourceKind`는 `VIDEO|BLOG|OFFICIAL_STORE|WEB`이다. 공식 offer가 없는 기존 자료에는 공식 판매처 표시를 부여하지 않는다. 후보의 `recommendationGroup`은 `RECOMMENDED|UNKNOWN|BELOW|LEGACY`이며 기본 추천은 모든 최소 사양과 예산을 충족한 제품을 가격·이름 순으로 표시한다.
 

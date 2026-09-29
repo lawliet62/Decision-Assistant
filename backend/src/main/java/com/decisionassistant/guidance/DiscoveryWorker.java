@@ -72,17 +72,13 @@ public class DiscoveryWorker {
             var template = templates.required(work.category(), work.conditions().templateVersion());
             var condition = work.conditions().normalized(template);
             var minimums = MinimumRequirementMatcher.conditions(template.minimumRequirements(), condition.selectedRequirements());
-            var query = OfficialStorePolicy.searchScope(work.category()) + " " + template.label() + " 구매 " + String.join(" ", condition.uses())
-                    + (condition.maxBudget() == null ? "" : " " + condition.maxBudget().toPlainString() + "원 이하")
-                    + " " + Objects.toString(condition.compatibility(), "")
-                    + minimums.stream().map(item -> " " + item.label() + " " + item.requiredValue()).collect(java.util.stream.Collectors.joining())
-                    + work.excluded().searchTerms();
+            var query = DiscoveryQuery.build(template, condition, work.excluded());
             stage = Stage.SEARCH;
             trace.enter(stage);
             progress(work, stage);
             var searchResults = search.lookupForOwner(query, work.owner());
             if (searchResults.isEmpty()) {
-                empty(work, work.generation() > 0 ? "NO_NEW_PRODUCTS" : "NO_OFFICIAL_RESULTS", false);
+                empty(work, "NO_OFFICIAL_RESULTS", false);
                 return;
             }
             var officialResults = searchResults.stream().filter(item -> OfficialStorePolicy.store(item.url()).isPresent()).toList();

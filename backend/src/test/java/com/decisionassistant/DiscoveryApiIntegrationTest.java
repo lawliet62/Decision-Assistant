@@ -27,6 +27,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.*;
 import java.util.*;
 import static com.decisionassistant.guidance.DiscoveryContracts.*;
+import static com.decisionassistant.decision.DecisionTypes.TemplateKey.EARBUDS;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -132,6 +133,22 @@ class DiscoveryApiIntegrationTest {
                 .andExpect(jsonPath("$.discovery.emptyReason").value("NO_VERIFIED_OFFERS"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(0));
         verify(search, times(2)).search(anyString(), eq(5)); verify(web, times(2)).scrapeProduct(anyString()); verifyNoInteractions(discoverer);
+    }
+
+    @Test void emptySearchOnRefreshDoesNotClaimThatPreviousProductsWereExcluded() throws Exception {
+        when(search.search(anyString(), eq(5))).thenReturn(List.of());
+        var id = create(); worker.processNext();
+        var before = runs.findById(UUID.fromString(id)).orElseThrow();
+        mvc.perform(post("/api/v1/decisions/" + id + "/discovery/refresh").with(owner).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":" + before.version() + "}"))
+                .andExpect(status().isOk());
+        worker.processNext();
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.discovery.emptyReason").value("NO_OFFICIAL_RESULTS"))
+                .andExpect(jsonPath("$.discovery.history[0].emptyReason").value("NO_OFFICIAL_RESULTS"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions.length()").value(0));
+        verify(search, times(2)).search(anyString(), eq(5));
+        verifyNoInteractions(web, discoverer);
     }
 
     @Test void legacyRecordsAreNotRetroactivelyCertified() throws Exception {
@@ -292,7 +309,7 @@ class DiscoveryApiIntegrationTest {
                 .contains(expected.isEmpty() ? "용도 미정" : String.join(" · ", expected));
         worker.processNext();
         assertThat(runs.findById(UUID.fromString(id)).orElseThrow().status()).isEqualTo(ProductDiscovery.Status.SUCCEEDED);
-        verify(search, times(1)).search(argThat(query -> expected.stream().allMatch(query::contains)), eq(5));
+        verify(search, times(1)).search(eq(OfficialStorePolicy.searchScope(EARBUDS) + " 무선 이어폰"), eq(5));
         verify(discoverer, times(1)).discover(argThat(input -> input.uses().equals(expected)));
     }
 
@@ -336,8 +353,9 @@ class DiscoveryApiIntegrationTest {
         mvc.perform(post("/api/v1/decisions/" + id + "/resolutions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"kind\":\"CHOSEN\",\"selectedOptionId\":\"" + selected + "\"}"))
                 .andExpect(status().isCreated());
-        verify(search, times(1)).search(argThat(query -> query.contains("200000") && !query.contains("서버에만")), eq(5));
+        verify(search, times(1)).search(eq(OfficialStorePolicy.searchScope(EARBUDS) + " 무선 이어폰"), eq(5));
         verify(web, times(2)).scrapeProduct(anyString()); verify(discoverer, times(1)).discover(any());
+        verify(discoverer).discover(argThat(input -> input.maxBudget().compareTo(new java.math.BigDecimal("200000")) == 0));
     }
 
     @Test void consentAuthenticationCsrfAndTemplateValidationBlockExternalCalls() throws Exception {
@@ -433,7 +451,7 @@ class DiscoveryApiIntegrationTest {
                 .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].facts[0].verificationStatus").value("UNREVIEWED"));
         mvc.perform(get("/api/v1/decisions/" + id).with(owner))
                 .andExpect(jsonPath("$.productFacts[0].requirementChecks[0].status").value("BELOW"));
-        verify(search, times(1)).search(argThat(query -> query.contains("ANC 지원 지원 필수") && !query.contains("서버에만")), eq(5));
+        verify(search, times(1)).search(eq(OfficialStorePolicy.searchScope(EARBUDS) + " 무선 이어폰 ANC"), eq(5));
         verify(web, times(5)).scrapeProduct(anyString());
         verify(discoverer, times(1)).discover(argThat(input -> input.minimumRequirements().equals(List.of(new MinimumCondition("anc", "ANC 지원", "지원 필수")))
                 && input.pages().size() == 5 && !mapper.writeValueAsString(input).contains("서버에만")));

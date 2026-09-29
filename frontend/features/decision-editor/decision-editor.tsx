@@ -14,6 +14,11 @@ import { ProductPicker, type SelectedSource } from "@/features/product-lookup/pr
 
 type Problem = { detail?: string; violations?: string[] };
 type DraftValue = NonNullable<UpdateDraftRequest["values"]>[number];
+const discoveryEmptyReasons: Record<string, string> = {
+  NO_OFFICIAL_RESULTS: "이번 검색에서 공식 판매처의 제품 페이지를 찾지 못했습니다. 조건을 바꾸거나 제품을 직접 추가할 수 있습니다.",
+  NO_VERIFIED_OFFERS: "찾은 공식 판매처 페이지에서 제품과 비교 가능한 가격을 확인하지 못했습니다. 제품을 직접 추가할 수 있습니다.",
+  NO_NEW_PRODUCTS: "이번 검색에서는 이전 추천을 제외한 새 제품을 찾지 못했습니다. 이전 추천을 비교하거나 제품을 직접 추가할 수 있습니다.",
+};
 const discoveryStages: Record<string, string> = {
   QUEUED: "추천을 준비하고 있습니다…", CONFIGURATION: "추천 조건을 확인하고 있습니다…", SEARCH: "공식 판매처에서 제품을 찾고 있습니다…",
   COLLECTION: "제품의 가격과 사양을 가져오고 있습니다…", AI: "수집한 제품 정보를 정리하고 있습니다…", VALIDATION: "조건과 근거를 확인하고 있습니다…", PERSISTENCE: "추천 결과를 저장하고 있습니다…",
@@ -215,7 +220,7 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
       <OfficialPolicyNotice version={decision.discovery.policyVersion} placement="result" />
       <p className="text-sm text-zinc-600">{guidance?.intentText}</p>
       {pending && <p role="status" className="text-sm text-emerald-800">{discoveryStages[decision.discovery.stage ?? ""] ?? "제품 정보를 찾고 있습니다…"}</p>}
-      {decision.discovery.emptyReason && <p role="status" className="text-sm text-zinc-600">이번 검색에서 공식 판매처와 비교 가능한 가격을 확인한 새 제품이 없습니다. 조건을 바꾸거나 제품을 직접 추가할 수 있습니다.</p>}
+      {decision.discovery.emptyReason && <p role="status" className="text-sm text-zinc-600">{discoveryEmptyReasons[decision.discovery.emptyReason] ?? "이번 검색에서 추천할 제품을 확인하지 못했습니다. 제품을 직접 추가할 수 있습니다."}</p>}
       {(decision.discovery.generation ?? 0) > (decision.discovery.displayedGeneration ?? 0) && <p className="text-sm text-zinc-600">새 추천을 확보할 때까지 이전 추천 목록과 비교 내용을 유지합니다.</p>}
       {decision.discovery.error && <p role="status" className="text-sm text-amber-800">{decision.discovery.error}</p>}
       {editable && ["FAILED", "PARTIAL"].includes(decision.discovery.status ?? "") && <button className={secondaryButton} onClick={() => run(async () => {
