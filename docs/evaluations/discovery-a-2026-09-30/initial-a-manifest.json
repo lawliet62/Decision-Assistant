@@ -1,0 +1,33 @@
+{
+  "variant": "a",
+  "startedAt": "2026-09-29T20:42:31.320Z",
+  "commit": "994dd90c1bef11867afc042e061e3bda4f992929",
+  "diffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "jarSha256": "a889f88e5160f0438c7b07a5fec73ae0de8c3911b12754c693fb3b04b32cd752",
+  "casesSha256": "30f97ad9151457ba8ee8dcc8728bd814bf89673c72460d795a7ba04bd0533a28",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "maxRuns": 15,
+  "maxSearchCalls": 15,
+  "maxCollectionCalls": 75,
+  "maxAiCalls": 15,
+  "comparisonValid": false,
+  "invalidationReason": "SHARED_QUEUE_COMPETING_WORKER",
+  "created": [
+    {
+      "caseId": "earbuds-1",
+      "decisionId": "19d1c531-f64e-4d4b-893c-dcc3c732c0cf"
+    },
+    {
+      "caseId": "earbuds-2",
+      "decisionId": "1baba726-6b07-4e5f-a33d-2ef3cca1d79e"
+    },
+    {
+      "caseId": "earbuds-3",
+      "decisionId": "a21ff5c9-f112-4992-bd77-a3c4d93ad554"
+    }
+  ],
+  "observedCompleted": 2,
+  "completeInstrumentation": 1,
+  "stopReason": "기존 개발 backend가 동일 DB 작업을 처리하여 초기 비교를 무효 처리함. A 중단 후 추가 외부 호출은 승인 대기."
+}

@@ -172,6 +172,8 @@ for (const [reason, message] of [
     await page.getByRole("button", { name: "같은 조건으로 다른 제품 찾기", exact: true }).click();
     await expect(page.getByRole("status").filter({ hasText: message })).toBeVisible();
     await expect(page.getByText("비교에 추가한 제품 1/5", { exact: true })).toBeVisible();
-    await expect(alpha).toBeVisible();
+    await expect(page.getByRole("article", { name: "무선 이어폰 Beta", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "후보 비교로 이동", exact: true }).click();
+    await expect(page.getByRole("table")).toContainText("무선 이어폰 Alpha");
   });
 }

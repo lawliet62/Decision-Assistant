@@ -2,6 +2,8 @@
 
 이 절차는 테스트 fixture로 확인할 수 없는 실제 검색 누락·수집·가격 검증 병목을 측정한다. [ADR 0013](decisions/0013-discovery-query-evaluation.md)에 따라 기존 방식과 A안을 비교하고 B/C 도입은 결과 이후 결정한다.
 
+[2026-09-30 초기 관찰 보고서](evaluations/discovery-a-2026-09-30/README.md)는 worker 혼입으로 무효인 비교와 확인 가능한 단일 사례를 구분해 기록한다. 개선 효과 판정은 재실험까지 보류한다.
+
 ## 실행
 
 `scripts/discovery-evaluation/cases.json`의 15개 공개·합성 조건을 사용한다. 현재 Dev provider/model·공식 판매처 정책·quota를 유지한다. 기존 Decision을 수정하지 않고 조건마다 새 Decision을 만든다. 기본 CI와 일반 test task에서는 실행하지 않는다.
