@@ -1,0 +1,160 @@
+[
+  {
+    "url": "https://qcystore.co.kr/product/detail.html?product_no=633",
+    "resolvedUrl": "https://qcystore.co.kr/product/detail.html?product_no=633",
+    "status": 200,
+    "checkedAt": "2026-09-29T23:30:24.033Z",
+    "title": "QCY T13 ANC APP 액티브노이즈캔슬링 블루투스 이어폰 화이트 - QCY스토어",
+    "canonical": "https://qcystore.co.kr/product/qcy-t13-anc-app-액티브노이즈캔슬링-블루투스-이어폰-화이트/633/",
+    "products": [
+      {
+        "type": "ProductGroup",
+        "name": "QCY T13 ANC APP 액티브노이즈캔슬링 블루투스 이어폰 화이트",
+        "sku": "cafe24_ylintlshop_1_633",
+        "variants": [
+          {
+            "name": "QCY T13 ANC APP 액티브노이즈캔슬링 블루투스 이어폰 화이트 블랙",
+            "offers": {
+              "@type": "Offer",
+              "url": "https://qcystore.co.kr/product/qcy-t13-anc-app-액티브노이즈캔슬링-블루투스-이어폰-화이트/633/?item_code=P00000YJ000B",
+              "priceCurrency": "KRW",
+              "price": 28200,
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        ]
+      }
+    ],
+    "priceRows": [
+      "판매가 28,200원"
+    ],
+    "specs": [],
+    "detailImages": 14
+  },
+  {
+    "url": "https://qcystore.co.kr/product/detail.html?product_no=1033",
+    "resolvedUrl": "https://qcystore.co.kr/product/detail.html?product_no=1033",
+    "status": 200,
+    "checkedAt": "2026-09-29T23:30:24.277Z",
+    "title": "QCY T13PRO ANC 블르투스 6.0 무선 커널형 이어폰 - QCY스토어",
+    "canonical": "https://qcystore.co.kr/product/qcy-t13pro-anc-블르투스-60-무선-커널형-이어폰/1033/",
+    "products": [
+      {
+        "type": "ProductGroup",
+        "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
+        "sku": "cafe24_ylintlshop_1_1033",
+        "variants": [
+          {
+            "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰 블랙",
+            "offers": {
+              "@type": "Offer",
+              "url": "https://qcystore.co.kr/product/qcy-t13pro-anc-블르투스-60-무선-커널형-이어폰/1033/?item_code=P0000BNT000B",
+              "priceCurrency": "KRW",
+              "price": 21900,
+              "availability": "https://schema.org/InStock"
+            }
+          },
+          {
+            "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰 화이트",
+            "offers": {
+              "@type": "Offer",
+              "url": "https://qcystore.co.kr/product/qcy-t13pro-anc-블르투스-60-무선-커널형-이어폰/1033/?item_code=P0000BNT000C",
+              "priceCurrency": "KRW",
+              "price": 21900,
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        ]
+      }
+    ],
+    "priceRows": [
+      "판매가 21,900원"
+    ],
+    "specs": [],
+    "detailImages": 23
+  },
+  {
+    "url": "https://qcystore.co.kr/product/detail.html?product_no=563",
+    "resolvedUrl": "https://qcystore.co.kr/product/detail.html?product_no=563",
+    "status": 200,
+    "checkedAt": "2026-09-29T23:30:24.556Z",
+    "title": "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙 - QCY스토어",
+    "canonical": "https://qcystore.co.kr/product/qcy-t17app-블루투스이어폰-커널형-무선이어폰-저지연-큐씨와이-초경량-블루투스53버전-블랙/563/",
+    "products": [
+      {
+        "type": "ProductGroup",
+        "name": "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙",
+        "sku": "cafe24_ylintlshop_1_563",
+        "variants": [
+          {
+            "name": "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙 블랙",
+            "offers": {
+              "@type": "Offer",
+              "url": "https://qcystore.co.kr/product/qcy-t17app-블루투스이어폰-커널형-무선이어폰-저지연-큐씨와이-초경량-블루투스53버전-블랙/563/?item_code=P00000VR000B",
+              "priceCurrency": "KRW",
+              "price": 29900,
+              "availability": "https://schema.org/InStock"
+            }
+          }
+        ]
+      }
+    ],
+    "priceRows": [
+      "판매가 29,900원"
+    ],
+    "specs": [],
+    "detailImages": 11
+  },
+  {
+    "url": "https://www.lge.co.kr/product/notebook/15u50u-growk",
+    "resolvedUrl": "https://www.lge.co.kr/product/notebook/15u50u-growk",
+    "status": 200,
+    "checkedAt": "2026-09-29T23:30:25.091Z",
+    "title": "LG 그램북 AI 2026 | 15U50U-GROWK | 노트북 | PC/모니터 | 제품/소모품 | LG전자",
+    "canonical": "https://www.lge.co.kr/product/notebook/15u50u-growk",
+    "products": [
+      {
+        "type": "Product",
+        "name": "LG 그램북 AI 2026",
+        "sku": "15U50U-G.AROWK",
+        "offers": {
+          "@type": "Offer",
+          "priceCurrency": "KRW",
+          "availability": "https://schema.org/InStock",
+          "itemCondition": "https://schema.org/NewCondition",
+          "price": "1290000",
+          "seller": {
+            "@id": "https://www.lge.co.kr#organization"
+          }
+        }
+      }
+    ],
+    "priceRows": [
+      "회원할인가회원할인가 상세 내용 열기할인율16%할인 적용 후 가격1,290,000원",
+      "최대혜택가최대혜택가 상세 내용 열기1,199,700원"
+    ],
+    "specs": [
+      {
+        "label": "L3 캐시 메모리 (MB)",
+        "value": "10"
+      },
+      {
+        "label": "메모리 용량 (GB)",
+        "value": "8"
+      },
+      {
+        "label": "메모리 종류",
+        "value": "DDR5 + 확장 슬롯 1"
+      },
+      {
+        "label": "그래픽메모리",
+        "value": "내장형"
+      },
+      {
+        "label": "SSD",
+        "value": "256 GB (NVMe™) + 확장 슬롯 1 (PCIe 4.0)"
+      }
+    ],
+    "detailImages": null
+  }
+]

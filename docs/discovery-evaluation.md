@@ -10,6 +10,8 @@
 
 v2는 선택한 호환성도 추천의 필수 조건으로 확인하므로 v1의 `RECOMMENDED` 개수와 같은 기준의 정확도로 비교하지 않는다. 공통 외부 검토 기준과 잘못 충족 처리한 사례, 가격 조건·사양 누락·설명 모순의 변화도 함께 보고한다. 새로운 `fieldEvidence`, `fieldValidation`, `requirementResults` 집계는 필드별 근거 블록 확보·AI 구조화 검증·최종 판정을 구분한다. `AI_OMITTED`여도 서버 추출로 사양을 확보할 수 있고, `BLOCK_MISSING`만으로 이미지 전용 정보라고 단정할 수 없다. HTML·이미지 전체를 평가 파일에 보존하지 않는다.
 
+[v2 15조건 평가 결과](evaluations/discovery-v2-2026-09-30/README.md)에서 검색 15·수집 37·AI 3회, 한도 오류 0건을 확인했다. 반환 후보 3개는 모두 확인 필요이며 기본 추천 2개 이상은 0/15다. 별도의 실제 공식 페이지 파서 진단에서 회원 가격 제외와 RAM·SSD 미달 판정을 확인했지만 검색 후보 확보와 설명 유용성은 여전히 부족하다.
+
 ## 실행
 
 `scripts/discovery-evaluation/cases.json`의 15개 공개·합성 조건을 사용한다. 현재 Dev provider/model·공식 판매처 정책·quota를 유지한다. 기존 Decision을 수정하지 않고 조건마다 새 Decision을 만든다. 기본 CI와 일반 test task에서는 실행하지 않는다.
