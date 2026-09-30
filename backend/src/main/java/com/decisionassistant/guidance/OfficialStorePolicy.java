@@ -7,7 +7,10 @@ import java.util.*;
 /** 등록 근거와 확장 절차는 docs/official-stores.md. URL 이름이나 검색 순위로 공식 여부를 추론하지 않는다. */
 public final class OfficialStorePolicy {
     private OfficialStorePolicy() {}
-    public static final String VERSION = "official-kr-v1";
+    public static final String VERSION = "official-kr-v2";
+    public static boolean verifiesCompatibility(DiscoveryContracts.OfficialOffer offer) {
+        return offer != null && VERSION.equals(offer.policyVersion());
+    }
     public record Description(String version, String scope, String priceBasis) {}
     public static Description description() { return new Description(VERSION, "KOREAN_OFFICIAL_STORES", "OBSERVED_KRW_PRICE"); }
     public record Store(String id, String name, String host, String productPath, Set<String> imageHosts) {}

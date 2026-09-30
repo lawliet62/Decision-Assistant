@@ -508,6 +508,7 @@ export interface components {
             sourceKind?: "VIDEO" | "BLOG" | "OFFICIAL_STORE" | "WEB";
             /** @enum {string} */
             recommendationGroup?: "RECOMMENDED" | "UNKNOWN" | "BELOW" | "LEGACY";
+            compatibilityCheck?: components["schemas"]["RequirementCheck"];
         };
         DecisionResponse: {
             /** Format: uuid */
@@ -659,6 +660,7 @@ export interface components {
             /** Format: date-time */
             fetchedAt?: string;
             verificationStatus?: string;
+            normalizationVersion?: string;
         };
         ProductFactsData: {
             /** Format: uuid */
@@ -671,6 +673,7 @@ export interface components {
             officialOffer?: components["schemas"]["OfficialOffer"];
             /** @enum {string} */
             sourceKind?: "VIDEO" | "BLOG" | "OFFICIAL_STORE" | "WEB";
+            compatibilityCheck?: components["schemas"]["RequirementCheck"];
         };
         QuestionData: {
             /** Format: uuid */

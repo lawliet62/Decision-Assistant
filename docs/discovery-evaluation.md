@@ -4,6 +4,14 @@
 
 [2026-09-30 재실험 보고서](evaluations/discovery-a-2026-09-30/README.md)에 총 30회 결과와 다섯 평가 항목, 원문·앱 판정의 차이를 기록했다. worker 혼입으로 무효인 초기 비교는 별도 기록이며 재실험 집계에 포함하지 않는다.
 
+## v2 검증·설명 개선 평가
+
+[ADR 0014](decisions/0014-evidence-based-discovery-validation.md)의 `official-kr-v2`도 같은 15조건을 한 번씩 평가한다. A안 검색을 유지하며 `--variant a`는 실행 표지다. 별도 commit/JAR hash와 결과 디렉터리로 v1과 구분한다. 전체 상한은 검색 15회·수집 75회·AI 15회, 조건 생성 간격은 65초다. 실패·부분 성공도 결과에 포함하며 중단 시 미실행 조건만 이어간다.
+
+v2는 선택한 호환성도 추천의 필수 조건으로 확인하므로 v1의 `RECOMMENDED` 개수와 같은 기준의 정확도로 비교하지 않는다. 공통 외부 검토 기준과 잘못 충족 처리한 사례, 가격 조건·사양 누락·설명 모순의 변화도 함께 보고한다. 새로운 `fieldEvidence`, `fieldValidation`, `requirementResults` 집계는 필드별 근거 블록 확보·AI 구조화 검증·최종 판정을 구분한다. `AI_OMITTED`여도 서버 추출로 사양을 확보할 수 있고, `BLOCK_MISSING`만으로 이미지 전용 정보라고 단정할 수 없다. HTML·이미지 전체를 평가 파일에 보존하지 않는다.
+
+[v2 15조건 평가 결과](evaluations/discovery-v2-2026-09-30/README.md)에서 검색 15·수집 37·AI 3회, 한도 오류 0건을 확인했다. 반환 후보 3개는 모두 확인 필요이며 기본 추천 2개 이상은 0/15다. 별도의 실제 공식 페이지 파서 진단에서 회원 가격 제외와 RAM·SSD 미달 판정을 확인했지만 검색 후보 확보와 설명 유용성은 여전히 부족하다.
+
 ## 실행
 
 `scripts/discovery-evaluation/cases.json`의 15개 공개·합성 조건을 사용한다. 현재 Dev provider/model·공식 판매처 정책·quota를 유지한다. 기존 Decision을 수정하지 않고 조건마다 새 Decision을 만든다. 기본 CI와 일반 test task에서는 실행하지 않는다.
@@ -34,7 +42,7 @@ node scripts/discovery-evaluation/run.mjs --execute-live --variant a --source-co
 
 `node scripts/discovery-evaluation/summarize.mjs <results.jsonl>`로 단계별 개수·시간을 집계한다. 완료 계측이 없는 실행은 호출 수를 null로 두고 유효 비교에서 제외한다. 다른 worker가 같은 DB에서 처리한 결과는 요청한 알고리즘의 결과라는 보장이 없다.
 
-평가 보고서에는 아래 기준과 사용자용 빈 평가란을 둔다. API의 `RECOMMENDED`와 외부 검토 결과는 별도로 기록한다. 현재 서버 그룹 판정은 예산·최소 사양 기반이며 호환성 전체를 자동 확정하는 판정기가 아니다.
+평가 보고서에는 아래 기준과 사용자용 빈 평가란을 둔다. API의 `RECOMMENDED`와 외부 검토 결과는 별도로 기록한다. v1 서버 그룹 판정은 예산·최소 사양 기반이며, v2는 선택한 호환성 근거도 확인한다. 어느 버전도 선택하지 않은 개별 기기·모든 부가 기능의 호환성까지 보장하지 않는다.
 
 | 항목 | 기준 |
 | --- | --- |

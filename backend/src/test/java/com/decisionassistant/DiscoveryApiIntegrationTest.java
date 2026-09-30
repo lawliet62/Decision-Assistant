@@ -88,7 +88,9 @@ class DiscoveryApiIntegrationTest {
     }
     private WebEvidenceProvider.Page page(String url, String name, int price, String facts) {
         var html = "<script type='application/ld+json'>" + mapper.writeValueAsString(Map.of("@type", "Product", "name", name,
-                "sku", name, "url", url, "offers", Map.of("@type", "Offer", "priceCurrency", "KRW", "price", price))) + "</script>";
+                "sku", name, "url", url, "offers", Map.of("@type", "Offer", "priceCurrency", "KRW", "price", price))) + "</script>"
+                + "<article itemscope itemtype='https://schema.org/Product'><h1 itemprop='name'>" + name
+                + "</h1><table><tr><th>판매가</th><td>" + price + "원</td></tr></table></article>";
         return new WebEvidenceProvider.Page(name, name + " 가격 " + price + " KRW. " + facts, html, url);
     }
     private RequestPostProcessor user() {
@@ -116,6 +118,38 @@ class DiscoveryApiIntegrationTest {
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer.price").value(100000))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].sourceKind").value("OFFICIAL_STORE"));
+    }
+
+    @Test void compatibilityIsRequiredWithoutMinimumSpecsAndLegacyPolicyKeepsItsOriginalMeaning() throws Exception {
+        when(web.scrapeProduct(anyString())).thenAnswer(call -> {
+            String source = call.getArgument(0);
+            var page = defaultPage(source, 100000, 150000);
+            if (!source.equals(url("Buds A"))) return page;
+            return new WebEvidenceProvider.Page(page.title(), page.markdown(), page.html().replace("</table>",
+                    "<tr><th>호환성</th><td>Android 지원</td></tr><tr><th>전용 앱</th><td>Android 8 이상 앱 지원</td></tr></table>"), source);
+        });
+        var body = BODY.replace("intake-v1", "intake-v2").replace("\"maxBudget\":200000", "\"maxBudget\":200000,\"compatibility\":\"Android\"");
+        var created = mapper.readTree(mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        var id = created.path("id").asText(); worker.processNext();
+        var response = mapper.readTree(mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck.status").value("MEETS"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[1].compatibilityCheck.status").value("UNKNOWN"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[1].recommendationGroup").value("UNKNOWN"))
+                .andReturn().getResponse().getContentAsString());
+        var items = response.path("guidance").path("candidateSuggestions");
+        assertThat(items.path(1).path("reason").asText()).contains("Android", "확인하지 못했습니다").doesNotContain("적합");
+        mvc.perform(patch("/api/v1/decisions/" + id + "/candidate-suggestions/" + items.path(0).path("id").asText())
+                .with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"ACCEPT\"}"))
+                .andExpect(jsonPath("$.productFacts[0].compatibilityCheck.status").value("MEETS"));
+        jdbc.update("UPDATE candidate_suggestions SET official_offer = jsonb_set(official_offer, '{policyVersion}', '\"official-kr-v1\"'), reason = ? WHERE id = ?",
+                "기존에 저장한 설명", UUID.fromString(items.path(1).path("id").asText()));
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck").doesNotExist())
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].reason").value("기존에 저장한 설명"));
+        verify(search, times(1)).search(anyString(), eq(5)); verify(web, times(2)).scrapeProduct(anyString()); verify(discoverer, times(1)).discover(any());
     }
 
     @Test void unverifiedOfficialClaimAndMissingPriceReturnEmptyWithoutExtraSearchOrAi() throws Exception {

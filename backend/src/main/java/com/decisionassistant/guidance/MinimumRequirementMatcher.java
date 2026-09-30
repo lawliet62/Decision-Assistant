@@ -61,7 +61,8 @@ public final class MinimumRequirementMatcher {
         if (fact.value() == null || "DISPUTED".equals(fact.verificationStatus())) return null;
         var raw = fact.value().strip();
         // 사람이 확인한 수치는 자유 형식의 메모 대신 입력한 수치 자체를 사용한다.
-        if (!"CONFIRMED".equals(fact.verificationStatus()) && AMBIGUOUS.matcher(Objects.toString(fact.quote(), "")).find()) return null;
+        if (!"CONFIRMED".equals(fact.verificationStatus()) && !SpecNormalizer.VERSION.equals(fact.normalizationVersion())
+                && AMBIGUOUS.matcher(Objects.toString(fact.quote(), "")).find()) return null;
         if (rule == Rule.SUPPORT) return support(raw, fact);
         if (rule == Rule.RESOLUTION) return resolution(raw);
         var matcher = (rule == Rule.CAPACITY ? CAPACITY : REFRESH).matcher(raw);

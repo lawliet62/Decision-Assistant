@@ -23,9 +23,11 @@ export function DiscoveryCandidates({ candidates, editable, optionCount, pending
       {item.status === "ACCEPTED" && <p className="text-xs text-emerald-800">비교에 추가됨</p>}
       {item.status === "DISMISSED" && <p className="text-xs text-zinc-500">제외한 제품</p>}
       <ProductOffer offer={item.officialOffer} name={item.name} />
+      {item.officialOffer?.policyVersion === "official-kr-v1" && <p className="text-xs text-amber-800">이전 검증 기준의 후보입니다. 기본 호환성은 재검증하지 않았습니다.</p>}
       {!item.officialOffer && <SourceLink url={item.url} kind={item.sourceKind} />}
       {item.fetchedAt && <p className="text-xs text-zinc-500">조회 {new Date(item.fetchedAt).toLocaleString("ko-KR")} · 수집 정보, 사용자 확인 전</p>}
       <RequirementChecks checks={item.requirementChecks} />
+      {item.compatibilityCheck && <RequirementChecks checks={[item.compatibilityCheck]} label="호환성 확인" />}
       <dl className="space-y-2 text-sm">{item.facts?.filter(fact => !(item.officialOffer && fact.name === "가격") && !item.requirementChecks?.some(check => check.facts?.some(checked => checked.name === fact.name))).map((fact, index) => <div key={index}><dt className="text-zinc-500">{fact.name}</dt><dd><FactValue fact={fact} compact /></dd></div>)}</dl>
       {!item.facts?.length && !item.requirementChecks?.length && <p className="text-sm text-zinc-500">수집한 사양이 없습니다.</p>}
       {editable && <div className="flex gap-2"><button disabled={optionCount >= 5} onClick={() => onAction(item.id!, "ACCEPT")} className="rounded-full bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">비교에 추가</button><button onClick={() => onAction(item.id!, "DISMISS")} className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium">제외</button></div>}
@@ -35,13 +37,13 @@ export function DiscoveryCandidates({ candidates, editable, optionCount, pending
     {!pending && (hasRequirements || active.some(item => item.officialOffer)) && remaining.length === 0 && <p role="status" className="text-sm text-amber-800">추가할 기본 추천 후보가 없습니다. 조건을 바꿔 새로 찾거나 제품을 직접 추가하세요.</p>}
     <div aria-label="추천 후보 목록" className="grid gap-4 sm:grid-cols-2">{remaining.map(card)}</div>
     {unknown.length > 0 && <details className="rounded-2xl border border-amber-200 p-4">
-      <summary className="cursor-pointer font-semibold">최소 조건의 근거가 부족한 제품 ({unknown.length})</summary>
+      <summary className="cursor-pointer font-semibold">최소 조건·호환성의 근거가 부족한 제품 ({unknown.length})</summary>
       <p className="my-3 text-sm text-zinc-600">선택한 사양을 모두 확인하지 못했습니다. 근거를 확인한 뒤 비교에 추가할 수 있습니다.</p>
       <div className="grid gap-4 sm:grid-cols-2">{unknown.map(card)}</div>
     </details>}
     {below.length > 0 && <details className="rounded-2xl border border-amber-200 p-4">
-      <summary className="cursor-pointer font-semibold">최소 조건·예산에 미달한 제품 ({below.length})</summary>
-      <p className="my-3 text-sm text-zinc-600">수집 사양이 최소 조건에 미달하거나 확인 판매가가 예산을 초과합니다. 근거를 확인한 뒤 비교에 추가할 수 있습니다.</p>
+      <summary className="cursor-pointer font-semibold">최소 조건·호환성·예산에 미달한 제품 ({below.length})</summary>
+      <p className="my-3 text-sm text-zinc-600">수집 사양·호환성이 선택 조건에 맞지 않거나 확인 판매가가 예산을 초과합니다. 근거를 확인한 뒤 비교에 추가할 수 있습니다.</p>
       <div className="grid gap-4 sm:grid-cols-2">{below.map(card)}</div>
     </details>}
     {legacy.length > 0 && <details className="rounded-2xl border border-zinc-200 p-4"><summary className="cursor-pointer font-semibold">이전 기준으로 수집한 후보 ({legacy.length})</summary><p className="my-3 text-sm text-zinc-600">공식 판매처와 가격을 확인하기 전에 수집한 제품입니다.</p><div className="grid gap-4 sm:grid-cols-2">{legacy.map(card)}</div></details>}

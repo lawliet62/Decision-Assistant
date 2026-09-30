@@ -234,7 +234,7 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
       })}>같은 조건으로 다른 제품 찾기</button>}
       <Link href={"/decisions/new?category=" + decision.templateKey} className="ml-3 text-sm text-emerald-800 underline">조건 바꿔 새로 찾기</Link>
       <DiscoveryCandidates candidates={guidance?.candidateSuggestions ?? []} editable={editable} optionCount={options.length}
-        officialPolicy={decision.discovery.policyVersion === "official-kr-v1"}
+        officialPolicy={decision.discovery.policyVersion?.startsWith("official-kr-")}
         pending={pending} hasRequirements={Object.keys(decision.discovery.conditions?.minimumRequirements ?? {}).length > 0}
         onAction={(id, action) => run(() => updateSuggestion(id, action))} />
       <p className="text-sm text-zinc-500">비교에 추가한 제품 {options.length}/5</p>
@@ -245,7 +245,7 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
           {round.error && <p className="text-sm text-amber-800">{round.error}</p>}
           {round.emptyReason && <p className="text-sm text-zinc-600">새롭게 확인한 제품이 없었습니다.</p>}
           <DiscoveryCandidates candidates={round.candidates ?? []} editable={false} optionCount={options.length} pending={false} hasRequirements={false}
-            officialPolicy={round.policyVersion === "official-kr-v1"} onAction={() => {}} />
+            officialPolicy={round.policyVersion?.startsWith("official-kr-")} onAction={() => {}} />
         </section>)}</div>
       </details>}
     </Section>}

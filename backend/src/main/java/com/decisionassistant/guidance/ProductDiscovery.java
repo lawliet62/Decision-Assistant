@@ -23,7 +23,7 @@ public class ProductDiscovery {
     @Column(name = "output_tokens") private Long outputTokens;
     @Column(name = "latency_ms") private Long latencyMs;
     @Column(name = "prompt_version", nullable = false, length = 50) private String promptVersion = DiscoveryContracts.PROMPT_VERSION;
-    @Column(name = "schema_version", nullable = false, length = 50) private String schemaVersion = "discovery-v1";
+    @Column(name = "schema_version", nullable = false, length = 50) private String schemaVersion = "discovery-v2";
     @Column(name = "execution_id") private UUID executionId;
     @Column(length = 30) private String stage;
     @Column(name = "policy_version", length = 50) private String policyVersion;
@@ -51,6 +51,7 @@ public class ProductDiscovery {
     }
     public void usage(String provider, String model, long input, long output, long latency) {
         promptVersion = DiscoveryContracts.PROMPT_VERSION;
+        schemaVersion = "discovery-v2";
         this.provider = provider; this.model = model; inputTokens = input; outputTokens = output; latencyMs = latency;
     }
     public UUID decisionId() { return decisionId; }

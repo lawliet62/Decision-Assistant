@@ -1,0 +1,80 @@
+[ {
+  "url" : "https://qcystore.co.kr/product/detail.html?product_no=633",
+  "checkedAt" : "2026-09-29T23:38:24.068166600Z",
+  "httpStatus" : 200,
+  "outcome" : "ACCEPTED",
+  "priceQuote" : "판매가 28,200원"
+}, {
+  "url" : "https://qcystore.co.kr/product/detail.html?product_no=1033",
+  "checkedAt" : "2026-09-29T23:38:24.483731Z",
+  "httpStatus" : 200,
+  "outcome" : "ACCEPTED",
+  "priceQuote" : "판매가 21,900원"
+}, {
+  "url" : "https://qcystore.co.kr/product/detail.html?product_no=563",
+  "checkedAt" : "2026-09-29T23:38:24.761082300Z",
+  "httpStatus" : 200,
+  "outcome" : "ACCEPTED",
+  "priceQuote" : "판매가 29,900원"
+}, {
+  "url" : "https://www.lge.co.kr/product/notebook/15u50u-growk",
+  "checkedAt" : "2026-09-29T23:38:24.938223500Z",
+  "httpStatus" : 200,
+  "outcome" : "CONDITIONAL_PRICE",
+  "isolatedFacts" : [ {
+    "name" : "OS",
+    "value" : "Windows 11 Home (64 비트)",
+    "sourceUrl" : "https://www.lge.co.kr/product/notebook/15u50u-growk",
+    "quote" : "OS: Windows 11 Home (64 비트)",
+    "fetchedAt" : "2026-09-29T23:38:24.938223500Z",
+    "verificationStatus" : "UNREVIEWED",
+    "normalizationVersion" : null
+  }, {
+    "name" : "메모리",
+    "value" : "8 GB",
+    "sourceUrl" : "https://www.lge.co.kr/product/notebook/15u50u-growk",
+    "quote" : "메모리 용량 (GB): 8",
+    "fetchedAt" : "2026-09-29T23:38:24.938223500Z",
+    "verificationStatus" : "UNREVIEWED",
+    "normalizationVersion" : "basic-spec-v1"
+  }, {
+    "name" : "저장공간",
+    "value" : "256 GB",
+    "sourceUrl" : "https://www.lge.co.kr/product/notebook/15u50u-growk",
+    "quote" : "SSD: 256 GB (NVMe™) + 확장 슬롯 1 (PCIe 4.0)",
+    "fetchedAt" : "2026-09-29T23:38:24.938223500Z",
+    "verificationStatus" : "UNREVIEWED",
+    "normalizationVersion" : "basic-spec-v1"
+  } ],
+  "isolatedChecks" : [ {
+    "id" : "memory",
+    "label" : "메모리",
+    "requiredValue" : "16GB 이상",
+    "status" : "BELOW",
+    "facts" : [ {
+      "name" : "메모리",
+      "value" : "8 GB",
+      "sourceUrl" : "https://www.lge.co.kr/product/notebook/15u50u-growk",
+      "quote" : "메모리 용량 (GB): 8",
+      "fetchedAt" : "2026-09-29T23:38:24.938223500Z",
+      "verificationStatus" : "UNREVIEWED",
+      "normalizationVersion" : "basic-spec-v1"
+    } ],
+    "unknownReason" : null
+  }, {
+    "id" : "storage",
+    "label" : "저장 공간",
+    "requiredValue" : "512GB 이상",
+    "status" : "BELOW",
+    "facts" : [ {
+      "name" : "저장공간",
+      "value" : "256 GB",
+      "sourceUrl" : "https://www.lge.co.kr/product/notebook/15u50u-growk",
+      "quote" : "SSD: 256 GB (NVMe™) + 확장 슬롯 1 (PCIe 4.0)",
+      "fetchedAt" : "2026-09-29T23:38:24.938223500Z",
+      "verificationStatus" : "UNREVIEWED",
+      "normalizationVersion" : "basic-spec-v1"
+    } ],
+    "unknownReason" : null
+  } ]
+} ]
