@@ -25,6 +25,16 @@ class DiscoveryExclusionsTest {
         assertThat(excluded.contains(product("Model 0", "other", "https://qcystore.co.kr/product/model/100/"))).isTrue();
         assertThat(excluded.searchTerms()).isEqualTo(" -\"Model 15\" -\"Model 16\" -\"Model 17\" -\"Model 18\" -\"Model 19\"");
     }
+    @Test void priorOfficialQcyIdentityExcludesANewColorPageWithoutRewritingHistory() {
+        var old = new CandidateSuggestion(UUID.randomUUID(), "QCY HT16 블랙", "https://qcystore.co.kr/product/model/990/", "", "test", Instant.now());
+        old.officialProduct(product(old.name(), "qcy-kr:cafe24_ylintlshop_1_990", old.url()));
+        var white = product("QCY HT16 화이트", DiscoveryExclusions.qcyColorIdentity("QCY HT16 화이트"), "https://qcystore.co.kr/product/model/979/");
+        assertThat(DiscoveryExclusions.from(List.of(old), List.of()).contains(white)).isTrue();
+        assertThat(old.productIdentity()).isEqualTo("qcy-kr:cafe24_ylintlshop_1_990");
+        var unverified = new CandidateSuggestion(UUID.randomUUID(), old.name(), old.url(), "", "test", Instant.now());
+        assertThat(DiscoveryExclusions.from(List.of(unverified), List.of()).contains(white)).isFalse();
+        assertThat(DiscoveryExclusions.from(List.of(old), List.of()).contains(product("QCY HT19 화이트", DiscoveryExclusions.qcyColorIdentity("QCY HT19 화이트"), white.offer().purchaseUrl()))).isFalse();
+    }
     private OfficialProduct product(String name, String id, String url) {
         return new OfficialProduct(name, id, new OfficialOffer(url, "store", new java.math.BigDecimal("10000"), "KRW", null, Instant.now(), "", OfficialStorePolicy.VERSION), "");
     }

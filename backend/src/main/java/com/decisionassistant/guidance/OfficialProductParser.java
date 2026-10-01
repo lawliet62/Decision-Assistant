@@ -103,7 +103,7 @@ final class OfficialProductParser {
         // QCY는 같은 모델의 색상별 진입 페이지에도 서로 다른 productGroupID를 부여한다.
         // 색상 그룹으로 검증한 경우에만 말미 색상을 제거하여 비교 후보 중복을 막는다.
         if (store.id().equals("qcy-kr") && type(product, "ProductGroup"))
-            identity = store.id() + ":color-model:" + DiscoveryExclusions.normalizedName(name.replaceFirst("\\s+(?:블랙|화이트)$", ""));
+            identity = DiscoveryExclusions.qcyColorIdentity(name);
         var description = Jsoup.parse(product.path("description").asText("")).text();
         if (description.length() > 1500) description = description.substring(0, 1500);
         return new Result(new OfficialProduct(name, identity, new OfficialOffer(requestedUrl, store.name(), price, "KRW", image,
