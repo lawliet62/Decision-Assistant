@@ -1,0 +1,207 @@
+[
+  {
+    "requested": "https://www.lge.co.kr/notebook/15u40n-ga76k",
+    "resolved": "https://www.lge.co.kr/product/notebook/15u40n-ga76k",
+    "canonical": "https://www.lge.co.kr/product/notebook/15u50t-growk",
+    "outcome": "RESOLVED_URL_MISMATCH",
+    "productOptions": [
+      {
+        "sku": "15U40N-G.AA76K",
+        "variesBy": ""
+      }
+    ]
+  },
+  {
+    "requested": "https://www.lge.co.kr/notebook/15u70p-pa7dk",
+    "resolved": "https://www.lge.co.kr/product/notebook/15u70p-pa7dk",
+    "canonical": "https://www.lge.co.kr/product/monitors/27gs50f",
+    "outcome": "RESOLVED_URL_MISMATCH",
+    "productOptions": [
+      {
+        "sku": "15U70P-P.AA7DK",
+        "variesBy": ""
+      }
+    ]
+  },
+  {
+    "requested": "https://www.lge.co.kr/product/notebook/15u50u-growk",
+    "resolved": "https://www.lge.co.kr/product/notebook/15u50u-growk",
+    "canonical": "https://www.lge.co.kr/product/notebook/15u50u-growk",
+    "outcome": "CONDITIONAL_PRICE",
+    "productOptions": [
+      {
+        "sku": "15U50U-G.AROWK",
+        "variesBy": ""
+      }
+    ]
+  },
+  {
+    "requested": "https://www.lge.co.kr/notebook/17u70n-pa70k",
+    "resolved": "https://www.lge.co.kr/product/notebook/17u70n-pa70k",
+    "canonical": "https://www.lge.co.kr/product/notebook/15u50t-growk",
+    "outcome": "RESOLVED_URL_MISMATCH",
+    "productOptions": [
+      {
+        "sku": "17U70N-P.AA70K",
+        "variesBy": ""
+      }
+    ]
+  },
+  {
+    "requested": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%9E%99/990/",
+    "resolved": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%9E%99/990/",
+    "canonical": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%9E%99/990/",
+    "outcome": "VARIANT_UNSUPPORTED",
+    "productOptions": [
+      {
+        "sku": "",
+        "variesBy": "[\"선택\"]",
+        "variants": [
+          {
+            "name": "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙 블랙",
+            "options": [
+              {
+                "@type": "PropertyValue",
+                "name": "선택",
+                "value": "블랙"
+              }
+            ],
+            "price": 31800
+          },
+          {
+            "name": "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙 화이트",
+            "options": [
+              {
+                "@type": "PropertyValue",
+                "name": "선택",
+                "value": "화이트"
+              }
+            ],
+            "price": 31800
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "requested": "https://qcystore.co.kr/product/qcy-t13-anc-app-%EC%95%A1%ED%8B%B0%EB%B8%8C%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-%ED%99%94%EC%9D%B4%ED%8A%B8/633/",
+    "resolved": "https://qcystore.co.kr/product/qcy-t13-anc-app-%EC%95%A1%ED%8B%B0%EB%B8%8C%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-%ED%99%94%EC%9D%B4%ED%8A%B8/633/",
+    "canonical": "https://qcystore.co.kr/product/qcy-t13-anc-app-%EC%95%A1%ED%8B%B0%EB%B8%8C%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-%ED%99%94%EC%9D%B4%ED%8A%B8/633/",
+    "outcome": "ACCEPTED",
+    "productOptions": [
+      {
+        "sku": "",
+        "variesBy": "[\"color\"]",
+        "variants": [
+          {
+            "name": "QCY T13 ANC APP 액티브노이즈캔슬링 블루투스 이어폰 화이트 블랙",
+            "options": {
+              "color": "블랙"
+            },
+            "price": 28200
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "requested": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%ED%99%94%EC%9D%B4%ED%8A%B8/979/",
+    "resolved": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%ED%99%94%EC%9D%B4%ED%8A%B8/979/",
+    "canonical": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%ED%99%94%EC%9D%B4%ED%8A%B8/979/",
+    "outcome": "VARIANT_UNSUPPORTED",
+    "productOptions": [
+      {
+        "sku": "",
+        "variesBy": "[\"선택\"]",
+        "variants": [
+          {
+            "name": "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 화이트 화이트",
+            "options": [
+              {
+                "@type": "PropertyValue",
+                "name": "선택",
+                "value": "화이트"
+              }
+            ],
+            "price": 31800
+          },
+          {
+            "name": "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 화이트 블랙",
+            "options": [
+              {
+                "@type": "PropertyValue",
+                "name": "선택",
+                "value": "블랙"
+              }
+            ],
+            "price": 31800
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "requested": "https://qcystore.co.kr/product/qcy-ht19-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%9D%B4%EC%96%B4%ED%8F%B0-%EA%B2%8C%EC%9D%B4%EB%B0%8D-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EA%B3%A0%EC%9D%8C%EC%A7%88/1012/",
+    "resolved": "https://qcystore.co.kr/product/qcy-ht19-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%9D%B4%EC%96%B4%ED%8F%B0-%EA%B2%8C%EC%9D%B4%EB%B0%8D-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EA%B3%A0%EC%9D%8C%EC%A7%88/1012/",
+    "canonical": "https://qcystore.co.kr/product/qcy-ht19-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%9D%B4%EC%96%B4%ED%8F%B0-%EA%B2%8C%EC%9D%B4%EB%B0%8D-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EA%B3%A0%EC%9D%8C%EC%A7%88/1012/",
+    "outcome": "VARIANT_UNSUPPORTED",
+    "productOptions": [
+      {
+        "sku": "",
+        "variesBy": "[\"선택\"]",
+        "variants": [
+          {
+            "name": "QCY HT19 멜로버즈 블루투스 6.0 무선 이어폰 게이밍 ANC 노이즈캔슬링 고음질 블랙",
+            "options": [
+              {
+                "@type": "PropertyValue",
+                "name": "선택",
+                "value": "블랙"
+              }
+            ],
+            "price": 50900
+          },
+          {
+            "name": "QCY HT19 멜로버즈 블루투스 6.0 무선 이어폰 게이밍 ANC 노이즈캔슬링 고음질 화이트",
+            "options": [
+              {
+                "@type": "PropertyValue",
+                "name": "선택",
+                "value": "화이트"
+              }
+            ],
+            "price": 50900
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "requested": "https://qcystore.co.kr/product/qcy-h4-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EC%9D%8C%EC%A7%88%EC%A2%8B%EC%9D%80-%EA%B2%8C%EC%9D%B4%EB%B0%8D-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%ED%97%A4%EB%93%9C%EC%85%8B-%EB%A7%88%EC%9D%B4%ED%81%AC-%EB%AC%B4%EC%84%A0-%ED%97%A4%EB%93%9C%ED%8F%B0-%EB%B8%94%EB%9E%99/671/",
+    "resolved": "https://qcystore.co.kr/product/qcy-h4-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EC%9D%8C%EC%A7%88%EC%A2%8B%EC%9D%80-%EA%B2%8C%EC%9D%B4%EB%B0%8D-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%ED%97%A4%EB%93%9C%EC%85%8B-%EB%A7%88%EC%9D%B4%ED%81%AC-%EB%AC%B4%EC%84%A0-%ED%97%A4%EB%93%9C%ED%8F%B0-%EB%B8%94%EB%9E%99/671/",
+    "canonical": "https://qcystore.co.kr/product/qcy-h4-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EC%9D%8C%EC%A7%88%EC%A2%8B%EC%9D%80-%EA%B2%8C%EC%9D%B4%EB%B0%8D-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%ED%97%A4%EB%93%9C%EC%85%8B-%EB%A7%88%EC%9D%B4%ED%81%AC-%EB%AC%B4%EC%84%A0-%ED%97%A4%EB%93%9C%ED%8F%B0-%EB%B8%94%EB%9E%99/671/",
+    "outcome": "ACCEPTED",
+    "productOptions": [
+      {
+        "sku": "",
+        "variesBy": "[\"color\"]",
+        "variants": [
+          {
+            "name": "QCY H4 ANC 노이즈캔슬링 음질좋은 게이밍 블루투스 헤드셋 마이크 무선 헤드폰 블랙 블랙",
+            "options": {
+              "color": "블랙"
+            },
+            "price": 49900
+          },
+          {
+            "name": "QCY H4 ANC 노이즈캔슬링 음질좋은 게이밍 블루투스 헤드셋 마이크 무선 헤드폰 블랙 베이지",
+            "options": {
+              "color": "베이지"
+            },
+            "price": 49900
+          }
+        ]
+      }
+    ]
+  }
+]
