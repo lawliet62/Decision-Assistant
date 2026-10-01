@@ -223,7 +223,11 @@ public class DiscoveryWorker {
             candidate.discovered(facts);
             accepted.add(candidate);
         }
-        return accepted.stream().sorted(DiscoveryRanking.byPrice()).toList();
+        var models = new LinkedHashMap<String, CandidateSuggestion>();
+        // 같은 색상 그룹의 별도 판매 페이지는 검증된 후보 중 저렴한 한 페이지만 남긴다.
+        // 서로 다른 페이지의 사양이나 가격을 합치지 않는다.
+        accepted.stream().sorted(DiscoveryRanking.byPrice()).forEach(candidate -> models.putIfAbsent(candidate.productIdentity(), candidate));
+        return List.copyOf(models.values());
     }
 
     private static void logFailure(String event, Work work, DiscoveryFailure failure, Throwable cause) {

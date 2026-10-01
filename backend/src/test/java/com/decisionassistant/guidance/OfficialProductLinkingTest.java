@@ -3,6 +3,7 @@ package com.decisionassistant.guidance;
 import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.List;
+import static com.decisionassistant.guidance.DiscoveryContracts.*;
 import static org.assertj.core.api.Assertions.*;
 
 class OfficialProductLinkingTest {
@@ -77,5 +78,21 @@ class OfficialProductLinkingTest {
         var wrongCanonical = "<link rel='canonical' href='https://www.lge.co.kr/product/notebook/model-b'>";
         assertThat(OfficialProductParser.inspect(old, new WebEvidenceProvider.Page("", "", wrongCanonical + page, current), Instant.now()).rejection())
                 .isEqualTo(OfficialProductParser.Rejection.CANONICAL_URL_MISMATCH);
+    }
+    @Test void finalCandidatesDeduplicateVerifiedModelWithoutCombiningFactsAcrossColorPages() {
+        var black = inspect(html(group())).product();
+        var whiteUrl = URL.replace("990", "979");
+        var whiteHtml = html(group()).replace(NAME, "QCY HT16 멜로버즈 화이트").replace(URL, whiteUrl);
+        var white = OfficialProductParser.inspect(whiteUrl, new WebEvidenceProvider.Page("", "", whiteHtml, whiteUrl), Instant.now()).product();
+        var pages = List.of(new SourcePage(URL, black.name(), black.name(), Instant.now(), black, List.of()),
+                new SourcePage(whiteUrl, white.name(), white.name(), Instant.now(), white, List.of()));
+        var input = new DiscoveryInput("무선 이어폰", List.of(), null, null, List.of("가격"), pages, List.of());
+        var proposal = new DiscoveryProposal(List.of(
+                new ProposedProduct(black.name(), URL, black.name(), "", List.of()),
+                new ProposedProduct(white.name(), whiteUrl, white.name(), "", List.of())));
+        var candidates = DiscoveryWorker.validateOfficialProducts(java.util.UUID.randomUUID(), proposal, input);
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.getFirst().productIdentity()).isEqualTo(black.identity());
+        assertThat(candidates.getFirst().facts()).allMatch(fact -> fact.sourceUrl().equals(candidates.getFirst().url()));
     }
 }
