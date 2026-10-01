@@ -29,6 +29,28 @@
 - branch, commit, push, Pull Request, CI 대응의 상세 절차는 [Development workflow](docs/development.md)를 따른다.
 - 독립 작업은 최신 `origin/main`에서 분기한다. 의존 작업을 stacked PR로 구성하면 head/base·병합 순서를 보고하고 [등록 절차](docs/stacked-prs.md)를 따른다. 자동화가 비활성이면 자동 restack이 된다고 안내하지 않는다.
 
+## 개발 에이전트 GitHub 인증
+
+이 규칙은 `lawliet62/Decision-Assistant`에 대한 에이전트 작업에 적용한다.
+
+- 세션 시작 시 다음 명령으로 인증을 확인한다.
+  `& C:\Users\dlwld\Tools\github-agent\agent.ps1 verify`
+- GitHub 조회·변경과 인증이 필요한 Git 작업(fetch·pull·push 등)은
+  `& C:\Users\dlwld\Tools\github-agent\agent.ps1 exec`를 통해 실행한다.
+  인증이 필요 없는 로컬 Git 조회·stage·branch 작업은 직접 실행할 수 있다.
+- 에이전트가 만드는 commit은 다음 형식으로 실행하여 bot 작성자와 committer를 적용한다.
+  `& C:\Users\dlwld\Tools\github-agent\agent.ps1 exec --bot-author git commit ...`
+  개인 또는 전역 Git 작성자 설정은 변경하지 않는다.
+- helper 부재 또는 인증 실패 시 개인 gh 로그인, 기존 Git 자격 증명,
+  다른 인증 경로로 자동 전환하거나 우회하지 않는다.
+  승인된 인증 경로의 문제를 진단하고, 해결되지 않으면 실패한 단계와
+  비밀값을 제외한 오류·필요한 사용자 조치를 보고한다.
+  인증과 무관한 로컬 작업은 계속할 수 있다.
+- 개인 GitHub 로그인과 credential store는 변경하지 않으며,
+  토큰·JWT·클라우드 자격 증명을 출력하거나 파일·Git에 저장하지 않는다.
+- 기존 구현 작업의 완료 조건인 commit·push·PR 생성·CI 확인은 유지한다.
+  인증 실패를 근거 없이 사용자에게 PR 게시를 넘기는 이유로 사용하지 않는다.
+
 ## 구현 전 Human Decision Gate
 
 - 현재 human 요청, 승인된 spec 또는 Accepted ADR이 아직 결정하지 않은 선택이 제품·핵심 domain 정책, 데이터 의미·수명, 인증·보안·개인정보·외부 전송 경계, runtime·provider·배포 architecture 또는 Accepted ADR을 변경한다면 구현 전에 human의 명시적 결정을 받는다. 세부 기준과 요청 형식은 [Development workflow](docs/development.md#human-decision-gate)를 따른다.
