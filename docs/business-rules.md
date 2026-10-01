@@ -146,6 +146,7 @@
 
 - **동작:** [등록 근거가 있는 판매처](official-stores.md)의 한국어 개별 상품 페이지에서 정확한 KRW 판매가를 확인한 제품만 추천한다. HTML의 단일 Product/Offer를 검증하며 가격 범위·조건부 가격·불명확한 구성은 제외한다. 가격은 AI 생성값으로 대체하지 않는다.
 - **동작:** v2는 같은 상품 구매 영역의 가격 라벨·금액도 대조한다. 해당 금액의 회원·쿠폰·카드 조건 또는 본문 연결 불명확은 가격 미확인으로 제외한다. 과거 v1 결과에 새 가격·호환성 검증을 소급하지 않는다.
+- **동작:** 등록 판매처의 알려진 동일 상품 경로 별칭과 명시적으로 확인된 색상 옵션만 정규화한다. 다른 모델의 canonical·용량/구성 옵션은 같은 상품으로 합치지 않는다. 색상별 별도 판매 페이지도 같은 모델이면 비교 후보 한 개로 취급한다. 구체적인 수집 표현은 [판매처 문서](official-stores.md)를 따른다.
 - **동작:** 공식 제품 이미지는 확인한 이미지 호스트에서 브라우저가 referrer 없이 직접 불러온다. 이미지가 없거나 실패하면 대체 영역을 표시한다. 입력 화면에서 이미지 서버로 IP가 전달됨을 알린다.
 - **동작:** 홈·조건 입력·결과에 공식 판매처 기준과 다른 판매·할인 경로가 더 저렴할 수 있음을 본문으로 표시한다. 실행의 정책 버전과 개별 공식 offer를 저장하며 기존 추천·직접 추가를 공식 추천으로 소급하지 않는다.
 - **이유:** 추천 범위와 가격 정렬의 의미를 명확히 하되 제품 안전성·품질·정품·최저가를 인증하지 않는다.
@@ -209,7 +210,7 @@
 | BR-EVD-03, BR-COST-01 | `ProductLookupServiceTest`, `SerperSearchProviderTest`, `SearchQuotaIntegrationTest`, `ProductLookupApiIntegrationTest`, `DecisionApiIntegrationTest.lookupRequiresAuthenticationCsrfAndExplicitConsentEvenWhenDisabled` |
 | BR-DISC-01~02 | `DiscoveryWorkerTest`, `DiscoveryFailureTest`, `ProviderResponseConversionTest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-DISC-03 | `MinimumRequirementMatcherTest`, `DiscoveryApiIntegrationTest.minimumRequirementsPersistAndRemainAdvisoryWithBoundedExternalCalls`, `DiscoveryApiIntegrationTest.invalidMinimumRequirementsAndLegacyVersionCannotTriggerProviders`, `frontend/e2e/minimum-requirements.spec.ts` |
-| BR-DISC-04 | `OfficialProductParserTest`, `ProviderResponseConversionTest.productScrapeConvertsHtmlAndFinalUrlWithOneRequest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
+| BR-DISC-04 | `OfficialProductParserTest`, `OfficialProductLinkingTest`, `ProviderResponseConversionTest.productScrapeConvertsHtmlAndFinalUrlWithOneRequest`, `DiscoveryApiIntegrationTest`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-DISC-02~04 (v2) | `DiscoveryVerificationTest`, `DiscoveryApiIntegrationTest.compatibilityIsRequiredWithoutMinimumSpecsAndLegacyPolicyKeepsItsOriginalMeaning`, `frontend/e2e/minimum-requirements.spec.ts` |
 | BR-DISC-05 | `DiscoveryExclusionsTest`, `DiscoveryApiIntegrationTest.refreshExcludesAllPreviousProductsAndPreservesAcceptedInputAndHistory`, `DiscoveryApiIntegrationTest.failedRefreshKeepsPreviousListAndRetryUsesSameGeneration`, `DiscoveryApiIntegrationTest.concurrentRefreshRequestsCreateOneNewGeneration`, `DiscoveryApiIntegrationTest.lateAiCompletionCannotOverwriteANewerExecution`, `frontend/e2e/click-discovery.spec.ts` |
 | BR-TPL-01 | `DecisionApiIntegrationTest.earbudsAndSelectedSourcesReuseExistingLifecycle`, `EvidenceWorkflowWorkerTest.earbudsNeverAutoFillSubjectiveRatings` |

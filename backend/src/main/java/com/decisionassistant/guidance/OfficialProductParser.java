@@ -16,7 +16,7 @@ final class OfficialProductParser {
     private OfficialProductParser() {}
 
     enum Rejection {
-        UNREGISTERED_STORE, HTML_MISSING, HTML_TOO_LARGE, RESOLVED_URL_MISMATCH,
+        UNREGISTERED_STORE, HTML_MISSING, HTML_TOO_LARGE, RESOLVED_URL_MISSING, RESOLVED_URL_MISMATCH, CANONICAL_URL_MISMATCH,
         PRODUCT_MISSING, PRODUCT_AMBIGUOUS, PRODUCT_NAME_INVALID, VARIANT_UNSUPPORTED,
         OFFER_MISSING, OFFER_TYPE_UNSUPPORTED, CURRENCY_UNSUPPORTED, CONDITIONAL_PRICE,
         UNAVAILABLE, NOT_NEW, OFFER_URL_MISMATCH, PRICE_EXPIRED, PRICE_INVALID,
@@ -37,8 +37,11 @@ final class OfficialProductParser {
         if (page.html() == null) return Result.rejected(Rejection.HTML_MISSING);
         if (page.html().length() > 2_000_000) return Result.rejected(Rejection.HTML_TOO_LARGE);
         // provider가 최종 URL을 확인하지 못하거나 다른 상품으로 이동했다면 공식 상품으로 승격하지 않는다.
+        if (page.resolvedUrl() == null || page.resolvedUrl().isBlank()) return Result.rejected(Rejection.RESOLVED_URL_MISSING);
         if (!samePage(requestedUrl, page.resolvedUrl())) return Result.rejected(Rejection.RESOLVED_URL_MISMATCH);
         var doc = Jsoup.parse(page.html(), requestedUrl);
+        var canonical = doc.selectFirst("link[rel=canonical]");
+        if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         var products = new ArrayList<JsonNode>();
         for (var script : doc.select("script[type=application/ld+json]")) {
             if (script.data().length() > 200_000) continue;
@@ -56,7 +59,8 @@ final class OfficialProductParser {
         if (type(product, "ProductGroup")) {
             var varies = product.path("variesBy");
             var dimensions = varies.isArray() ? iterable(varies) : List.of(varies);
-            if (dimensions.isEmpty() || dimensions.stream().anyMatch(item -> !Set.of("color", "https://schema.org/color", "http://schema.org/color").contains(item.asText("")))) return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
+            if ((dimensions.isEmpty() || dimensions.stream().anyMatch(item -> !Set.of("color", "https://schema.org/color", "http://schema.org/color").contains(item.asText(""))))
+                    && !qcyColorSelection(store, product, variants, dimensions)) return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
         }
         var rows = new ArrayList<JsonNode>();
         for (var variant : variants) {
@@ -96,6 +100,10 @@ final class OfficialProductParser {
         var image = OfficialStorePolicy.image(store, requestedUrl, first.isObject() ? first.path("url").asText("") : first.asText(""));
         if (first.isMissingNode() || first.isNull() || first.asText("").isBlank() && !first.isObject()) image = null;
         var identity = store.id() + ":" + (sku.isBlank() ? name.replaceAll("[\\s\\p{Punct}]", "").toLowerCase(Locale.ROOT) : sku.toLowerCase(Locale.ROOT));
+        // QCY는 같은 모델의 색상별 진입 페이지에도 서로 다른 productGroupID를 부여한다.
+        // 색상 그룹으로 검증한 경우에만 말미 색상을 제거하여 비교 후보 중복을 막는다.
+        if (store.id().equals("qcy-kr") && type(product, "ProductGroup"))
+            identity = store.id() + ":color-model:" + DiscoveryExclusions.normalizedName(name.replaceFirst("\\s+(?:블랙|화이트)$", ""));
         var description = Jsoup.parse(product.path("description").asText("")).text();
         if (description.length() > 1500) description = description.substring(0, 1500);
         return new Result(new OfficialProduct(name, identity, new OfficialOffer(requestedUrl, store.name(), price, "KRW", image,
@@ -104,6 +112,19 @@ final class OfficialProductParser {
     }
 
     private static List<JsonNode> iterable(JsonNode node) { var items = new ArrayList<JsonNode>(); node.forEach(items::add); return items; }
+    private static boolean qcyColorSelection(OfficialStorePolicy.Store store, JsonNode product, List<JsonNode> variants, List<JsonNode> dimensions) {
+        if (!store.id().equals("qcy-kr") || dimensions.size() != 1 || !dimensions.getFirst().asText("").equals("선택") || variants.isEmpty()) return false;
+        var name = product.path("name").asText("").strip();
+        return variants.stream().allMatch(variant -> {
+            var properties = variant.path("additionalProperty");
+            if (!type(variant, "Product") || !properties.isArray() || properties.size() != 1) return false;
+            var property = properties.path(0);
+            var color = property.path("value").asText("");
+            return type(property, "PropertyValue") && property.path("name").asText("").equals("선택")
+                    && Set.of("블랙", "화이트").contains(color)
+                    && variant.path("name").asText("").strip().equals(name + " " + color);
+        });
+    }
     private static boolean type(JsonNode node, String type) {
         var value = node.path("@type");
         return value.asText("").equals(type) || value.isArray() && iterable(value).stream().anyMatch(item -> type.equals(item.asText()));
@@ -124,6 +145,8 @@ final class OfficialProductParser {
         } catch (RuntimeException ignored) { return false; }
     }
     private static String productPath(URI uri) {
+        if ("www.lge.co.kr".equalsIgnoreCase(uri.getHost()))
+            return uri.getPath().replaceFirst("^/product/", "/").replaceFirst("/$", "");
         if ("qcystore.co.kr".equalsIgnoreCase(uri.getHost())) {
             if (uri.getPath().equals("/product/detail.html")) return Arrays.stream(Objects.toString(uri.getQuery(), "").split("&"))
                     .filter(item -> item.startsWith("product_no=")).map(item -> item.substring(11)).findFirst().orElse("");
