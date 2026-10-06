@@ -186,6 +186,7 @@ Serper는 제품명 검색, Firecrawl은 페이지 수집과 기존 대안 검�
 
 ## 문서 유지
 
+- 반복 진단의 탐색 비용과 근거 없는 원인 추정을 줄이기 위해, agent는 승인된 작업에서 얻은 재사용 가치가 있는 진단을 별도 요청 없이 `docs/troubleshooting/`에 작성하거나 갱신한다. [작성 기준](troubleshooting/README.md)에 따라 선정하고 최종 보고에 추가·갱신한 문서를 알린다. 이 규칙은 문서 유지에 적용되며 제품 범위 변경, 새 유료 실험 또는 Human Decision Gate 대상의 구현을 승인하지 않는다.
 - 동작 설명은 가능한 test/OpenAPI/config에서 생성하거나 연결한다.
 - 제품 boundary 변경은 `product.md`, 핵심 용어 변경은 `domain.md`를 같은 변경에서 갱신한다.
 - 장기간 유지할 architecture 선택과 대안은 ADR로 남긴다.
