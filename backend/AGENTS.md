@@ -19,7 +19,7 @@ feature package 내부에서 controller/service/entity/repository를 가까이 �
 - deterministic evaluator는 순수 Java로 유지하고 unit test에서 edge case를 검증한다.
 - LLM은 저장된 snapshot만 받고 algorithm result는 받지 않는다. AI 실패가 algorithm result를 무효화해서는 안 된다.
 - AI 호출 전 명시적 consent를 검증하고 timeout, provider/model, prompt/schema version, token metadata를 기록한다.
-- 외부 URL 수집은 사용자의 명시적 동의와 공개 HTTP(S) URL 검증을 거친 provider adapter로만 수행한다. 원문은 저장하지 않고 출처 URL·짧은 발췌·hash·조회 시각만 보존한다.
+- 사용자 입력의 외부 URL 수집은 명시적 동의와 공개 HTTP(S) URL 검증을 거친 provider adapter로만 수행한다. 운영자 등록 카탈로그의 고정 URL 갱신은 [ADR 0016](../docs/decisions/0016-curated-catalog.md)의 별도 경계이며 사용자 조건을 전송하지 않는다. 원문은 저장하지 않고 출처 URL·짧은 발췌·hash·조회 시각만 보존한다.
 
 ## 검증
 

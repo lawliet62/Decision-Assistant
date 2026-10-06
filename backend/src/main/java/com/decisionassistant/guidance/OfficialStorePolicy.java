@@ -9,7 +9,7 @@ public final class OfficialStorePolicy {
     private OfficialStorePolicy() {}
     public static final String VERSION = "official-kr-v2";
     public static boolean verifiesCompatibility(DiscoveryContracts.OfficialOffer offer) {
-        return offer != null && VERSION.equals(offer.policyVersion());
+        return offer != null && (VERSION.equals(offer.policyVersion()) || CatalogProperties.VERSION.equals(offer.policyVersion()));
     }
     public record Description(String version, String scope, String priceBasis) {}
     public static Description description() { return new Description(VERSION, "KOREAN_OFFICIAL_STORES", "OBSERVED_KRW_PRICE"); }

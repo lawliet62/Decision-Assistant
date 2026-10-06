@@ -1,0 +1,33 @@
+{
+  "samples" : [ {
+    "p50Ms" : 97.8247,
+    "maxMs" : 138.8184,
+    "concurrency" : 1,
+    "products" : 5,
+    "p95Ms" : 119.591199,
+    "requests" : 30
+  }, {
+    "p50Ms" : 156.6899,
+    "maxMs" : 193.1148,
+    "concurrency" : 5,
+    "products" : 5,
+    "p95Ms" : 184.1151,
+    "requests" : 30
+  }, {
+    "p50Ms" : 92.7341,
+    "maxMs" : 127.069499,
+    "concurrency" : 1,
+    "products" : 30,
+    "p95Ms" : 124.9289,
+    "requests" : 30
+  }, {
+    "p50Ms" : 126.1824,
+    "maxMs" : 141.0412,
+    "concurrency" : 5,
+    "products" : 30,
+    "p95Ms" : 140.9992,
+    "requests" : 30
+  } ],
+  "measuredAt" : "2026-10-06T05:37:25.476131900Z",
+  "environment" : "MockMvc + Testcontainers PostgreSQL; warm JVM; no browser/network latency"
+}

@@ -1,5 +1,8 @@
 # No cloud account, ADC or production secret is required by the test suite.
 decision-assistant:
+  catalog:
+    enabled: false
+    refresh-enabled: false
   secrets:
     mode: offline
   ai:

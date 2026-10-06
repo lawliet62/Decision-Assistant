@@ -509,6 +509,7 @@ export interface components {
             /** @enum {string} */
             recommendationGroup?: "RECOMMENDED" | "UNKNOWN" | "BELOW" | "LEGACY";
             compatibilityCheck?: components["schemas"]["RequirementCheck"];
+            priceStatus?: string;
         };
         DecisionResponse: {
             /** Format: uuid */
@@ -951,6 +952,7 @@ export interface components {
             importProvider?: string;
             importNotice?: string;
             discoveryPolicy?: components["schemas"]["Description"];
+            catalogEnabled?: boolean;
         };
         CurrentUserResponse: {
             /** Format: uuid */

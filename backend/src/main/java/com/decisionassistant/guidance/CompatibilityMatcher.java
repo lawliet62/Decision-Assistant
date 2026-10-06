@@ -8,7 +8,10 @@ import static com.decisionassistant.guidance.DiscoveryContracts.*;
 public final class CompatibilityMatcher {
     private CompatibilityMatcher() {}
     public static RequirementCheck check(TemplateKey category, String requested, List<ProductFact> facts, OfficialOffer offer) {
-        if (requested == null || !OfficialStorePolicy.verifiesCompatibility(offer)) return null;
+        return check(category, requested, facts, offer, false);
+    }
+    public static RequirementCheck check(TemplateKey category, String requested, List<ProductFact> facts, OfficialOffer offer, boolean catalog) {
+        if (requested == null || !catalog && !OfficialStorePolicy.verifiesCompatibility(offer)) return null;
         var name = switch (category) { case EARBUDS -> "호환성"; case MONITOR -> "연결 단자"; default -> "OS"; };
         var evidence = facts.stream().filter(f -> name.equals(f.name())).toList();
         var values = evidence.stream().map(f -> value(category, requested, f)).toList();

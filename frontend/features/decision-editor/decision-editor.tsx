@@ -16,6 +16,7 @@ type Problem = { detail?: string; violations?: string[] };
 type DraftValue = NonNullable<UpdateDraftRequest["values"]>[number];
 const discoveryEmptyReasons: Record<string, string> = {
   NO_OFFICIAL_RESULTS: "이번 검색에서 공식 판매처의 제품 페이지를 찾지 못했습니다. 조건을 바꾸거나 제품을 직접 추가할 수 있습니다.",
+  CATALOG_EMPTY: "등록된 제품을 준비 중입니다. 잠시 후 다시 확인하세요.",
   NO_VERIFIED_OFFERS: "찾은 공식 판매처 페이지에서 제품과 비교 가능한 가격을 확인하지 못했습니다. 제품을 직접 추가할 수 있습니다.",
   NO_NEW_PRODUCTS: "이번 검색에서는 이전 추천을 제외한 새 제품을 찾지 못했습니다. 이전 추천을 비교하거나 제품을 직접 추가할 수 있습니다.",
 };

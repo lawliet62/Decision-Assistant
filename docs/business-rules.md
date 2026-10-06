@@ -116,6 +116,8 @@
 
 ### BR-DISC-01: 선택 조건만으로 추천을 시작한다
 
+기본 `intake-catalog-v1`에는 BR-CAT-01~03을 적용한다. 아래 외부 검색·전송 규칙은 기존 `intake-v1/v2` 호환 경로에 적용한다.
+
 - **동작:** 지원하는 5개 제품군의 versioned intake template로 하나 이상의 용도·최대 예산·호환성을 선택한다. 선택한 용도는 하나의 추천에서 함께 고려하며 중복을 제거하고 템플릿 순서로 저장한다. 미정·제한 없음도 허용하며 자유 텍스트는 필수가 아니다. 조건·검색/수집/AI 동의·민감 정보 비포함 확인을 저장한다. 기존 동의는 새 경로를 허용하지 않는다.
 - **동작:** 최초 추천은 Serper 조건 검색 1회, 공개 페이지 최대 5개 수집, AI 구조화 최대 1회로 제한한다. 검색은 기존 월·burst 한도를 공유한다. 메모·사용자 identity는 최초 추천 검색·AI 입력에서 제외한다.
 - **동작:** 검색어는 공식 판매처 범위와 제품군 이름에 ANC·전용 펜 필수 선택의 기능 힌트만 더한다. 용도·예산·호환성·숫자형 최소 사양·UI 문구를 검색어에 나열하지 않는다. 전체 선택 조건은 저장·AI 입력·기존 서버 판정에 유지하며, 검색어에서 빠진 조건을 충족으로 간주하지 않는다.
@@ -159,6 +161,24 @@
 - **동작:** 추천 묶음의 최종 상태와 후보는 이력으로 남긴다. retry는 같은 generation을 복구하며 승인한 사양을 덮어쓰지 않는다. 진행 단계 변경은 optimistic version을 증가시키지만 executionId를 유지한다. 이전 실행의 지연 응답은 새 실행에 반영하지 않는다.
 - **이유:** 재검색 비용을 명시적으로 통제하면서 비교 내용을 잃지 않고 다른 후보를 확인한다. 별칭·판매자 간 완전한 모델 식별 catalog는 도입하지 않는다.
 
+### BR-CAT-01: 등록 제품 추천은 사용자 후보·외부 전송 없이 시작한다
+
+- **동작:** 기본 경로는 무선 이어폰, 초기 5개·활성 최대 30개 중 최대 5개다. 선택 조건은 DB의 공식 근거로 결정적으로 판정한다. 추천 시 외부 호출은 없고 검색·수집·AI 동의는 false여야 한다. 메모는 개인 비교에만 저장하며 자동 필터로 해석하지 않는다.
+- **동작:** 모델·구성이 불확실한 별칭은 결합하지 않는다. ANC·호환성 등의 근거가 없으면 UNKNOWN이며 조건을 자동 완화하지 않는다. 후보 수용은 여전히 사용자 선택이다.
+- **이유:** 후보 없는 클릭 진입을 유지하면서 검색 실패·외부 호출 비용을 제한한다.
+
+### BR-CAT-02: 가격과 고정 사양의 수명을 분리한다
+
+- **동작:** 가격은 확인 시각부터 24시간 미만만 예산 판정에 사용한다. 없는/만료된 가격은 확인 필요이며 다른 조건의 명확한 미달이 없으면 UNKNOWN으로 분류한다. 저장 시각·조회 시각으로 가격 시각을 갱신하지 않는다. 고정 사양은 90일 점검 대상으로 유지하고 SOFTWARE 사양은 30일 이후 새 추천에서 보류한다.
+- **동작:** 공식 판매 URL을 제품별 24시간 간격으로 수집한다. 수집 실패는 이전 시각을 연장하지 않는다. 품절·가격 검증 실패·모델 불일치는 새 추천의 판매 정보를 제외한다. 월 한도와 시도 기록은 호출 전에 commit하며 실패·재시작도 한도를 소비한다.
+- **이유:** 느리게 변하는 정보의 운영 비용과 가격 오판 위험을 구분한다. 일중 변동과 판매처 정확성은 보장하지 않는다.
+
+### BR-CAT-03: 공개 등록 정보와 개인 비교 snapshot은 구분한다
+
+- **동작:** 운영자가 검토한 로컬 manifest만 등록하며 수정은 revision 증가를 요구한다. 사양은 공식 URL·인용·확인 시각을 보존하고 UNREVIEWED로 표시한다. URL·identity 변경은 기존 가격을 초기화한다.
+- **동작:** 후보 생성 당시의 사양과 가격을 개인 비교에 복사한다. 이후 공용 등록 수정은 개인 확인값·평가를 덮어쓰지 않는다. 과거 후보를 읽을 때에도 가격의 24시간 규칙을 적용한다.
+- **이유:** 재사용으로 인한 개인정보 혼합과 과거 결정 근거의 변조를 막는다.
+
 ### BR-EVD-03: 제품명 검색은 사용자 선택을 돕는 URL lookup이다
 
 공식 추천의 추가 규칙은 BR-DISC-04를 따른다. 직접 제품명 검색·URL 추가는 공식 추천과 구분한다.
@@ -199,6 +219,7 @@
 | 규칙 | 현재 자동 검증 |
 | --- | --- |
 | BR-AUTH-01 | `UserProvisioningServiceTest` |
+| BR-CAT-01~03 | `CatalogPolicyTest`, `CatalogApiIntegrationTest`, `frontend/e2e/catalog.spec.ts`, `scripts/catalog/report.test.mjs` |
 | BR-OWN-01 | `DecisionApiIntegrationTest.isolatesEveryDecisionOperationByOwner`, `DecisionApiIntegrationTest.requiresAuthenticationAndCsrf` |
 | BR-EVAL-01 | `SnapshotFactoryTest.blocksEvaluationWhenAnActiveValueIsMissing` |
 | BR-EVAL-02, BR-EVAL-03 | `AlgorithmEvaluatorTest.appliesConstraintsAnchorsWeightsAndEstimatedFlag`, `AlgorithmEvaluatorTest.clampsNumericUtilityOutsideAnchors` |

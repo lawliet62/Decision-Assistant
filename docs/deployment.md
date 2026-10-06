@@ -1,5 +1,7 @@
 # MVP 배포·운영 runbook
 
+기본 추천의 제품 등록·가격 갱신 활성화·월 호출 한도·2주 관측은 [카탈로그 운영](catalog-operations.md)을 따른다. 카탈로그 조회와 가격 worker 활성화는 별도 설정이다. 초기 가격이 없는 상태를 최신 가격 추천이 준비된 배포로 취급하지 않는다.
+
 단일 backend + Next.js + PostgreSQL 배포를 전제로 한다. 이 문서는 자동 배포나 외부 유료 구매 권한을 의미하지 않는다. 실제 배포 대상은 아직 미정이다. Secret은 GCP Secret Manager에서 backend가 직접 조회하며 리소스·IAM·운영 Identity 준비는 운영자가 수행한다.
 
 ## 출시 전 확인

@@ -19,8 +19,12 @@ final class DiscoveryExplanation {
                         case CONFLICT -> "근거가 상충하여 확인하지 못했습니다."; case AMBIGUOUS -> "근거의 표현이 모호하여 확인하지 못했습니다."; default -> "수집 근거로 확인하지 못했습니다.";
                     });
         }
-        var price = offer.price().stripTrailingZeros().toPlainString();
-        parts.add("공식 판매가는 " + price + "원입니다." + (input.maxBudget() == null ? "" : offer.price().compareTo(input.maxBudget()) > 0 ? " 선택한 예산을 초과합니다." : " 선택한 예산 이내입니다."));
+        if (offer == null || CatalogProperties.VERSION.equals(offer.policyVersion()) && !CatalogDiscovery.fresh(offer, java.time.Instant.now())) {
+            parts.add("24시간 안에 확인한 판매가가 없어 예산 충족 여부를 판정하지 않았습니다.");
+        } else {
+            var price = offer.price().stripTrailingZeros().toPlainString();
+            parts.add("확인 시점의 공식 판매가는 " + price + "원입니다." + (input.maxBudget() == null ? "" : offer.price().compareTo(input.maxBudget()) > 0 ? " 선택한 예산을 초과합니다." : " 선택한 예산 이내입니다."));
+        }
         var verified = checks.stream().filter(c -> c.status() == RequirementStatus.MEETS)
                 .map(c -> c.requiredValue().equals("지원 필수") ? c.label() : c.label() + " " + c.requiredValue()).toList();
         if (!verified.isEmpty()) parts.add(String.join(", ", verified) + "의 지원·충족 근거가 있습니다.");

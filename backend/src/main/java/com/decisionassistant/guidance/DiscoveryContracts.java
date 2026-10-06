@@ -15,10 +15,10 @@ public final class DiscoveryContracts {
                                    @Size(max = 4) List<@NotBlank @Size(max = 40) String> uses,
                                    @DecimalMin("1") @DecimalMax("100000000") BigDecimal maxBudget,
                                    @Size(max = 40) String compatibility,
-                                   @NotNull @AssertTrue Boolean searchConsent,
-                                   @NotNull @AssertTrue Boolean collectionConsent,
-                                   @NotNull @AssertTrue Boolean aiConsent,
-                                   @NotNull @AssertTrue Boolean sensitiveDataAcknowledged,
+                                   @NotNull Boolean searchConsent,
+                                   @NotNull Boolean collectionConsent,
+                                   @NotNull Boolean aiConsent,
+                                   @NotNull Boolean sensitiveDataAcknowledged,
                                    @Size(max = 3) Map<@NotBlank @Size(max = 40) String, @NotBlank @Size(max = 40) String> minimumRequirements) {
         public List<String> selectedUses() {
             return uses != null ? uses : use == null ? List.of() : List.of(use);
@@ -33,6 +33,14 @@ public final class DiscoveryContracts {
                     searchConsent, collectionConsent, aiConsent, sensitiveDataAcknowledged, requirements);
         }
         public Map<String, String> selectedRequirements() { return minimumRequirements == null ? Map.of() : minimumRequirements; }
+        @AssertTrue(message = "추천 경로에 맞는 전송 동의가 필요합니다.")
+        @com.fasterxml.jackson.annotation.JsonIgnore
+        public boolean isConsentsValid() {
+            return CatalogProperties.TEMPLATE.equals(templateVersion)
+                    ? Boolean.FALSE.equals(searchConsent) && Boolean.FALSE.equals(collectionConsent) && Boolean.FALSE.equals(aiConsent)
+                    : Boolean.TRUE.equals(searchConsent) && Boolean.TRUE.equals(collectionConsent)
+                        && Boolean.TRUE.equals(aiConsent) && Boolean.TRUE.equals(sensitiveDataAcknowledged);
+        }
     }
     public record ProductFact(String name, String value, String sourceUrl, String quote,
                               Instant fetchedAt, String verificationStatus, String normalizationVersion) {

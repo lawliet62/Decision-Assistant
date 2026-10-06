@@ -11,6 +11,7 @@ export function ProductOffer({ offer, name }: { offer?: components["schemas"]["O
     <p className="text-lg font-semibold">{offer.price?.toLocaleString("ko-KR")}원 <span className="text-xs font-normal text-zinc-500">확인 판매가</span></p>
     <SourceLink url={offer.purchaseUrl} kind="OFFICIAL_STORE" label={`${offer.seller ?? "공식 판매처"}에서 구매 정보 보기`} />
     <p className="text-xs text-zinc-500">{offer.fetchedAt && `조회 ${new Date(offer.fetchedAt).toLocaleString("ko-KR")} · `}배송비·추가 혜택은 판매처에서 확인하세요. 가격과 재고는 달라질 수 있습니다.</p>
+    {offer.policyVersion === "catalog-v1" && <p className="text-xs text-zinc-500">저장된 비교 시점의 판매 정보입니다. 확인 후 24시간이 지난 가격은 새 예산 판정에 사용할 수 없습니다.</p>}
   </div>;
 }
 function ProductImage({ url, name }: { url?: string; name?: string }) {

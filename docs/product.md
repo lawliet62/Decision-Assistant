@@ -10,7 +10,7 @@ Decision Assistant는 용도·예산을 선택해 개인 전자기기 후보를 
 
 지원한다.
 
-- 단일 사용자의 개인 전자기기(Laptop, Phone, Tablet, Monitor, 완전 무선 이어폰)의 후보 없는 추천 시작, 1~5개 후보 저장과 2~5개 Option 비교
+- 기본 추천은 운영자가 등록한 완전 무선 이어폰의 후보 없는 시작, 최대 5개 후보 저장과 2~5개 Option 비교다. Laptop/Phone/Tablet/Monitor는 기존 비교·직접 입력 및 실시간 추천 호환 경로로 유지한다.
 - 초대된 사용자의 Google 또는 이메일 OTP 로그인과 개인별 데이터 격리
 - Criterion weight와 numeric/rating value
 - hard Constraint와 불확실성 표시
@@ -28,7 +28,7 @@ Decision Assistant는 용도·예산을 선택해 개인 전자기기 후보를 
 지원하지 않는다.
 
 - 협업, 공개 공유, 관리자용 사용자 관리 UI
-- 인증 페이지 crawling, 지속적인 가격/재고 감시, 최저가 보장, domain catalog
+- 인증 페이지 crawling, 시장 전체의 지속적인 가격/재고 감시, 최저가 보장, 범용 모델 식별 catalog
 - pairwise comparison, 확률 모델, 숨은 가중치 변경이나 자동 학습 모델
 - 범용 대화형 agent와 사용자 확인값을 덮어쓰는 LLM 변경
 - CPU 벤치마크·음질 하한·배터리 사용 조건의 자동 판정과 최소 사양의 점수 평가 연동은 후속 과제다. 기존 점수 평가 기능은 유지한다.
@@ -37,7 +37,7 @@ Decision Assistant는 용도·예산을 선택해 개인 전자기기 후보를 
 
 대상은 제품명을 아직 모르거나 여러 제품의 차이를 직접 확인하려는 개인 전자기기 구매자다. 타이핑 없이 추천과 비교에 도달하도록 하고 출처가 있는 주요 정보를 먼저 보여준다. 검색 결과는 최대 5개이고 정확한 제품·세대·페이지는 사용자가 선택한다. 첫 잠정 조언까지 필요한 시간과 답변 수, 실제 선택·outcome 기록이 핵심 신호다. 추천 클릭률만으로 correctness를 판단하지 않는다.
 
-클릭 중심 추천 확장은 ADR 0009의 human 승인에 따라 기존 마지막 MVP 범위를 변경한다. 전체 시장을 망라하는 최적 후보 탐색, 가격·재고·공식 유통 정확성, 후기 aggregation, catalog/entity resolution subsystem, preference learning, evaluator 교체, 모바일 앱·협업·실시간 알림은 추가하지 않는다.
+클릭 중심 진입은 유지하며 [ADR 0016](decisions/0016-curated-catalog.md)의 승인에 따라 기본 추천을 초기 이어폰 5개·활성 최대 30개로 축소한다. 공식 사양을 등록하고 가격만 고정 URL에서 일간 갱신한다. 가격은 24시간, 소프트웨어 관련 사양은 30일 이후 새 추천의 충족 근거에서 제외하며 하드웨어 사양은 90일마다 재점검한다. 갱신을 켜기 전에는 사양만 제공하고 가격은 확인 필요다. 전체 시장 탐색, 가격·재고 정확성 보장, 후기 aggregation, 범용 entity resolution, preference learning, evaluator 교체, 모바일 앱·협업·실시간 알림은 추가하지 않는다.
 
 ## 제품 원칙
 

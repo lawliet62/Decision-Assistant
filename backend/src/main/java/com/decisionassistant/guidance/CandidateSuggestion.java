@@ -51,6 +51,8 @@ public class CandidateSuggestion {
     public Instant fetchedAt() { return fetchedAt; }
     public DiscoveryContracts.OfficialOffer officialOffer() { return officialOffer; }
     public String productIdentity() { return productIdentity; }
+    public boolean catalog() { return CatalogProperties.VERSION.equals(provider); }
+    public void catalogSnapshot(String identity, DiscoveryContracts.OfficialOffer offer) { productIdentity = identity; officialOffer = offer; }
     public int generation() { return generation; }
     public void generation(int value) { generation = value; }
     public void officialProduct(DiscoveryContracts.OfficialProduct product) { officialOffer = product.offer(); productIdentity = product.identity(); }

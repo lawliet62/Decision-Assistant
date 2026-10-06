@@ -226,7 +226,8 @@ public final class DecisionDtos {
             com.decisionassistant.guidance.DiscoveryContracts.OfficialOffer officialOffer,
             com.decisionassistant.guidance.OfficialStorePolicy.SourceKind sourceKind,
             com.decisionassistant.guidance.DiscoveryRanking.Group recommendationGroup,
-            com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck compatibilityCheck
+            com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck compatibilityCheck,
+            String priceStatus
     ) {
     }
 

@@ -53,9 +53,11 @@ function create(body) {
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 }
 function createDiscovery(body) {
+  const catalog = body.discovery.templateVersion === "intake-catalog-v1";
   const template = templates.find(item => item.key === body.templateKey);
   const result = create({ ...body, intentText: template.label + " 비교", selectedSources: [] });
   result.discovery = { version: 1, status: "PENDING", policyVersion: "official-kr-v2", generation: 0, displayedGeneration: 0, history: [], conditions: body.discovery, updatedAt: new Date().toISOString() };
+  if (catalog) result.discovery.policyVersion = "catalog-v1";
   result.productFacts = [];
   result.guidance.questions = [];
   result.guidance.candidateSuggestions = ["Alpha", "Beta", "Gamma"].map((name, index) => ({
@@ -81,6 +83,11 @@ function createDiscovery(body) {
     }
     candidate.sourceKind = "OFFICIAL_STORE";
     candidate.recommendationGroup = candidate.requirementChecks.length || candidate.compatibilityCheck ? ["RECOMMENDED", "BELOW", "UNKNOWN"][index] : "RECOMMENDED";
+    if (catalog) {
+      candidate.officialOffer.policyVersion = "catalog-v1";
+      candidate.priceStatus = index === 2 ? "EXPIRED" : "VERIFIED";
+      if (index === 2) { candidate.officialOffer.fetchedAt = "2020-01-01T00:00:00Z"; candidate.recommendationGroup = "UNKNOWN"; }
+    }
   });
   return result;
 }

@@ -31,6 +31,12 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 
 ## 클릭 추천 작업
 
+기본 `catalog-v1` 추천은 같은 transaction에서 공유 `CatalogProduct`의 공개 사양·판매 관측을 읽고 개인 `CandidateSuggestion`에 복사한다. 추천 요청의 검색·수집·LLM 호출은 없다. 초기 5개·최대 30개이며 PostgreSQL이 원본이므로 별도 캐시는 두지 않는다. 제품 등록은 검토한 로컬 manifest의 revision으로 갱신한다.
+
+가격 worker는 사용자가 아닌 운영자가 등록한 고정 URL만 Firecrawl에 전달한다. 사용자 조건·메모는 전달하지 않는다. V11의 제품별 다음 시도 시각, UTC 월별 호출 예약, 관측 이력을 별도 transaction에서 저장한 뒤 외부 호출하며 중단·실패도 한도를 소비한다. `FOR UPDATE SKIP LOCKED`와 atomic quota upsert로 중복 호출을 제한한다. 가격 24시간·사양 30/90일 정책과 과거 snapshot 보존은 [ADR 0016](decisions/0016-curated-catalog.md), 설정은 [운영 문서](catalog-operations.md)를 따른다.
+
+아래는 기존 `intake-v1/v2` 실시간 추천의 호환 경로다.
+
 `ProductDiscovery`는 기존 모놀리스의 scheduled worker에서 처리한다. 소유권과 명시적 동의를 확인한 Decision만 시작하며, `FOR UPDATE SKIP LOCKED`로 claim한 뒤 외부 호출을 transaction 밖에서 실행한다. 상태와 version으로 중복 실행·늦은 완료를 제어하고 실패는 수동 재시도한다. 최초 검색 1회·페이지 최대 5개·AI 1회로 제한하며 Serper quota는 제품명 lookup과 공유한다. 표시용 사양은 CandidateSuggestion에 저장하고 승인 시 Option과 연결한다. 평가값과 과거 snapshot을 변경하지 않는다. [ADR 0009](decisions/0009-click-first-product-discovery.md)에 동의·저장·실패 경계를 기록한다.
 
 ## 요청 흐름
