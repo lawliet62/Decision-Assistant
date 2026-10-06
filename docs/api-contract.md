@@ -30,6 +30,10 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 
 `LookupCapabilities.discoveryPolicy`는 현재 추천 정책을 알린다. `DiscoveryData.policyVersion`은 해당 실행의 정책이며 과거 데이터는 null이다. `executionId`는 한 실행에서 진행 단계가 바뀌어 version이 증가해도 유지되고 명시적 재시도마다 바뀐다. 늦게 끝난 이전 실행은 새 실행의 결과를 덮어쓰지 않는다.
 
+`DiscoveryRequest.officialEvidenceConsent`는 선택적 보완 동의다. true인 신규 요청은 `official-kr-v3`와 검색 3·수집 7·AI 1 상한을 사용한다. 생략/null/false인 기존·신규 요청과 그 retry/refresh는 v2와 1·5·1을 유지한다. 기존 검색/수집/AI 동의와 민감정보 확인은 여전히 필수다. 보완 동의는 조건 정규화·JSONB 저장·조회에 보존하며 기존 데이터를 backfill하지 않는다.
+
+보완한 `ProductFact.officialEvidence`에는 `model`, `purchaseModelQuote`, `documentModelQuote`, `contentHash`를 선택적으로 반환한다. 사양의 `sourceUrl`은 해당 공식 문서 URL이며 구매 URL과 다를 수 있다. 가격은 항상 원래 공식 offer에서 가져온다. 서버의 모델·사양 검증 경로만 출처를 연결하며 AI의 임의 교차 문서 사양은 채택하지 않는다. 기존 fact는 이 필드가 null이다. 보완 수집·검색 장애는 확보한 후보를 유지하는 PARTIAL이고 문서/사양 미확보는 UNKNOWN이다.
+
 공식 검색 결과가 없으면 최초·추가 탐색 모두 `SUCCEEDED` + `emptyReason=NO_OFFICIAL_RESULTS`, 수집했으나 공식 상품·비교 가능한 가격을 확인하지 못하면 `NO_VERIFIED_OFFERS`를 반환한다. `NO_NEW_PRODUCTS`는 이전 추천을 제외하여 새 후보가 없을 때 사용한다. 일부 페이지 수집이 실패했다면 `PARTIAL`을 유지한다. 자동 추가 검색은 없다.
 
 `CandidateSuggestionData`와 `ProductFactsData`의 nullable `officialOffer`는 공식 구매 URL·판매처·KRW 가격·선택적 이미지·조회 시점·가격 기준·정책 버전을 포함한다. `sourceKind`는 `VIDEO|BLOG|OFFICIAL_STORE|WEB`이다. 공식 offer가 없는 기존 자료에는 공식 판매처 표시를 부여하지 않는다. 후보의 `recommendationGroup`은 `RECOMMENDED|UNKNOWN|BELOW|LEGACY`이며 기본 추천은 모든 최소 사양과 예산을 충족한 제품을 가격·이름 순으로 표시한다.

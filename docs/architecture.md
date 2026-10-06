@@ -31,7 +31,7 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 
 ## 클릭 추천 작업
 
-`ProductDiscovery`는 기존 모놀리스의 scheduled worker에서 처리한다. 소유권과 명시적 동의를 확인한 Decision만 시작하며, `FOR UPDATE SKIP LOCKED`로 claim한 뒤 외부 호출을 transaction 밖에서 실행한다. 상태와 version으로 중복 실행·늦은 완료를 제어하고 실패는 수동 재시도한다. 최초 검색 1회·페이지 최대 5개·AI 1회로 제한하며 Serper quota는 제품명 lookup과 공유한다. 표시용 사양은 CandidateSuggestion에 저장하고 승인 시 Option과 연결한다. 평가값과 과거 snapshot을 변경하지 않는다. [ADR 0009](decisions/0009-click-first-product-discovery.md)에 동의·저장·실패 경계를 기록한다.
+`ProductDiscovery`는 기존 모놀리스의 scheduled worker에서 처리한다. 소유권과 명시적 동의를 확인한 Decision만 시작하며, `FOR UPDATE SKIP LOCKED`로 claim한 뒤 외부 호출을 transaction 밖에서 실행한다. 상태와 version으로 중복 실행·늦은 완료를 제어하고 실패는 수동 재시도한다. 기본 검색 1회·페이지 최대 5개·AI 1회이며, 별도 공식 문서 보완 동의가 있으면 가격 검증 후보 최대 2개에 검색·수집을 각각 한 번 추가한다. Serper quota는 제품명 lookup과 공유한다. 보완 문서는 서버가 동일 모델·사양 영역을 검증하며 추가 AI 호출이나 전체 문서 전송을 하지 않는다. 표시용 사양과 모델 연결 근거는 CandidateSuggestion에 저장하고 승인 시 Option과 연결한다. 평가값과 과거 snapshot을 변경하지 않는다. [ADR 0009](decisions/0009-click-first-product-discovery.md)와 [ADR 0015](decisions/0015-official-specification-supplement.md)에 동의·저장·실패 경계를 기록한다.
 
 ## 요청 흐름
 

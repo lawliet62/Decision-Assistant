@@ -19,7 +19,14 @@ public final class DiscoveryContracts {
                                    @NotNull @AssertTrue Boolean collectionConsent,
                                    @NotNull @AssertTrue Boolean aiConsent,
                                    @NotNull @AssertTrue Boolean sensitiveDataAcknowledged,
-                                   @Size(max = 3) Map<@NotBlank @Size(max = 40) String, @NotBlank @Size(max = 40) String> minimumRequirements) {
+                                   @Size(max = 3) Map<@NotBlank @Size(max = 40) String, @NotBlank @Size(max = 40) String> minimumRequirements,
+                                   @io.swagger.v3.oas.annotations.media.Schema(description = "동일 모델의 공식 문서 보완 검색·수집 동의. 생략한 기존 요청은 추가 호출하지 않음") Boolean officialEvidenceConsent) {
+        public DiscoveryRequest(String templateVersion, String use, List<String> uses, BigDecimal maxBudget, String compatibility,
+                                Boolean searchConsent, Boolean collectionConsent, Boolean aiConsent, Boolean sensitiveDataAcknowledged,
+                                Map<String, String> minimumRequirements) {
+            this(templateVersion, use, uses, maxBudget, compatibility, searchConsent, collectionConsent, aiConsent,
+                    sensitiveDataAcknowledged, minimumRequirements, null);
+        }
         public List<String> selectedUses() {
             return uses != null ? uses : use == null ? List.of() : List.of(use);
         }
@@ -30,19 +37,27 @@ public final class DiscoveryContracts {
                 if (selectedRequirements().containsKey(item.id())) requirements.put(item.id(), selectedRequirements().get(item.id()));
             });
             return new DiscoveryRequest(templateVersion, null, ordered, maxBudget, compatibility,
-                    searchConsent, collectionConsent, aiConsent, sensitiveDataAcknowledged, requirements);
+                    searchConsent, collectionConsent, aiConsent, sensitiveDataAcknowledged, requirements, officialEvidenceConsent);
         }
         public Map<String, String> selectedRequirements() { return minimumRequirements == null ? Map.of() : minimumRequirements; }
     }
     public record ProductFact(String name, String value, String sourceUrl, String quote,
-                              Instant fetchedAt, String verificationStatus, String normalizationVersion) {
+                              Instant fetchedAt, String verificationStatus, String normalizationVersion, OfficialEvidenceLink officialEvidence) {
+        public ProductFact(String name, String value, String sourceUrl, String quote, Instant fetchedAt, String verificationStatus, String normalizationVersion) {
+            this(name, value, sourceUrl, quote, fetchedAt, verificationStatus, normalizationVersion, null);
+        }
         public ProductFact(String name, String value, String sourceUrl, String quote, Instant fetchedAt, String verificationStatus) {
             this(name, value, sourceUrl, quote, fetchedAt, verificationStatus, null);
         }
     }
+    public record OfficialEvidenceLink(String model, String purchaseModelQuote, String documentModelQuote, String contentHash) {}
+    public record ProductModel(String brand, String code, String quote) {}
     public record OfficialOffer(String purchaseUrl, String seller, BigDecimal price, String currency, String imageUrl,
                                 Instant fetchedAt, String priceBasis, String policyVersion) {}
-    public record OfficialProduct(String name, String identity, OfficialOffer offer, String description, String priceQuote) {
+    public record OfficialProduct(String name, String identity, OfficialOffer offer, String description, String priceQuote, ProductModel model) {
+        public OfficialProduct(String name, String identity, OfficialOffer offer, String description, String priceQuote) {
+            this(name, identity, offer, description, priceQuote, null);
+        }
         public OfficialProduct(String name, String identity, OfficialOffer offer, String description) {
             this(name, identity, offer, description, null);
         }
@@ -73,7 +88,7 @@ public final class DiscoveryContracts {
     }
     public record DiscoveryProposal(List<ProposedProduct> products) {}
     public interface ProductDiscoverer { AiResult<DiscoveryProposal> discover(DiscoveryInput input); }
-    public static final String PROMPT_VERSION = "discovery-v6";
+    public static final String PROMPT_VERSION = "discovery-v7";
     public static final String PROMPT = """
             선택한 여러 용도를 하나의 추천 목록에서 함께 고려한다. 용도별 별도 목록이나 임의 점수를 만들지 않는다.
             officialProduct가 있는 공식 상품 페이지에서 해당 category의 제품만 정리한다. 케이스·액세서리는 제외한다.

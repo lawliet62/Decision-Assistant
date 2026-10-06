@@ -18,7 +18,7 @@
 
 - V8은 추천 작업·표시용 사양과 출처 metadata를 추가하고 새 추천의 중복 제약을 분리한다. 기존 결정·평가 snapshot은 변환하지 않는다. 운영 적용 전 백업·복원 검증을 수행한다.
 - 실제 Dev smoke: 5개 제품군에서 용도·예산을 선택하고 동의 후 추천 → 2개 승인 → 주요 사양·출처·조회 시점 확인 → 평가 없이 선택 기록을 수행한다. 수집 실패 시 확보된 결과·직접 추가·수동 재시도를 확인한다.
-- 추천 1회는 Serper 1회, 공개 페이지 최대 5개, AI 구조화 1회다. 추천용 SDK와 구조화 출력의 자동 재시도도 비활성화한다. 기존 평가·구조화 경로의 재시도 설정은 바꾸지 않는다.
+- 기본 추천 1회는 Serper 1회, 공개 페이지 최대 5개, AI 구조화 최대 1회다. 공식 문서 보완에 별도 동의한 v3 요청은 최대 검색 3·수집 7·AI 1이며 최대 2모델에 각각 검색·수집을 한 번 추가한다. 기존 Serper 월·burst 한도를 공유하고 보완 한도 오류는 추가 요청을 중단한다. 보완 실패에도 확보한 후보를 PARTIAL로 보존한다. 추천용 SDK와 구조화 출력의 자동 재시도는 비활성화한다.
 - 추천 검색은 제품명 lookup과 월 1,000회 및 burst 제한을 공유한다. AI/Firecrawl 전체 계정 비용 상한을 대체하지 않는다.
 - `product_event=discovery_finished/discovery_failed/discovery_page_failed`와 `product.lookup.requests`를 관측한다. 실패 로그의 `decision_id`, `stage`, `code`, `reason`, `root_cause`, `http_status`로 단계를 찾는다. `reason`과 `root_cause`는 예외 종류이며 메시지·stack trace·URL·provider 원문 응답은 기록하지 않는다. 추천 행에 provider/model, prompt/schema version, token/latency를 보존한다. 조건 원문·구매 메모·Secret을 로그에 추가하지 않는다.
 - 실패나 부분 완료는 사용자만 재시도한다. 재시작으로 RUNNING에 남은 작업은 15분 경과 후 다음 worker 점검에서 실패로 전환되며 자동 외부 재호출은 하지 않는다.

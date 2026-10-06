@@ -23,6 +23,7 @@ public class DiscoveryWorker {
     private final CandidateSuggestionRepository candidates;
     private final ProductLookupService search;
     private final DiscoveryPageCollector collector;
+    private final DiscoverySupplementer supplementer;
     private final java.util.concurrent.atomic.AtomicBoolean processing = new java.util.concurrent.atomic.AtomicBoolean();
     private final ProductDiscoverer ai;
     private final AiCallExecutor executor;
@@ -32,11 +33,11 @@ public class DiscoveryWorker {
     private final TransactionTemplate tx;
     public DiscoveryWorker(ProductDiscoveryRepository runs, DecisionRepository decisions,
                            CandidateSuggestionRepository candidates, ProductLookupService search,
-                           DiscoveryPageCollector collector, ObjectProvider<ProductDiscoverer> ai, AiCallExecutor executor,
+                           DiscoveryPageCollector collector, DiscoverySupplementer supplementer, ObjectProvider<ProductDiscoverer> ai, AiCallExecutor executor,
                            AiProperties properties, DiscoveryService service, IntakeTemplates templates,
                            PlatformTransactionManager manager) {
         this.runs = runs; this.decisions = decisions; this.candidates = candidates; this.search = search;
-        this.collector = collector; this.ai = ai.getIfAvailable(); this.executor = executor; this.properties = properties;
+        this.collector = collector; this.supplementer = supplementer; this.ai = ai.getIfAvailable(); this.executor = executor; this.properties = properties;
         this.service = service; this.templates = templates; tx = new TransactionTemplate(manager);
     }
     private record Work(UUID id, UUID owner, DecisionTypes.TemplateKey category, DiscoveryRequest conditions, UUID executionId,
@@ -92,8 +93,8 @@ public class DiscoveryWorker {
             var priority = new ArrayList<>(template.minimumRequirements().stream().filter(d -> condition.selectedRequirements().containsKey(d.id()))
                     .map(com.decisionassistant.template.MinimumRequirements.MinimumRequirement::factName).toList());
             if (condition.compatibility() != null) priority.add(switch (work.category()) { case EARBUDS -> "호환성"; case MONITOR -> "연결 단자"; default -> "OS"; });
-            var collected = collector.collect(work.id(), unseen, template.facts(), priority);
-            var collectionFailures = collected.failures();
+            var collected = collector.collect(work.id(), unseen, template.facts(), priority, OfficialStorePolicy.version(condition));
+            var collectionFailures = new ArrayList<>(collected.failures());
             log.info("product_event=discovery_collection_results decision_id={} attempted={} collected={} failed={}",
                     work.id(), unseen.size(), collected.pages().size(), collectionFailures.size());
             if (collected.pages().isEmpty()) {
@@ -105,6 +106,8 @@ public class DiscoveryWorker {
             log.info("product_event=discovery_offer_validation decision_id={} collected={} eligible={} rejected={}",
                     work.id(), collected.pages().size(), pages.size(), collected.pages().size() - pages.size());
             if (pages.isEmpty()) { empty(work, eligible.isEmpty() ? "NO_VERIFIED_OFFERS" : "NO_NEW_PRODUCTS", !collectionFailures.isEmpty()); return; }
+            var supplements = supplementer.collect(work.id(), work.owner(), condition, template, pages);
+            collectionFailures.addAll(supplements.failures());
             var input = new DiscoveryInput(template.label(), condition.uses(), condition.maxBudget(),
                     condition.compatibility(), template.facts(), pages, minimums);
             stage = Stage.AI;
@@ -119,7 +122,7 @@ public class DiscoveryWorker {
             stage = Stage.VALIDATION;
             trace.enter(stage);
             progress(work, stage);
-            var verified = validateOfficialProducts(work.id(), result.value(), input);
+            var verified = validateOfficialProducts(work.id(), result.value(), input, supplements.factsByPurchaseUrl());
             var groups = new EnumMap<DiscoveryRanking.Group, Integer>(DiscoveryRanking.Group.class);
             for (var candidate : verified) {
                 var checks = MinimumRequirementMatcher.check(template.minimumRequirements(), condition.selectedRequirements(), candidate.facts());
@@ -201,6 +204,10 @@ public class DiscoveryWorker {
     }
 
     static List<CandidateSuggestion> validateOfficialProducts(UUID id, DiscoveryProposal proposal, DiscoveryInput input) {
+        return validateOfficialProducts(id, proposal, input, Map.of());
+    }
+    static List<CandidateSuggestion> validateOfficialProducts(UUID id, DiscoveryProposal proposal, DiscoveryInput input,
+                                                             Map<String, List<ProductFact>> supplements) {
         var products = new HashMap<String, OfficialProduct>();
         input.pages().stream().filter(page -> page.officialProduct() != null).forEach(page -> products.put(page.url(), page.officialProduct()));
         var accepted = new ArrayList<CandidateSuggestion>();
@@ -218,6 +225,10 @@ public class DiscoveryWorker {
                 if (fact.normalizationVersion() != null) log.info("product_event=discovery_field_validation decision_id={} field={} outcome=NORMALIZED", id, DiscoveryPageCollector.fieldKey(fact.name()));
             }
             var offer = product.offer();
+            // 보완 문서는 별도의 서버 검증 경로에서 온 사양만 추가한다. AI의 임의 교차 출처 연결은 허용하지 않는다.
+            facts.addAll(supplements.getOrDefault(source.url(), List.of()).stream()
+                    .filter(f -> !"가격".equals(f.name()) && input.factNames().contains(f.name()) && f.officialEvidence() != null
+                            && product.model() != null && product.model().code().equals(f.officialEvidence().model())).toList());
             facts.addFirst(new ProductFact("가격", offer.price().stripTrailingZeros().toPlainString() + " KRW", offer.purchaseUrl(),
                     product.priceQuote() == null ? product.name() + " · " + offer.priceBasis() + " " + offer.price().toPlainString() + " KRW" : product.priceQuote(), offer.fetchedAt(), "UNREVIEWED"));
             candidate.discovered(facts);

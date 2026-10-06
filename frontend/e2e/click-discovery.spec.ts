@@ -26,7 +26,7 @@ for (const [key, name, use] of [["LAPTOP", "노트북", "학업"], ["PHONE", "�
     await consent(page);
     const sent = page.waitForRequest(request => request.method() === "POST" && request.url().endsWith("/api/v1/decisions"));
     await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
-    expect((await sent).postDataJSON()).toMatchObject({ templateKey: key, discovery: { uses: [use, secondUse], searchConsent: true } });
+    expect((await sent).postDataJSON()).toMatchObject({ templateKey: key, discovery: { uses: [use, secondUse], searchConsent: true, officialEvidenceConsent: false } });
     await expect(page.getByRole("heading", { name: "추천 제품", exact: true })).toBeVisible();
     await expect(page.getByRole("complementary", { name: "공식 판매처 추천 기준" })).toContainText("확인한 판매가 낮은 순");
     await page.reload();
@@ -47,6 +47,29 @@ for (const [key, name, use] of [["LAPTOP", "노트북", "학업"], ["PHONE", "�
     await expect(page.getByRole("heading", { name: "사용 후 회고", exact: true })).toBeVisible();
   });
 }
+
+test("공식 문서 보완은 별도 동의를 전송하고 모델 연결 근거를 표시한다", async ({ page }) => {
+  let releaseCapabilities!: () => void;
+  const capabilitiesReady = new Promise<void>(resolve => { releaseCapabilities = resolve; });
+  await page.route("**/api/v1/product-lookups/capabilities", async route => { await capabilitiesReady; await route.continue(); });
+  await page.goto("/decisions/new");
+  await expect(page.getByLabel("선택 조건을 Serper")).toBeDisabled();
+  releaseCapabilities();
+  await consent(page);
+  const extra = page.getByLabel("공식 문서로 부족한 사양 보완하기");
+  await expect(extra).not.toBeChecked();
+  await extra.check();
+  const sent = page.waitForRequest(request => request.method() === "POST" && request.url().endsWith("/api/v1/decisions"));
+  await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
+  expect((await sent).postDataJSON().discovery.officialEvidenceConsent).toBe(true);
+  await expect(page).toHaveURL(/\/decisions\/[0-9a-f-]+$/);
+  await page.reload();
+  const card = page.getByRole("article", { name: "무선 이어폰 Alpha", exact: true });
+  await card.getByText("공식 문서의 모델 연결 근거", {exact:true}).click();
+  await expect(card).toContainText("모델: T13ANC");
+  await expect(card).toContainText("판매 페이지: QCY T13 ANC APP");
+  await expect(card).toContainText("공식 문서: QCY T13 ANC");
+});
 
 test("복수 용도 해제와 미정 선택 및 제품군 변경", async ({ page }) => {
   await page.goto("/decisions/new");

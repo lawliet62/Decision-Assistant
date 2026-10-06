@@ -99,6 +99,50 @@ class DiscoveryApiIntegrationTest {
         return authentication(UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))));
     }
 
+    @Test void officialDocumentConsentBoundsCallsAndPreservesModelProofAfterAcceptance() throws Exception {
+        var names = List.of("QCY T13 ANC", "QCY HT16", "QCY HT19", "QCY T17", "QCY H3");
+        var urls = java.util.stream.IntStream.range(0, 5).mapToObj(i -> "https://qcystore.co.kr/product/model/" + (700 + i) + "/").toList();
+        when(search.search(anyString(), eq(5))).thenAnswer(call -> {
+            String query = call.getArgument(0);
+            if (query.contains("site:www.qcy.com")) return List.of(new WebSearchProvider.SearchResult("공식 문서",
+                    "https://www.qcy.com/products/" + (query.contains("T13 ANC") ? "qcy-t13-anc" : "qcy-ht16"), "snippet ignored"));
+            return java.util.stream.IntStream.range(0, 5).mapToObj(i -> new WebSearchProvider.SearchResult(names.get(i), urls.get(i), "")).toList();
+        });
+        when(web.scrapeProduct(anyString())).thenAnswer(call -> {
+            String source = call.getArgument(0);
+            if (source.startsWith("https://www.qcy.com/")) {
+                var name = source.endsWith("t13-anc") ? names.getFirst() : names.get(1);
+                return new WebEvidenceProvider.Page(name, name, "<main><h1>" + name + "</h1><dl><dt>ANC</dt><dd>supported</dd>"
+                        + "<dt>Compatible system</dt><dd>Android/iOS</dd></dl></main>", source);
+            }
+            int i = urls.indexOf(source);
+            return page(source, names.get(i), (i + 1) * 10000, "");
+        });
+        when(discoverer.discover(any())).thenAnswer(call -> new AiContracts.AiResult<>(new DiscoveryProposal(
+                java.util.stream.IntStream.range(0, 5).mapToObj(i -> new ProposedProduct(names.get(i), urls.get(i), names.get(i), List.of())).toList()), 10, 10));
+        var body = BODY.replace("intake-v1", "intake-v2").replace("\"maxBudget\":200000", "\"maxBudget\":200000,\"compatibility\":\"Android\",\"minimumRequirements\":{\"anc\":\"required\"},\"officialEvidenceConsent\":true");
+        var id = mapper.readTree(mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString()).path("id").asText();
+        worker.processNext();
+        var data = mapper.readTree(mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.discovery.policyVersion").value("official-kr-v3"))
+                .andExpect(jsonPath("$.discovery.conditions.officialEvidenceConsent").value(true))
+                .andExpect(jsonPath("$.discovery.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[1].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[2].recommendationGroup").value("UNKNOWN"))
+                .andReturn().getResponse().getContentAsString());
+        var candidate = data.path("guidance").path("candidateSuggestions").path(0);
+        mvc.perform(patch("/api/v1/decisions/" + id + "/candidate-suggestions/" + candidate.path("id").asText())
+                .with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"ACCEPT\"}"))
+                .andExpect(jsonPath("$.productFacts[0].compatibilityCheck.status").value("MEETS"))
+                .andExpect(jsonPath("$.productFacts[0].facts[1].officialEvidence.model").value("T13ANC"))
+                .andExpect(jsonPath("$.productFacts[0].facts[1].sourceUrl").value("https://www.qcy.com/products/qcy-t13-anc"));
+        verify(search, times(3)).search(anyString(), eq(5));
+        verify(web, times(7)).scrapeProduct(anyString());
+        verify(discoverer, times(1)).discover(any());
+    }
+
     @Test void policyOfferSortingAndExecutionProgressArePersistedWithoutChangingExecutionIdentity() throws Exception {
         var id = create();
         var queued = runs.findById(UUID.fromString(id)).orElseThrow();
@@ -112,7 +156,7 @@ class DiscoveryApiIntegrationTest {
         });
         worker.processNext();
         mvc.perform(get("/api/v1/decisions/" + id).with(owner))
-                .andExpect(jsonPath("$.discovery.policyVersion").value(OfficialStorePolicy.VERSION))
+                .andExpect(jsonPath("$.discovery.policyVersion").value("official-kr-v2"))
                 .andExpect(jsonPath("$.discovery.executionId").value(execution.toString()))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].name").value("Buds A"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer.price").value(100000))

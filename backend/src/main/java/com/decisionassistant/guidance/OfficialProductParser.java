@@ -107,7 +107,8 @@ final class OfficialProductParser {
         var description = Jsoup.parse(product.path("description").asText("")).text();
         if (description.length() > 1500) description = description.substring(0, 1500);
         return new Result(new OfficialProduct(name, identity, new OfficialOffer(requestedUrl, store.name(), price, "KRW", image,
-                fetchedAt, "상품 구조화 데이터·구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), description, visible.quote()), null,
+                fetchedAt, "상품 구조화 데이터·구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), description, visible.quote(),
+                OfficialSpecificationPolicy.purchaseModel(requestedUrl, name)), null,
                 ProductEvidence.extract(doc, product, requestedUrl, name, identity));
     }
 

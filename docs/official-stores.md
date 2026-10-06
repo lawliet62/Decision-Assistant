@@ -1,6 +1,6 @@
 # 공식 판매처 추천의 수집 범위
 
-`official-kr-v2`는 국내·한국어 판매 페이지를 먼저 검색한다. 공식 판매처 여부는 `OfficialStorePolicy`의 정확한 호스트·상품 경로에 한정한다. 검색 결과 제목이나 AI의 판단으로 판매자를 등록하지 않는다. 전체 브랜드·전체 시장의 카탈로그가 아니다.
+`official-kr-v2`와 `official-kr-v3`는 국내·한국어 판매 페이지를 먼저 검색한다. 공식 판매처 여부는 `OfficialStorePolicy`의 정확한 호스트·상품 경로에 한정한다. 검색 결과 제목이나 AI의 판단으로 판매자를 등록하지 않는다. 전체 브랜드·전체 시장의 카탈로그가 아니다.
 
 | 판매처 | 허용 범위와 확인 근거 |
 | --- | --- |
@@ -30,7 +30,23 @@ v2는 JSON-LD 금액을 같은 상품 구매 영역의 라벨·금액과 대조�
 
 이미지는 해당 Product의 이미지 필드만 사용하며 판매처별 확인한 이미지 호스트로 제한한다. 공식 이미지 CDN 호스트가 새로 필요하면 해당 상품 페이지의 근거와 테스트를 추가한다. 누락·차단·로딩 실패 시 대체 영역을 표시한다. 브라우저가 직접 요청하고 `referrerPolicy="no-referrer"`를 사용한다. IP 전송은 입력 화면에 안내한다. 이미지의 안전성·저작권이나 제품의 품질·정품·재고를 인증한다는 의미가 아니다.
 
-확인한 이미지 호스트는 삼성 상품 페이지의 `images.samsung.com`, Apple 구매 페이지의 `store.storeimages.cdn-apple.com`, QCY 상품 페이지의 `qcystore.co.kr`, [LG 상품 페이지](https://www.lge.co.kr/product/monitors/27gs50f)의 `www.lge.co.kr`이다. 같은 제품군 이름이라도 사양 인용은 판매가를 확인한 그 상품 페이지에 한정하여 다른 구성의 사양과 결합하지 않는다.
+확인한 이미지 호스트는 삼성 상품 페이지의 `images.samsung.com`, Apple 구매 페이지의 `store.storeimages.cdn-apple.com`, QCY 상품 페이지의 `qcystore.co.kr`, [LG 상품 페이지](https://www.lge.co.kr/product/monitors/27gs50f)의 `www.lge.co.kr`이다. v2의 사양 인용은 판매가를 확인한 그 상품 페이지에 한정한다. v3는 아래 공식 문서 연결 기준을 추가하며 같은 제품군 이름만으로 다른 구성의 사양을 결합하지 않는다.
+
+## 공식 문서 사양 보완
+
+`official-kr-v3`는 별도 동의가 있는 요청에서만 구매 페이지 외 공식 문서의 사양을 보완한다. 가격을 확인한 후보 중 필수 조건이 미확인인 최대 2개에 검색·수집을 각각 1회 추가한다. 등록 모델을 판매가 순으로 확인하고, 상품 사양 페이지를 지원 문서보다 우선한다. [ADR 0015](decisions/0015-official-specification-supplement.md)의 상한·동의·저장 경계를 따른다.
+
+2026-10-06에 확인한 초기 범위는 다음과 같다. 직전 평가에서 가격을 확보한 QCY 모델을 우선하며 다른 브랜드는 보완 검색을 소비하지 않는다.
+
+| 공식 출처 | 허용 경로·등록 근거 |
+| --- | --- |
+| QCY 글로벌 제품 | `www.qcy.com/products/<slug>` — [T13 ANC 공식 상품](https://www.qcy.com/products/qcy-t13-anc)의 모델명과 제품별 사양 영역. 해외 가격은 사용하지 않음 |
+| QCY 공식 지원 | `support.qcy.com/support-center-<slug>` 및 `www.qcy.com/pages/support-center-<slug>` — [공식 제품 지원 링크](https://www.qcy.com/pages/support-center-t13-anc)가 같은 slug의 support 호스트로 이동하는 것을 확인 |
+| QCY KOREA 제품 안내 | `www.qcykorea.com/default/product/product01.php`에서 `com_board_basic=read_form`, `com_board_id=10`, 숫자 `com_board_idx` — [HT16 안내](https://www.qcykorea.com/default/product/product01.php?com_board_basic=read_form&com_board_id=10&com_board_idx=8&sub=01). 기존 공식 유통 등록 근거와 같은 운영 주체 |
+
+구매 제품명에서 단일 QCY 모델 코드와 ANC/Pro/세대 suffix를 보존하고 문서의 제품 제목·모델 표기와 대조한다. 단순 공백·하이픈 표기만 정규화하며 HT16을 MeloBuds N50으로 변환하는 별칭 사전은 없다. 다른 모델의 최종 URL·canonical, 복수 모델 영역, 관련 상품·리뷰·앱만의 호환 OS는 기본 사양 근거로 사용하지 않는다. 지원 페이지의 일반 FAQ나 이미지 안의 글을 자동 구조화하지 않는다.
+
+QCY 글로벌 페이지의 `.specification-section .spec-details`에는 줄바꿈으로 구분한 `Compatible system`과 명시적인 `Active Noise Cancellation (ANC)` 항목이 있다. 이 영역의 `Product Name`을 다시 대조하여 본문의 다른 상품 카드와 분리한다. 항목별 짧은 인용을 보존하며 ENC·바람 소음 감소를 ANC로 바꾸지 않는다. 표·정의 목록도 같은 모델 영역 안에서만 읽는다. 구매 페이지와 상충하는 값은 모두 보존해 UNKNOWN으로 판정한다. 보완 사양의 `officialEvidence`는 양쪽 모델 인용과 근거 영역 hash를 담고, 화면에서 사양의 실제 출처와 연결 근거를 확인할 수 있다.
 
 ## 사용자 안내와 기존 데이터
 

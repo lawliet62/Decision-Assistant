@@ -584,6 +584,8 @@ export interface components {
             minimumRequirements?: {
                 [key: string]: string;
             };
+            /** @description 동일 모델의 공식 문서 보완 검색·수집 동의. 생략한 기존 요청은 추가 호출하지 않음 */
+            officialEvidenceConsent?: boolean;
         };
         EvidenceData: {
             /** Format: uuid */
@@ -612,6 +614,12 @@ export interface components {
             candidateSuggestions?: components["schemas"]["CandidateSuggestionData"][];
             appliedPreferences?: components["schemas"]["PreferenceData"][];
             reminders?: components["schemas"]["ReminderData"][];
+        };
+        OfficialEvidenceLink: {
+            model?: string;
+            purchaseModelQuote?: string;
+            documentModelQuote?: string;
+            contentHash?: string;
         };
         OfficialOffer: {
             purchaseUrl?: string;
@@ -661,6 +669,7 @@ export interface components {
             fetchedAt?: string;
             verificationStatus?: string;
             normalizationVersion?: string;
+            officialEvidence?: components["schemas"]["OfficialEvidenceLink"];
         };
         ProductFactsData: {
             /** Format: uuid */

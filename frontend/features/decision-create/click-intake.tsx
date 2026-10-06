@@ -26,6 +26,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
   const [web, setWeb] = useState<Capabilities>();
   const [ai, setAi] = useState<AiCapabilities>();
   const [consents, setConsents] = useState({ search: false, collection: false, ai: false, sensitive: false });
+  const [officialEvidenceConsent, setOfficialEvidenceConsent] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const inFlight = useRef(false);
@@ -51,6 +52,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
         templateKey: template.key, intentText: note || undefined,
         discovery: { templateVersion: template.version!, uses: (template.uses ?? []).filter(value => uses.includes(value)), maxBudget: budget, compatibility, minimumRequirements,
           searchConsent: consents.search, collectionConsent: consents.collection,
+          officialEvidenceConsent: web?.discoveryPolicy?.version === "official-kr-v3" && officialEvidenceConsent,
           aiConsent: consents.ai, sensitiveDataAcknowledged: consents.sensitive },
       } });
       if (error || !data?.id) { setError(problemMessage(error)); return; }
@@ -66,7 +68,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
     </div>
     {manual ? <DecisionCreateForm /> : <form onSubmit={submit} className="space-y-7 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
       <OfficialPolicyNotice version={web?.discoveryPolicy?.version} placement="input" />
-      <fieldset disabled={pending} className="space-y-7">
+      <fieldset disabled={pending || !template || !web || !ai} className="space-y-7">
         <ChoiceGroup title="제품군" options={templates.map(item => ({ value: item.key!, label: item.label! }))} selected={template?.key} onSelect={value => { setCategory(value!); setUses([]); setBudget(undefined); setCompatibility(undefined); setMinimumRequirements({}); }} />
         {template && <>
           <ChoiceGroup title="주로 어떻게 쓰나요? (복수 선택)" options={[{ label: "아직 모르겠어요" }, ...(template.uses ?? []).map(value => ({ value, label: value }))]} selected={uses} onSelect={value => setUses(current => value === undefined ? [] : current.includes(value) ? current.filter(item => item !== value) : [...current, value])} />
@@ -95,6 +97,10 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
           <legend className="font-semibold">추천 정보 가져오기</legend>
           <label className="flex gap-2"><input type="checkbox" checked={consents.search} onChange={e => setConsents({ ...consents, search: e.target.checked })} />선택 조건을 Serper로 보내 제품을 검색하는 데 동의합니다.</label>
           <label className="flex gap-2"><input type="checkbox" checked={consents.collection} onChange={e => setConsents({ ...consents, collection: e.target.checked })} />검색된 공개 페이지를 후보 선택 전에 Firecrawl로 수집하는 데 동의합니다. 이후 직접 추가한 페이지에도 적용됩니다.</label>
+          {web?.discoveryPolicy?.version === "official-kr-v3" && <div className="space-y-1">
+            <label className="flex gap-2"><input type="checkbox" checked={officialEvidenceConsent} onChange={e => setOfficialEvidenceConsent(e.target.checked)} />공식 문서로 부족한 사양 보완하기 (선택): 가격을 확인한 후보의 모델명을 Serper로 검색하고 공식 제품·지원 문서를 Firecrawl로 수집하는 데 동의합니다.</label>
+            <p className="text-xs text-zinc-500">선택하면 추천 한 번에 검색 최대 3회·페이지 최대 7개를 사용합니다. 선택하지 않으면 검색 1회·페이지 최대 5개로 진행합니다. AI 정리는 최대 1회이며, 모델이나 사양을 확인하지 못하면 미확인으로 표시합니다.</p>
+          </div>}
           <label className="flex gap-2"><input type="checkbox" checked={consents.ai} onChange={e => setConsents({ ...consents, ai: e.target.checked })} />선택 조건과 수집 정보를 {ai?.provider ?? "AI"} ({ai?.model ?? "설정 확인 중"})에 보내 제품·사양을 정리하는 데 동의합니다.</label>
           <label className="flex gap-2"><input type="checkbox" checked={consents.sensitive} onChange={e => setConsents({ ...consents, sensitive: e.target.checked })} />개인 식별·금융·건강·비공개 업무 정보가 없음을 확인합니다.</label>
           {ai?.provider === "gemini" && <p className="text-xs text-zinc-600">Gemini 무료 티어에서는 전송 콘텐츠가 Google 제품 개선에 사용될 수 있습니다.</p>}

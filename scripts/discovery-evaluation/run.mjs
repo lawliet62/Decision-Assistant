@@ -12,6 +12,7 @@ import { selectRemaining } from "./plan.mjs";
 // 수동 Dev 실험 전용. API를 통해 동의·소유권·quota를 그대로 적용한다.
 const { values } = parseArgs({ options: {
   "execute-live": { type: "boolean", default: false },
+  "official-specs": { type: "boolean", default: false },
   variant: { type: "string" }, jar: { type: "string" }, output: { type: "string" },
   "source-commit": { type: "string" },
   "resume-from": { type: "string" }, "min-interval-ms": { type: "string", default: "65000" },
@@ -50,6 +51,7 @@ const manifest = {
   provider: env.DECISION_ASSISTANT_AI_PROVIDER ?? "gemini",
   model: env.DECISION_ASSISTANT_AI_MODEL ?? env.GEMINI_MODEL ?? "gemini-3.5-flash-lite",
   minIntervalMs,
+  officialEvidenceConsent: values["official-specs"],
 };
 if (values["resume-from"]) {
   const previousOutput = resolve(values["resume-from"]);
@@ -60,7 +62,7 @@ if (values["resume-from"]) {
   manifest.previousManifestSha256 = sha256(readFileSync(resolve(previousOutput, "manifest.json")));
 }
 Object.assign(manifest, {caseIds: cases.map(item => item.id), maxRuns: cases.length,
-  maxSearchCalls: cases.length, maxCollectionCalls: cases.length * 5, maxAiCalls: cases.length});
+  maxSearchCalls: cases.length * (values["official-specs"] ? 3 : 1), maxCollectionCalls: cases.length * (values["official-specs"] ? 7 : 5), maxAiCalls: cases.length});
 writeFileSync(resolve(output, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 const java = spawn("java", ["-jar", jar], {
   env: { ...env, SERVER_PORT: String(port), SERVER_ADDRESS: "127.0.0.1" },
@@ -143,7 +145,8 @@ try {
       title: `[탐색 평가 ${values.variant}] ${scenario.id}`, templateKey: scenario.category,
       discovery: { templateVersion: "intake-v2", uses: scenario.uses, maxBudget: scenario.budget,
         compatibility: scenario.compatibility, minimumRequirements: scenario.requirements,
-        searchConsent: true, collectionConsent: true, aiConsent: true, sensitiveDataAcknowledged: true },
+        searchConsent: true, collectionConsent: true, aiConsent: true, sensitiveDataAcknowledged: true,
+        officialEvidenceConsent: values["official-specs"] },
     };
     previousStart = Date.now();
     let decision = await request("/api/v1/decisions", body);
@@ -164,6 +167,8 @@ try {
     console.log(JSON.stringify({ caseId: scenario.id, status: decision.discovery.status, emptyReason: decision.discovery.emptyReason,
       candidates: result.candidates.length, ms: result.wallMs }));
     if (!result.metrics.coverageComplete) throw new Error("평가 worker의 완료 계측이 없습니다. 다른 backend의 작업 처리 가능성이 있어 실험을 중단합니다.");
+    if (result.metrics.searchCalls > (values["official-specs"] ? 3 : 1) || result.metrics.collectionCalls > (values["official-specs"] ? 7 : 5) || result.metrics.aiCalls > 1)
+      throw new Error("승인된 실행당 호출 상한을 초과해 실험을 중단합니다.");
     if (result.metrics.events.some(event => event.code === "SEARCH_MONTHLY_LIMIT" || event.http_status === "429")) {
       throw new Error("계정 한도 응답으로 실험 중단. 자동 재시도하지 않습니다.");
     }

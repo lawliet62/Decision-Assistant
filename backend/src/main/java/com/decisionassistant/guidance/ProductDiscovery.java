@@ -36,8 +36,8 @@ public class ProductDiscovery {
     public ProductDiscovery(UUID decisionId, DiscoveryContracts.DiscoveryRequest conditions) {
         this.decisionId = decisionId; this.conditions = conditions; pending();
     }
-    public void pending() { status = Status.PENDING; error = null; emptyReason = null; stage = "QUEUED"; executionId = UUID.randomUUID(); policyVersion = OfficialStorePolicy.VERSION; updatedAt = Instant.now(); }
-    public void running() { status = Status.RUNNING; stage = "CONFIGURATION"; if (executionId == null) executionId = UUID.randomUUID(); policyVersion = OfficialStorePolicy.VERSION; updatedAt = Instant.now(); }
+    public void pending() { status = Status.PENDING; error = null; emptyReason = null; stage = "QUEUED"; executionId = UUID.randomUUID(); policyVersion = OfficialStorePolicy.version(conditions); updatedAt = Instant.now(); }
+    public void running() { status = Status.RUNNING; stage = "CONFIGURATION"; if (executionId == null) executionId = UUID.randomUUID(); policyVersion = OfficialStorePolicy.version(conditions); updatedAt = Instant.now(); }
     public void stage(DiscoveryFailure.Stage stage) { this.stage = stage.name(); updatedAt = Instant.now(); }
     public void finish(Status status, String error) { this.status = status; this.error = error; stage = null; updatedAt = Instant.now(); remember(); }
     public void empty(String reason) { emptyReason = reason; finish(Status.SUCCEEDED, null); }

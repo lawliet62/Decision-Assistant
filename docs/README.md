@@ -16,6 +16,7 @@
 - [공식 판매처 등록과 검증](official-stores.md): 판매처 근거·가격/이미지 수집 범위·화면 안내
 - [제품 탐색 A안 평가](discovery-evaluation.md): 실제 provider 비교 절차·호출 상한·평가 기준
 - [상품 근거·호환성·설명](decisions/0014-evidence-based-discovery-validation.md): v2 가격 대조·사양 정규화·필수 호환성·검증 결과의 설명
+- [공식 문서 사양 보완](decisions/0015-official-specification-supplement.md): 별도 동의·동일 모델 근거·검색 3/수집 7/AI 1 상한
 - [ADR](decisions/): 장기간 유지할 architecture decision과 trade-off
 - [Identity-based secrets](decisions/0008-identity-based-secret-management.md): Dev/Prod 격리, runtime 조회와 cloud-free 테스트 전략
 

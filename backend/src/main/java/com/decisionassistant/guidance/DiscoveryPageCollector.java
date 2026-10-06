@@ -22,7 +22,10 @@ public class DiscoveryPageCollector {
         return collect(decisionId, results, facts, List.of());
     }
     Result collect(UUID decisionId, List<WebSearchProvider.SearchResult> results, List<String> facts, List<String> priority) {
-        var tasks = results.stream().limit(5).map(result -> (Callable<Collected>) () -> collectOne(decisionId, result, facts, priority)).toList();
+        return collect(decisionId, results, facts, priority, OfficialStorePolicy.VERSION);
+    }
+    Result collect(UUID decisionId, List<WebSearchProvider.SearchResult> results, List<String> facts, List<String> priority, String policyVersion) {
+        var tasks = results.stream().limit(5).map(result -> (Callable<Collected>) () -> collectOne(decisionId, result, facts, priority, policyVersion)).toList();
         try {
             var pages = new ArrayList<SourcePage>();
             var failures = new ArrayList<DiscoveryFailure>();
@@ -37,7 +40,7 @@ public class DiscoveryPageCollector {
         } catch (ExecutionException ex) { throw new IllegalStateException("수집 작업에 실패했습니다.", ex.getCause()); }
     }
 
-    private Collected collectOne(UUID id, WebSearchProvider.SearchResult result, List<String> facts, List<String> priority) {
+    private Collected collectOne(UUID id, WebSearchProvider.SearchResult result, List<String> facts, List<String> priority, String policyVersion) {
         var start = System.nanoTime();
         try {
             var url = urls.validate(result.url());
@@ -67,7 +70,9 @@ public class DiscoveryPageCollector {
                 var description = product.description().substring(0, Math.min(product.description().length(), Math.min(500, remaining)));
                 var metadata = heading + description + "\n\n<!-- evidence boundary -->\n\n";
                 excerpt = metadata + excerpt.substring(0, Math.min(excerpt.length(), remaining - description.length()));
-                product = new OfficialProduct(product.name(), product.identity(), product.offer(), "", product.priceQuote());
+                var offer = product.offer();
+                product = new OfficialProduct(product.name(), product.identity(), new OfficialOffer(offer.purchaseUrl(), offer.seller(), offer.price(),
+                        offer.currency(), offer.imageUrl(), offer.fetchedAt(), offer.priceBasis(), policyVersion), "", product.priceQuote(), product.model());
             }
             for (var field : priority) log.info("product_event=discovery_field_evidence decision_id={} field={} outcome={}", id, fieldKey(field),
                     blocks.stream().anyMatch(b -> b.factName().equals(field)) ? "BLOCK_AVAILABLE" : "BLOCK_MISSING");

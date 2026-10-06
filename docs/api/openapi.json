@@ -1416,6 +1416,10 @@
             "additionalProperties" : {
               "type" : "string"
             }
+          },
+          "officialEvidenceConsent" : {
+            "type" : "boolean",
+            "description" : "동일 모델의 공식 문서 보완 검색·수집 동의. 생략한 기존 요청은 추가 호출하지 않음"
           }
         },
         "required" : [ "aiConsent", "collectionConsent", "searchConsent", "sensitiveDataAcknowledged", "templateVersion" ]
@@ -1506,6 +1510,23 @@
             "items" : {
               "$ref" : "#/components/schemas/ReminderData"
             }
+          }
+        }
+      },
+      "OfficialEvidenceLink" : {
+        "type" : "object",
+        "properties" : {
+          "model" : {
+            "type" : "string"
+          },
+          "purchaseModelQuote" : {
+            "type" : "string"
+          },
+          "documentModelQuote" : {
+            "type" : "string"
+          },
+          "contentHash" : {
+            "type" : "string"
           }
         }
       },
@@ -1629,6 +1650,9 @@
           },
           "normalizationVersion" : {
             "type" : "string"
+          },
+          "officialEvidence" : {
+            "$ref" : "#/components/schemas/OfficialEvidenceLink"
           }
         }
       },

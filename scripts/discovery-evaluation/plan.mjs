@@ -2,6 +2,7 @@ export function selectRemaining(cases, previous, rows, created, current) {
   for (const key of ["variant", "commit", "jarSha256", "casesSha256"]) {
     if (previous[key] !== current[key]) throw new Error(`이전 실험과 ${key}가 다릅니다.`);
   }
+  if ((previous.officialEvidenceConsent === true) !== (current.officialEvidenceConsent === true)) throw new Error("이전 실험과 공식 문서 보완 동의가 다릅니다.");
   if (rows.length !== created.length || rows.length !== previous.completed) {
     throw new Error("생성됐지만 결과가 확정되지 않은 실행이 있어 이어갈 수 없습니다.");
   }

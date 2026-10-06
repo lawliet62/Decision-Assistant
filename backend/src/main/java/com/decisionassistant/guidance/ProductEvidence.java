@@ -57,9 +57,9 @@ final class ProductEvidence {
             case "운영체제", "운영 체제", "os", "operating system" -> "OS";
             case "주사율", "화면 주사율", "refresh rate" -> "주사율";
             case "해상도", "resolution" -> "해상도";
-            case "anc", "anc 지원", "액티브 노이즈 캔슬링" -> "ANC 지원";
+            case "anc", "anc 지원", "액티브 노이즈 캔슬링", "active noise cancellation" -> "ANC 지원";
             case "전용 펜", "전용 펜 지원", "펜 지원" -> "펜 지원";
-            case "호환성", "기본 호환성", "지원 기기", "compatible devices", "compatibility", "멀티포인트", "multipoint" -> "호환성";
+            case "호환성", "기본 호환성", "지원 기기", "compatible devices", "compatible system", "compatibility", "멀티포인트", "multipoint" -> "호환성";
             case "입력 단자", "영상 입력", "연결 단자", "input ports" -> "연결 단자";
             case "전용 앱", "앱 지원", "app compatibility" -> "전용 앱";
             case "기기별 추가 기능", "기기별 전용 기능" -> "기기별 추가 기능";

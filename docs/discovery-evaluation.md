@@ -24,6 +24,16 @@ v2는 선택한 호환성도 추천의 필수 조건으로 확인하므로 v1의
 
 ## 실행
 
+### v3 공식 문서 보완 평가
+
+[ADR 0015](decisions/0015-official-specification-supplement.md)에 따라 기존 15조건을 `--official-specs`로 실행하면 각 생성 요청에 별도 보완 동의를 기록한다. 총 상한은 검색 45·수집 105·AI 15이며 실행당 3·7·1을 넘으면 평가를 중단한다. 보완 대상이 없으면 추가 호출하지 않는다. 최대 수집 수 증가를 고려해 이번 평가의 생성 간격은 `--min-interval-ms 95000`을 사용한다. 보완 실패·URL/모델/사양 미확보와 성공을 `supplementaryDocuments` 및 `failures`로 따로 집계하고 초기 상품 검색 funnel과 혼합하지 않는다. 다른 동의 모드·빌드의 결과는 resume으로 이어 붙일 수 없다.
+
+```text
+node scripts/discovery-evaluation/run.mjs --execute-live --variant a --official-specs --min-interval-ms 95000 --source-commit <고정 commit> --jar <고정 JAR> --output <새 결과 디렉터리>
+```
+
+아래 1·5·1 설명과 기존 명령은 `--official-specs`를 사용하지 않는 v1/v2 비교 경로다.
+
 `scripts/discovery-evaluation/cases.json`의 15개 공개·합성 조건을 사용한다. 현재 Dev provider/model·공식 판매처 정책·quota를 유지한다. 기존 Decision을 수정하지 않고 조건마다 새 Decision을 만든다. 기본 CI와 일반 test task에서는 실행하지 않는다.
 
 1. Docker PostgreSQL과 `backend/.env`의 local/GCP Dev 설정, ADC, 검색·수집·AI 활성화를 준비한다. 같은 DB를 소비하는 다른 backend를 중단한다. 포트만 다르게 실행해도 작업 큐는 격리되지 않는다. 실행기는 8080 서버가 응답하거나 자기 worker의 완료 계측이 없으면 중단한다. Secret 값은 파일·환경 변수·보고서에 복사하지 않는다.
