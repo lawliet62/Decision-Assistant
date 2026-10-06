@@ -10,6 +10,9 @@ record DiscoveryExclusions(Set<String> identities, Set<String> names, List<Strin
         var urls = new ArrayList<String>(); var publicNames = new ArrayList<String>();
         for (var candidate : previous) {
             if (candidate.productIdentity() != null) identities.add(candidate.productIdentity());
+            // 이전 빌드의 SKU 식별자를 재작성하지 않고 새 색상 그룹 식별자에도 제외 이력을 연결한다.
+            if (candidate.officialOffer() != null && OfficialStorePolicy.store(candidate.officialOffer().purchaseUrl())
+                    .map(store -> store.id().equals("qcy-kr")).orElse(false)) identities.add(qcyColorIdentity(candidate.name()));
             names.add(normalizedName(candidate.name())); urls.add(candidate.url()); publicNames.add(candidate.name());
         }
         optionNames.forEach(name -> names.add(normalizedName(name)));
@@ -27,5 +30,8 @@ record DiscoveryExclusions(Set<String> identities, Set<String> names, List<Strin
     }
     static String normalizedName(String value) {
         return Normalizer.normalize(value, Normalizer.Form.NFKC).replaceAll("[^\\p{L}\\p{N}]", "").toLowerCase(Locale.ROOT);
+    }
+    static String qcyColorIdentity(String name) {
+        return "qcy-kr:color-model:" + normalizedName(name.replaceFirst("\\s+(?:블랙|화이트)$", ""));
     }
 }

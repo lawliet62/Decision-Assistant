@@ -35,7 +35,7 @@ class OfficialProductParserTest {
         assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", null, URL), Instant.now()).rejection())
                 .isEqualTo(OfficialProductParser.Rejection.HTML_MISSING);
         assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", html, null), Instant.now()).rejection())
-                .isEqualTo(OfficialProductParser.Rejection.RESOLVED_URL_MISMATCH);
+                .isEqualTo(OfficialProductParser.Rejection.RESOLVED_URL_MISSING);
         assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", "<p>21900원</p>", URL), Instant.now()).rejection())
                 .isEqualTo(OfficialProductParser.Rejection.PRODUCT_MISSING);
         assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", html.replace("KRW", "USD"), URL), Instant.now()).rejection())
