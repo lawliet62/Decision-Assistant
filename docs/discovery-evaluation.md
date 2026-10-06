@@ -34,6 +34,8 @@ node scripts/discovery-evaluation/run.mjs --execute-live --variant a --official-
 
 아래 1·5·1 설명과 기존 명령은 `--official-specs`를 사용하지 않는 v1/v2 비교 경로다.
 
+[v3 공식 문서 보완 15조건 결과](evaluations/discovery-specs-2026-10-06/README.md): 검색 20·수집 35·AI 3회로 가격 후보 8개를 반환했지만 모두 확인 필요였다. 조건 확인 후보 2개 이상은 0/15, 실제 보완 사양은 0건, 설명 평균은 1.0/3점이다. 추가 검색 5회·문서 수집 2회는 검색 미확보·canonical 불일치·수집 502에서 막혔다. 별도 공식 문서 직접 진단의 사양 2개 채택은 실제 서비스 성공률에 포함하지 않았다. 후보 수 변화 전체를 코드 효과로 보지 않으며 비용 대비 이득은 입증하지 못했다.
+
 `scripts/discovery-evaluation/cases.json`의 15개 공개·합성 조건을 사용한다. 현재 Dev provider/model·공식 판매처 정책·quota를 유지한다. 기존 Decision을 수정하지 않고 조건마다 새 Decision을 만든다. 기본 CI와 일반 test task에서는 실행하지 않는다.
 
 1. Docker PostgreSQL과 `backend/.env`의 local/GCP Dev 설정, ADC, 검색·수집·AI 활성화를 준비한다. 같은 DB를 소비하는 다른 backend를 중단한다. 포트만 다르게 실행해도 작업 큐는 격리되지 않는다. 실행기는 8080 서버가 응답하거나 자기 worker의 완료 계측이 없으면 중단한다. Secret 값은 파일·환경 변수·보고서에 복사하지 않는다.

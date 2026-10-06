@@ -44,7 +44,7 @@ v2는 JSON-LD 금액을 같은 상품 구매 영역의 라벨·금액과 대조�
 | QCY 공식 지원 | `support.qcy.com/support-center-<slug>` 및 `www.qcy.com/pages/support-center-<slug>` — [공식 제품 지원 링크](https://www.qcy.com/pages/support-center-t13-anc)가 같은 slug의 support 호스트로 이동하는 것을 확인 |
 | QCY KOREA 제품 안내 | `www.qcykorea.com/default/product/product01.php`에서 `com_board_basic=read_form`, `com_board_id=10`, 숫자 `com_board_idx` — [HT16 안내](https://www.qcykorea.com/default/product/product01.php?com_board_basic=read_form&com_board_id=10&com_board_idx=8&sub=01). 기존 공식 유통 등록 근거와 같은 운영 주체 |
 
-구매 제품명에서 단일 QCY 모델 코드와 ANC/Pro/세대 suffix를 보존하고 문서의 제품 제목·모델 표기와 대조한다. 단순 공백·하이픈 표기만 정규화하며 HT16을 MeloBuds N50으로 변환하는 별칭 사전은 없다. 다른 모델의 최종 URL·canonical, 복수 모델 영역, 관련 상품·리뷰·앱만의 호환 OS는 기본 사양 근거로 사용하지 않는다. 지원 페이지의 일반 FAQ나 이미지 안의 글을 자동 구조화하지 않는다.
+구매 제품명에서 단일 QCY 모델 코드와 ANC/Pro/세대 suffix를 보존하고 문서의 제품 제목·모델 표기와 대조한다. 대소문자·공백·하이픈 표기를 정규화하되 모델 번호와 숫자 세대의 구분은 보존한다. HT16을 MeloBuds N50으로 변환하는 별칭 사전은 없다. 다른 모델의 최종 URL·canonical, 복수 모델 영역, 관련 상품·리뷰·앱만의 호환 OS는 기본 사양 근거로 사용하지 않는다. 지원 페이지의 일반 FAQ나 이미지 안의 글을 자동 구조화하지 않는다.
 
 QCY 글로벌 페이지의 `.specification-section .spec-details`에는 줄바꿈으로 구분한 `Compatible system`과 명시적인 `Active Noise Cancellation (ANC)` 항목이 있다. 이 영역의 `Product Name`을 다시 대조하여 본문의 다른 상품 카드와 분리한다. 항목별 짧은 인용을 보존하며 ENC·바람 소음 감소를 ANC로 바꾸지 않는다. 표·정의 목록도 같은 모델 영역 안에서만 읽는다. 구매 페이지와 상충하는 값은 모두 보존해 UNKNOWN으로 판정한다. 보완 사양의 `officialEvidence`는 양쪽 모델 인용과 근거 영역 hash를 담고, 화면에서 사양의 실제 출처와 연결 근거를 확인할 수 있다.
 
