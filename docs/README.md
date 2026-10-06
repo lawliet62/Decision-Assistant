@@ -6,6 +6,7 @@
 - [System architecture](architecture.md): runtime/data/security 경계
 - [API contract](api-contract.md): OpenAPI 생성·소비 workflow
 - [Development workflow](development.md): golden commands와 변경 절차
+- [Troubleshooting](troubleshooting/README.md): 재사용 가능한 문제 진단·개선 효과 분석과 작성 기준
 - [Stacked PR 운영](stacked-prs.md): App 초기 설정·등록·순차 squash merge·restack 복구
 - [Stacked PR 자동화 결정](decisions/0012-stacked-pr-restack.md): 사람의 병합과 AI 없는 후속 기반 정리
 - [Deployment runbook](deployment.md): MVP 설정·검색 비용 한도·장애 대응·staging smoke
