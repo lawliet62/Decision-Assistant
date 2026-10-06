@@ -1,0 +1,109 @@
+[
+  {
+    "id": "qcy-t13-anc",
+    "revision": 1,
+    "name": "QCY T13 ANC APP 액티브노이즈캔슬링 블루투스 이어폰",
+    "purchaseUrl": "https://qcystore.co.kr/product/qcy-t13-anc-app-%EC%95%A1%ED%8B%B0%EB%B8%8C%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-%ED%99%94%EC%9D%B4%ED%8A%B8/633/",
+    "expectedIdentity": "qcy-kr:color-model:qcyt13ancapp액티브노이즈캔슬링블루투스이어폰",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.qcy.com/products/qcy-t13-anc",
+          "quote": "Active Noise Cancellation (ANC)",
+          "fetchedAt": "2026-10-06T05:27:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "iOS/Android",
+          "sourceUrl": "https://www.qcy.com/products/qcy-t13-anc",
+          "quote": "Compatible system: iOS/Android",
+          "fetchedAt": "2026-10-06T05:27:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "qcy-ht16",
+    "revision": 1,
+    "name": "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링",
+    "purchaseUrl": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%9E%99/990/",
+    "expectedIdentity": "qcy-kr:color-model:qcyht16멜로버즈무선블루투스이어폰anc노이즈캔슬링",
+    "facts": [],
+    "active": true
+  },
+  {
+    "id": "qcy-ht19",
+    "revision": 1,
+    "name": "QCY HT19 멜로버즈 블루투스 6.0 무선 이어폰 게이밍 ANC 노이즈캔슬링 고음질",
+    "purchaseUrl": "https://qcystore.co.kr/product/qcy-ht19-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%9D%B4%EC%96%B4%ED%8F%B0-%EA%B2%8C%EC%9D%B4%EB%B0%8D-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EA%B3%A0%EC%9D%8C%EC%A7%88/1012/",
+    "expectedIdentity": "qcy-kr:color-model:qcyht19멜로버즈블루투스60무선이어폰게이밍anc노이즈캔슬링고음질",
+    "facts": [],
+    "active": true
+  },
+  {
+    "id": "qcy-t13-pro",
+    "revision": 1,
+    "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
+    "purchaseUrl": "https://qcystore.co.kr/product/qcy-t13pro-anc-%EB%B8%94%EB%A5%B4%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%BB%A4%EB%84%90%ED%98%95-%EC%9D%B4%EC%96%B4%ED%8F%B0/1033/category/134/display/1/",
+    "expectedIdentity": "qcy-kr:color-model:qcyt13proanc블르투스60무선커널형이어폰",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.qcy.com/products/qcy-t13-pro",
+          "quote": "50dB Adaptive ANC",
+          "fetchedAt": "2026-10-06T05:27:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "iOS / Android",
+          "sourceUrl": "https://www.qcy.com/products/qcy-t13-pro",
+          "quote": "Compatible Systems: iOS / Android",
+          "fetchedAt": "2026-10-06T05:27:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
+      },
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IPX4",
+          "sourceUrl": "https://www.qcy.com/products/qcy-t13-pro",
+          "quote": "Water Resistance Range: IPX4",
+          "fetchedAt": "2026-10-06T05:27:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "qcy-t17-app",
+    "revision": 1,
+    "name": "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전",
+    "purchaseUrl": "https://qcystore.co.kr/product/qcy-t17app-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%BB%A4%EB%84%90%ED%98%95-%EB%AC%B4%EC%84%A0%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%A0%80%EC%A7%80%EC%97%B0-%ED%81%90%EC%94%A8%EC%99%80%EC%9D%B4-%EC%B4%88%EA%B2%BD%EB%9F%89-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A453%EB%B2%84%EC%A0%84-%EB%B8%94%EB%9E%99/563/",
+    "expectedIdentity": "qcy-kr:color-model:qcyt17app블루투스이어폰커널형무선이어폰저지연큐씨와이초경량블루투스53버전",
+    "facts": [],
+    "active": true
+  }
+]

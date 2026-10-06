@@ -16,9 +16,12 @@ public class DiscoveryService {
     private final WebProperties web;
     private final AiProperties ai;
     private final AiDataPolicy policy;
+    private final CatalogProperties catalog;
+    private final CatalogDiscovery catalogDiscovery;
     public DiscoveryService(ProductDiscoveryRepository runs, IntakeTemplates templates, SearchProperties search,
-                            WebProperties web, AiProperties ai, AiDataPolicy policy) {
+                            WebProperties web, AiProperties ai, AiDataPolicy policy, CatalogProperties catalog, CatalogDiscovery catalogDiscovery) {
         this.runs = runs; this.templates = templates; this.search = search; this.web = web; this.ai = ai; this.policy = policy;
+        this.catalog = catalog; this.catalogDiscovery = catalogDiscovery;
     }
     public IntakeTemplates.IntakeTemplate validate(com.decisionassistant.decision.DecisionTypes.TemplateKey key,
                                                   DiscoveryContracts.DiscoveryRequest request) {
@@ -34,6 +37,13 @@ public class DiscoveryService {
             if (definition.isEmpty() || definition.get().choices().stream().noneMatch(choice -> choice.id().equals(selected.getValue())))
                 throw new InvalidDecisionException(List.of("해당 제품군의 최소 사양 선택 항목을 사용하세요."));
         }
+        if (CatalogDiscovery.isCatalog(request)) {
+            if (!catalog.enabled() || key != com.decisionassistant.decision.DecisionTypes.TemplateKey.EARBUDS)
+                throw new ConflictException("현재 등록 제품 추천은 무선 이어폰만 지원합니다.");
+            if (Boolean.TRUE.equals(request.searchConsent()) || Boolean.TRUE.equals(request.collectionConsent()) || Boolean.TRUE.equals(request.aiConsent()))
+                throw new InvalidDecisionException(List.of("등록 제품 추천은 외부 전송 동의를 사용하지 않습니다."));
+            return template;
+        }
         if (!Boolean.TRUE.equals(request.searchConsent()) || !Boolean.TRUE.equals(request.collectionConsent())
                 || !Boolean.TRUE.equals(request.aiConsent()) || !Boolean.TRUE.equals(request.sensitiveDataAcknowledged())) {
             throw new InvalidDecisionException(List.of("검색·페이지 수집·AI 전송에 각각 동의해야 추천을 시작할 수 있습니다."));
@@ -45,7 +55,8 @@ public class DiscoveryService {
         return template;
     }
     public void start(Decision decision, DiscoveryContracts.DiscoveryRequest request) {
-        runs.save(new ProductDiscovery(decision.id(), request));
+        var run = runs.save(new ProductDiscovery(decision.id(), request));
+        if (CatalogDiscovery.isCatalog(request)) catalogDiscovery.populate(decision, run);
     }
     public void retry(Decision decision, long expectedVersion) {
         var run = runs.lockById(decision.id()).orElseThrow(() -> new NotFoundException("추천 요청이 없습니다."));
@@ -55,6 +66,7 @@ public class DiscoveryService {
         }
         validate(decision.templateKey(), run.conditions());
         run.pending();
+        if (CatalogDiscovery.isCatalog(run.conditions())) catalogDiscovery.populate(decision, run);
         runs.flush();
     }
     public void refresh(Decision decision, long expectedVersion) {
@@ -64,5 +76,6 @@ public class DiscoveryService {
             throw new ConflictException("추천이 진행 중입니다. 완료 후 다른 제품을 찾아보세요.");
         validate(decision.templateKey(), run.conditions());
         run.refresh(); runs.flush();
+        if (CatalogDiscovery.isCatalog(run.conditions())) catalogDiscovery.populate(decision, run);
     }
 }

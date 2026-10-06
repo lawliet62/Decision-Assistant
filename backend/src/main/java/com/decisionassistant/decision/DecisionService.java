@@ -125,7 +125,8 @@ public class DecisionService {
                         .map(item -> " · " + item.label() + " " + item.requiredValue()).collect(Collectors.joining());
         var now = Instant.now(clock);
         var decision = new Decision(currentUser.current().id(), template.label() + " 비교", template.key(), templates.version(template.key()), now);
-        decision.startGuidedIntake(intent, true, true, "discovery-v1", now);
+        var catalog = com.decisionassistant.guidance.CatalogDiscovery.isCatalog(conditions);
+        decision.startGuidedIntake(intent, !catalog, !catalog, catalog ? "catalog-v1" : "discovery-v1", now);
         decision.processingStatus(DecisionTypes.ProcessingStatus.NEEDS_INPUT, now);
         decision.updateDraft(decision.title(), new DecisionContext(intent, conditions.maxBudget(), "KRW", request.intentText()), now);
         templates.apply(decision);
@@ -606,7 +607,8 @@ public class DecisionService {
             return new ProductFactsData(option.id(), facts, source == null ? fetchedAt : source.fetchedAt(),
                     source == null ? null : source.sourceExcerpt(), requirementChecks(decision, selected, facts),
                     source == null ? null : source.officialOffer(), OfficialStorePolicy.sourceKind(option.sourceUrl(), source != null && source.officialOffer() != null),
-                    compatibilityCheck(decision, run == null ? null : run.conditions().compatibility(), facts, source == null ? null : source.officialOffer()));
+                    com.decisionassistant.guidance.CompatibilityMatcher.check(decision.templateKey(), run == null ? null : run.conditions().compatibility(), facts,
+                            source == null ? null : source.officialOffer(), source != null && source.catalog()));
         }).toList();
         return new DecisionResponse(
                 decision.id(), decision.version(), decision.title(), decision.templateKey(), decision.templateVersion(),
@@ -689,13 +691,12 @@ public class DecisionService {
     private CandidateSuggestionData candidateData(Decision decision, java.util.Map<String, String> selected, CandidateSuggestion item, BigDecimal discoveryBudget) {
         var checks = requirementChecks(decision, selected, item.facts());
         var run = discoveries.findById(decision.id()).orElse(null);
-        var compatibility = compatibilityCheck(decision, run == null ? null : run.conditions().compatibility(), item.facts(), item.officialOffer());
-        return new CandidateSuggestionData(item.id(), item.name(), item.url(), item.reason(), item.status().name(), item.facts(), item.fetchedAt(),
+        var compatibility = com.decisionassistant.guidance.CompatibilityMatcher.check(decision.templateKey(), run == null ? null : run.conditions().compatibility(), item.facts(), item.officialOffer(), item.catalog());
+        var reason = item.catalog() && run != null ? com.decisionassistant.guidance.CatalogDiscovery.reason(decision, run.conditions(), item,
+                new com.decisionassistant.template.IntakeTemplates().required(decision.templateKey(), run.conditions().templateVersion())) : item.reason();
+        return new CandidateSuggestionData(item.id(), item.name(), item.url(), reason, item.status().name(), item.facts(), item.fetchedAt(),
                 item.sourceExcerpt(), checks, item.officialOffer(), OfficialStorePolicy.sourceKind(item.url(), item.officialOffer() != null),
-                DiscoveryRanking.group(item.officialOffer(), checks, discoveryBudget, compatibility), compatibility);
-    }
-    private DiscoveryContracts.RequirementCheck compatibilityCheck(Decision decision, String requested,
-            List<DiscoveryContracts.ProductFact> facts, DiscoveryContracts.OfficialOffer offer) {
-        return com.decisionassistant.guidance.CompatibilityMatcher.check(decision.templateKey(), requested, facts, offer);
+                item.catalog() ? DiscoveryRanking.catalogGroup(item.officialOffer(), checks, discoveryBudget, compatibility) : DiscoveryRanking.group(item.officialOffer(), checks, discoveryBudget, compatibility), compatibility,
+                item.catalog() ? com.decisionassistant.guidance.CatalogDiscovery.priceStatus(item.officialOffer()) : null);
     }
 }

@@ -2,6 +2,8 @@
 
 인증된 개인의 비교형 의사결정을 구조화하고, deterministic evaluation과 독립적인 LLM assessment를 비교하며, 실제 선택과 outcome을 기록하는 MVP다.
 
+기본 추천은 사용자가 후보를 가져올 필요 없이 등록된 이어폰에서 조건을 선택하는 방식이다. 초기 제품 5개, 가격 일간 갱신, 사양 30/90일 점검으로 운영 범위를 제한한다. 가격 갱신은 별도 활성화해야 하며 offline 초기 상태의 가격은 확인 필요로 표시한다. [카탈로그 운영](docs/catalog-operations.md)과 [초기 평가](docs/evaluations/catalog-2026-10-06/README.md)를 참고한다.
+
 ## Repository structure
 
 ```text

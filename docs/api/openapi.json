@@ -1190,6 +1190,9 @@
           },
           "compatibilityCheck" : {
             "$ref" : "#/components/schemas/RequirementCheck"
+          },
+          "priceStatus" : {
+            "type" : "string"
           }
         }
       },
@@ -2460,6 +2463,9 @@
           },
           "discoveryPolicy" : {
             "$ref" : "#/components/schemas/Description"
+          },
+          "catalogEnabled" : {
+            "type" : "boolean"
           }
         }
       },

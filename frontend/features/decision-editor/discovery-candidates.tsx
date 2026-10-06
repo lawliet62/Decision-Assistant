@@ -12,7 +12,7 @@ export function DiscoveryCandidates({ candidates, editable, optionCount, pending
 }) {
   const isBelow = (item: Candidate) => item.recommendationGroup === "BELOW" || item.requirementChecks?.some(check => check.status === "BELOW");
   const isUnknown = (item: Candidate) => !isBelow(item) && item.recommendationGroup === "UNKNOWN";
-  const legacy = officialPolicy ? candidates.filter(item => !item.officialOffer) : [];
+  const legacy = officialPolicy ? candidates.filter(item => !item.officialOffer && !item.priceStatus) : [];
   const active = candidates.filter(item => !legacy.includes(item));
   const remaining = active.filter(item => !isBelow(item) && !isUnknown(item));
   const below = active.filter(isBelow);
@@ -23,6 +23,7 @@ export function DiscoveryCandidates({ candidates, editable, optionCount, pending
       {item.status === "ACCEPTED" && <p className="text-xs text-emerald-800">비교에 추가됨</p>}
       {item.status === "DISMISSED" && <p className="text-xs text-zinc-500">제외한 제품</p>}
       <ProductOffer offer={item.officialOffer} name={item.name} />
+      {item.priceStatus && item.priceStatus !== "VERIFIED" && <p className="text-sm text-amber-800">최근 판매가 확인이 필요합니다. 예산 충족 추천에 포함하지 않았습니다.</p>}
       {item.officialOffer?.policyVersion === "official-kr-v1" && <p className="text-xs text-amber-800">이전 검증 기준의 후보입니다. 기본 호환성은 재검증하지 않았습니다.</p>}
       {!item.officialOffer && <SourceLink url={item.url} kind={item.sourceKind} />}
       {item.fetchedAt && <p className="text-xs text-zinc-500">조회 {new Date(item.fetchedAt).toLocaleString("ko-KR")} · 수집 정보, 사용자 확인 전</p>}
@@ -38,7 +39,7 @@ export function DiscoveryCandidates({ candidates, editable, optionCount, pending
     <div aria-label="추천 후보 목록" className="grid gap-4 sm:grid-cols-2">{remaining.map(card)}</div>
     {unknown.length > 0 && <details className="rounded-2xl border border-amber-200 p-4">
       <summary className="cursor-pointer font-semibold">최소 조건·호환성의 근거가 부족한 제품 ({unknown.length})</summary>
-      <p className="my-3 text-sm text-zinc-600">선택한 사양을 모두 확인하지 못했습니다. 근거를 확인한 뒤 비교에 추가할 수 있습니다.</p>
+      <p className="my-3 text-sm text-zinc-600">선택 조건의 근거 또는 최근 판매가를 확인하지 못했습니다. 근거를 확인한 뒤 비교에 추가할 수 있습니다.</p>
       <div className="grid gap-4 sm:grid-cols-2">{unknown.map(card)}</div>
     </details>}
     {below.length > 0 && <details className="rounded-2xl border border-amber-200 p-4">

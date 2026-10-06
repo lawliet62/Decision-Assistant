@@ -33,6 +33,11 @@ spring:
         max-interval: 2s
 
 decision-assistant:
+  catalog:
+    enabled: ${DECISION_ASSISTANT_CATALOG_ENABLED:true}
+    refresh-enabled: ${DECISION_ASSISTANT_CATALOG_REFRESH_ENABLED:false}
+    manifest: ${DECISION_ASSISTANT_CATALOG_MANIFEST:classpath:catalog/earbuds.json}
+    monthly-limit: ${DECISION_ASSISTANT_CATALOG_MONTHLY_LIMIT:200}
   secrets:
     mode: ${DECISION_ASSISTANT_SECRETS_MODE:gcp}
     dev-project-id: ${DECISION_ASSISTANT_SECRETS_DEV_PROJECT_ID:}

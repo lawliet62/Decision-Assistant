@@ -30,6 +30,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
   const [error, setError] = useState<string>();
   const inFlight = useRef(false);
   const template = templates.find(item => item.key === category) ?? templates[0];
+  const catalog = web?.catalogEnabled === true;
 
   useEffect(() => {
     let active = true;
@@ -66,7 +67,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
     </div>
     {manual ? <DecisionCreateForm /> : <form onSubmit={submit} className="space-y-7 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
       <OfficialPolicyNotice version={web?.discoveryPolicy?.version} placement="input" />
-      <fieldset disabled={pending} className="space-y-7">
+      <fieldset disabled={pending || !web || !template} className="space-y-7">
         <ChoiceGroup title="제품군" options={templates.map(item => ({ value: item.key!, label: item.label! }))} selected={template?.key} onSelect={value => { setCategory(value!); setUses([]); setBudget(undefined); setCompatibility(undefined); setMinimumRequirements({}); }} />
         {template && <>
           <ChoiceGroup title="주로 어떻게 쓰나요? (복수 선택)" options={[{ label: "아직 모르겠어요" }, ...(template.uses ?? []).map(value => ({ value, label: value }))]} selected={uses} onSelect={value => setUses(current => value === undefined ? [] : current.includes(value) ? current.filter(item => item !== value) : [...current, value])} />
@@ -91,7 +92,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
             <p className="text-xs text-zinc-500">메모는 비교에 저장하며 최초 추천 검색·AI에는 보내지 않습니다.</p>
           </div></details>
         </>}
-        <fieldset className="space-y-3 rounded-2xl bg-zinc-50 p-4 text-sm">
+        {catalog ? <p className="rounded-2xl bg-zinc-50 p-4 text-sm">공식 근거를 확인해 등록한 이어폰에서 조건에 맞는 제품을 찾습니다. 선택 조건과 메모는 이 추천을 위해 외부 검색·수집·AI로 전송하지 않습니다. 구매 메모는 필터에 자동 반영되지 않습니다.</p> : <fieldset className="space-y-3 rounded-2xl bg-zinc-50 p-4 text-sm">
           <legend className="font-semibold">추천 정보 가져오기</legend>
           <label className="flex gap-2"><input type="checkbox" checked={consents.search} onChange={e => setConsents({ ...consents, search: e.target.checked })} />선택 조건을 Serper로 보내 제품을 검색하는 데 동의합니다.</label>
           <label className="flex gap-2"><input type="checkbox" checked={consents.collection} onChange={e => setConsents({ ...consents, collection: e.target.checked })} />검색된 공개 페이지를 후보 선택 전에 Firecrawl로 수집하는 데 동의합니다. 이후 직접 추가한 페이지에도 적용됩니다.</label>
@@ -100,10 +101,11 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
           {ai?.provider === "gemini" && <p className="text-xs text-zinc-600">Gemini 무료 티어에서는 전송 콘텐츠가 Google 제품 개선에 사용될 수 있습니다.</p>}
           <p className="text-xs text-zinc-500">이 비교에만 적용됩니다. 출처·짧은 발췌·조회 시점을 저장하며 자동 정보는 확인이 필요합니다. 실제 판매·재고·최저가는 보장하지 않습니다.</p>
           <p className="text-xs text-zinc-500">제품 이미지는 공식 판매처의 이미지 서버에서 직접 불러옵니다. 이때 해당 서버에 IP 주소가 전달되며, 현재 페이지 주소는 전달하지 않습니다.</p>
-        </fieldset>
-        {web && ai && !(web.searchEnabled && web.importEnabled && ai.enabled) && <p role="status" className="text-sm text-amber-800">현재 추천 서비스가 꺼져 있습니다. 제품 직접 추가를 이용하세요.</p>}
+        </fieldset>}
+        {catalog && <p className="text-xs text-zinc-500">제품 이미지는 공식 판매처 서버에서 불러오며 해당 서버에 IP 주소가 전달됩니다.</p>}
+        {!catalog && web && ai && !(web.searchEnabled && web.importEnabled && ai.enabled) && <p role="status" className="text-sm text-amber-800">현재 추천 서비스가 꺼져 있습니다. 제품 직접 추가를 이용하세요.</p>}
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-        <button disabled={!template || !web?.searchEnabled || !web.importEnabled || !ai?.enabled || !Object.values(consents).every(Boolean)} className="rounded-full bg-emerald-800 px-6 py-3 font-semibold text-white disabled:opacity-40">{pending ? "비교 준비 중…" : "추천 제품 보기"}</button>
+        <button disabled={!template || !web || (!catalog && (!web.searchEnabled || !web.importEnabled || !ai?.enabled || !Object.values(consents).every(Boolean)))} className="rounded-full bg-emerald-800 px-6 py-3 font-semibold text-white disabled:opacity-40">{pending ? "비교 준비 중…" : "추천 제품 보기"}</button>
       </fieldset>
     </form>}
   </div>;

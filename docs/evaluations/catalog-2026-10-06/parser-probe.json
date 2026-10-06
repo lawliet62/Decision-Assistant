@@ -1,0 +1,36 @@
+[ {
+  "id" : "qcy-t13-anc",
+  "httpStatus" : 200,
+  "checkedAt" : "2026-10-06T05:45:22.980030900Z",
+  "rejection" : null,
+  "identityMatches" : true,
+  "price" : 28200
+}, {
+  "id" : "qcy-ht16",
+  "httpStatus" : 200,
+  "checkedAt" : "2026-10-06T05:45:23.386092900Z",
+  "rejection" : null,
+  "identityMatches" : true,
+  "price" : 31800
+}, {
+  "id" : "qcy-ht19",
+  "httpStatus" : 200,
+  "checkedAt" : "2026-10-06T05:45:23.623327700Z",
+  "rejection" : null,
+  "identityMatches" : true,
+  "price" : 50900
+}, {
+  "id" : "qcy-t13-pro",
+  "httpStatus" : 200,
+  "checkedAt" : "2026-10-06T05:45:23.856656600Z",
+  "rejection" : null,
+  "identityMatches" : true,
+  "price" : 21900
+}, {
+  "id" : "qcy-t17-app",
+  "httpStatus" : 200,
+  "checkedAt" : "2026-10-06T05:45:24.091886200Z",
+  "rejection" : null,
+  "identityMatches" : true,
+  "price" : 29900
+} ]

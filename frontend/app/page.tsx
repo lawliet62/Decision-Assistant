@@ -36,7 +36,7 @@ export default async function Home() {
 
       <OfficialPolicyNotice version={capabilities?.discoveryPolicy?.version} placement="home" />
       <nav aria-label="제품군 선택" className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {Object.entries(categoryLabels).map(([key, label]) => <Link key={key} href={`/decisions/new?category=${key}`} className="rounded-2xl border border-zinc-200 bg-white p-5 font-semibold hover:border-emerald-600 hover:bg-emerald-50">{label}<span aria-hidden="true" className="mt-4 block text-emerald-700">→</span></Link>)}
+        {Object.entries(categoryLabels).filter(([key]) => !capabilities?.catalogEnabled || key === "EARBUDS").map(([key, label]) => <Link key={key} href={`/decisions/new?category=${key}`} className="rounded-2xl border border-zinc-200 bg-white p-5 font-semibold hover:border-emerald-600 hover:bg-emerald-50">{label}<span aria-hidden="true" className="mt-4 block text-emerald-700">→</span></Link>)}
       </nav>
       <section>
         <h2 className="text-lg font-semibold text-zinc-900">최근 비교</h2>

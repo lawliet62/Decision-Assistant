@@ -9,6 +9,10 @@ import java.util.List;
 
 @RestController
 public class IntakeTemplates {
+    private com.decisionassistant.guidance.CatalogProperties catalog;
+    public IntakeTemplates() {}
+    @org.springframework.beans.factory.annotation.Autowired
+    public IntakeTemplates(com.decisionassistant.guidance.CatalogProperties catalog) { this.catalog = catalog; }
     public record IntakeTemplate(TemplateKey key, String version, String label, List<String> uses,
                                  List<Integer> budgets, List<String> compatibility, List<String> facts,
                                  List<MinimumRequirements.MinimumRequirement> minimumRequirements) {}
@@ -36,7 +40,9 @@ public class IntakeTemplates {
     }
 
     @GetMapping("/api/v1/intake-templates")
-    public List<IntakeTemplate> list() { return TEMPLATES; }
+    public List<IntakeTemplate> list() {
+        return catalog != null && catalog.enabled() ? List.of(required(TemplateKey.EARBUDS, com.decisionassistant.guidance.CatalogProperties.TEMPLATE)) : TEMPLATES;
+    }
 
     public IntakeTemplate required(TemplateKey key) {
         return TEMPLATES.stream().filter(item -> item.key() == key).findFirst()
@@ -46,6 +52,9 @@ public class IntakeTemplates {
     public IntakeTemplate required(TemplateKey key, String version) {
         var current = required(key);
         if (current.version().equals(version)) return current;
+        if (com.decisionassistant.guidance.CatalogProperties.TEMPLATE.equals(version) && key == TemplateKey.EARBUDS)
+            return new IntakeTemplate(key, version, current.label(), current.uses(), List.of(30000, 50000, 100000, 200000),
+                    current.compatibility(), current.facts(), current.minimumRequirements());
         if ("intake-v1".equals(version)) return new IntakeTemplate(key, version, current.label(), current.uses(),
                 current.budgets(), current.compatibility(),
                 key == TemplateKey.PHONE || key == TemplateKey.TABLET

@@ -43,6 +43,7 @@ public class ProductDiscovery {
     public void empty(String reason) { emptyReason = reason; finish(Status.SUCCEEDED, null); }
     public void refresh() { remember(); generation++; pending(); }
     public void displayCurrentGeneration() { displayedGeneration = generation; }
+    public void catalog() { policyVersion = CatalogProperties.VERSION; promptVersion = "none"; schemaVersion = CatalogProperties.VERSION; }
     private void remember() {
         if (status == Status.PENDING || status == Status.RUNNING) return;
         var records = new java.util.ArrayList<>(history.stream().filter(item -> item.generation() != generation).toList());
