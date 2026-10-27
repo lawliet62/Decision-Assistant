@@ -24,6 +24,12 @@ worker는 기본 60초마다 최대 한 제품을 claim하고 제품별 시도 �
 
 ## 제품·사양 관리
 
+매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 QCY T13 ANC와 T13 Pro의 등록된 공식 페이지 두 곳을 제품당 최대 한 번 읽는다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
+
+작업 요약에서 `QUOTE_PRESENT`는 단순 문구 존재, `QUOTE_MISSING`은 미발견, `UNAVAILABLE`은 접근 실패, `UNSUPPORTED_SOURCE`는 허용된 고정 주소가 아닌 사양이다. 문구가 다른 상품·추천 영역에 나타날 수도 있으므로 **일치가 동일 모델이나 사양의 정확성을 검증하지 않는다**. 점검 기한이 7일 이내이거나 문구 미발견·접근 실패가 있으면 작업을 실패로 표시해 확인할 수 있게 한다. 수집 실패의 HTTP 상태와 크기 초과는 간단한 코드만 남긴다. GitHub 알림 수신 여부는 계정 설정에 달려 있으며 예약 자체가 누락된 경우 이 workflow가 알림을 보장하지 않는다.
+
+이 작업은 `fetchedAt`이나 manifest·DB를 수정하지 않는다. 운영자는 요약에서 점검 기한과 실패 항목을 확인하고 실제 모델·구성·원문을 점검한 뒤 아래 절차로 revision을 올린다. 예정된 점검 기한이 지난 경우 사실 내용이 바뀌지 않았더라도 출처 검토와 사양 갱신 PR이 필요하다. 이미 생성한 개인 비교는 당시 snapshot으로 유지한다.
+
 1. 공식 제품명·세대·구성·판매 URL과 `OfficialProductParser`의 identity를 대조한다. 유사한 제품명이나 지역별 별칭만으로 사양을 복사하지 않는다.
 2. 공식 사양 출처의 짧은 원문 인용과 확인 시각을 `facts[].evidence`에 넣고 HARDWARE/SOFTWARE를 선택한다. ANC 지원은 음질·ANC 성능 점수가 아니다. 앱·OS 관련 호환성은 SOFTWARE다.
 3. 수정 시 해당 제품 `revision`을 증가시킨다. 같은 revision의 다른 내용은 기동을 거절하며 낮은 revision은 최신 DB 등록을 되돌리지 않는다. 비활성화는 항목 삭제 대신 `active:false`와 revision 증가를 사용한다.
@@ -50,9 +56,12 @@ node scripts/catalog/report.mjs observations.json products.json
 
 보고서는 시도 수·결과별 수·관측 기간·점검 기한과 1/3/7일 가상 갱신 결과를 출력한다. `references`는 VERIFIED 관측 수, `available`은 24시간 내 가격이 남은 표본 수다. `priceMismatches`와 3/5/10/20만원 예산의 `falseBudgetPasses`를 함께 본다. `unavailableReferences`/`falseAvailable`은 관측된 품절과 그때 남아 있던 가격을 센다. 실패·미관측 구간은 정상 가격으로 간주하지 않는다. ATTEMPTED만 남은 관측은 프로세스 중단 가능성을 확인한다.
 
-주 1회 다음을 별도 기록한다: 수동 출처 점검 시간, 수정한 사양 수, 품절·잘못된 모델 발견, 사용자 신고. 근거가 충분하지 않으면 24시간을 유지한다. 3/7일은 가격 정답률이 높더라도 UNKNOWN 노출을 크게 늘릴 수 있다. 기간·품목·판매 채널이 좁으므로 불일치 0건만으로 주기를 늘리지 않는다. 2주 실측과 관리 시간 기록은 배포 후 수행해야 하며 이번 구현 검증 결과와 구분한다.
+주 1회 다음을 별도 기록한다: 수동 출처 점검 시간, 수정한 사양 수, 품절·잘못된 모델 발견, 사용자 신고. 근거가 충분하지 않으면 24시간을 유지한다. 3/7일은 가격 정답률이 높더라도 UNKNOWN 노출을 크게 늘릴 수 있다. 기간·품목·판매 채널이 좁으므로 불일치 0건만으로 주기를 늘리지 않는다. 2주 실측은 갱신 주기의 적절성을 판단하는 자료이며 기능 구현·배포를 위해 그 기간을 기다리는 필수 절차가 아니다. 실측과 관리 시간 기록은 배포 후 수행하며 구현 검증 결과와 구분한다.
 
 ## 성능과 장애 대응
+
+- 가격 worker는 관측의 성공 또는 실패를 `catalog_refresh` 로그에 제품 ID와 결과 코드로 남긴다. 마지막으로 사용할 수 있는 가격 대비 2배 이상 또는 절반 이하인 새 가격은 `catalog_price_change` 경고를 추가하지만 자동으로 거절하지 않는다. 할인 등 정상 변동도 포함될 수 있어 경고는 원인 확인 신호다. DB 관측 기록이 최종 결과의 기준이며 로그는 별도 알림 시스템이 아니다.
+- `CATALOG_MONTHLY_LIMIT=100`은 2주 파일럿 예시다. 5개 제품의 한 달 일간 시도에는 약 150~155회가 필요하므로 계속 운영할 때 상한과 provider 계정 비용을 함께 검토한다. 실패도 한도를 소비한다.
 
 - `CatalogApiIntegrationTest.measureDatabaseBaselineAtFiveAndThirtyProductsWithoutCache`는 제품 5/30개, 동시 요청 1/5개에서 비교 생성 API를 측정하고 `backend/build/reports/catalog-benchmark.json`을 만든다. 운영 트래픽·브라우저 지연을 포함하지 않는다.
 - `catalog.db.read`, `catalog.discovery` Micrometer timer로 DB 조회와 전체 후보 생성을 구분한다. 외부에 metrics endpoint를 새로 노출하지 않는다. 운영 지연이 관찰되면 DB 시간과 요청 전체 시간부터 확인하고 캐시 효과를 별도 비교한다.

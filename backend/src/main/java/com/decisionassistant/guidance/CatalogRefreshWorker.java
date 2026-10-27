@@ -10,6 +10,7 @@ import java.util.UUID;
 
 @Component
 public class CatalogRefreshWorker {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CatalogRefreshWorker.class);
     private final CatalogProperties config;
     private final WebProperties web;
     private final FirecrawlWebEvidenceProvider provider;
@@ -56,12 +57,21 @@ public class CatalogRefreshWorker {
         tx.executeWithoutResult(status -> {
             var product = products.findById(work.id()).orElseThrow();
             var effective = product.revision() != work.revision() ? "REGISTRATION_CHANGED" : code;
-            if ("VERIFIED".equals(effective)) product.observed(result.product());
+            if ("VERIFIED".equals(effective)) {
+                var previous = product.usableOffer();
+                var price = result.product().offer().price();
+                if (previous != null && (price.compareTo(previous.price().multiply(java.math.BigDecimal.valueOf(2))) >= 0
+                        || price.multiply(java.math.BigDecimal.valueOf(2)).compareTo(previous.price()) <= 0))
+                    log.warn("catalog_price_change product_id={} reason=PRICE_DOUBLED_OR_HALVED", work.id());
+                product.observed(result.product());
+            }
             else if (!"REGISTRATION_CHANGED".equals(effective)) product.rejected(effective);
             jdbc.update("update catalog_observations set completed_at=?,outcome=?,price=?,currency=? where id=?",
                     java.sql.Timestamp.from(Instant.now()), effective,
                     "VERIFIED".equals(effective) ? result.product().offer().price() : null,
                     "VERIFIED".equals(effective) ? "KRW" : null, work.observation());
+            if ("VERIFIED".equals(effective)) log.info("catalog_refresh product_id={} outcome={}", work.id(), effective);
+            else log.warn("catalog_refresh product_id={} outcome={}", work.id(), effective);
         });
     }
 }
