@@ -138,6 +138,18 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById("product-2").orElseThrow().usableOffer()).isNull();
         assertThat(jdbc.queryForList("select outcome from catalog_observations", String.class)).containsExactlyInAnyOrder("VERIFIED", "MODEL_MISMATCH");
     }
+    @Test
+    @org.junit.jupiter.api.extension.ExtendWith(org.springframework.boot.test.system.OutputCaptureExtension.class)
+    void largePriceChangeIsLoggedButStillUpdatesVerifiedOffer(org.springframework.boot.test.system.CapturedOutput output) {
+        var p = product(1, Instant.now());
+        p.observed(new OfficialProduct(p.name(), p.expectedIdentity(), new OfficialOffer(url(1), "QCY 공식몰",
+                BigDecimal.valueOf(10000), "KRW", null, Instant.now(), "판매가", "catalog-v1"), "", "판매가 10000원"));
+        products.saveAndFlush(p);
+        when(web.scrapeProduct(url(1))).thenReturn(page(1, "Buds 1"));
+        worker.refreshNext();
+        assertThat(products.findById(p.id()).orElseThrow().usableOffer().price()).isEqualByComparingTo("35000");
+        assertThat(output.getAll()).contains("catalog_price_change product_id=product-1 reason=PRICE_DOUBLED_OR_HALVED");
+    }
     private WebEvidenceProvider.Page page(int n, String name) {
         var data = json.writeValueAsString(Map.of("@type", "Product", "name", name, "sku", name, "url", url(n), "offers", Map.of("@type", "Offer", "priceCurrency", "KRW", "price", 35000)));
         var html = "<script type='application/ld+json'>" + data + "</script><article itemscope itemtype='https://schema.org/Product'><h1 itemprop='name'>" + name
