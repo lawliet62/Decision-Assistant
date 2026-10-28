@@ -1,8 +1,9 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 
-// 운영자가 승인한 두 QCY 사양 페이지만 점검한다. 일치는 사양의 진실성이나 모델 동일성을 증명하지 않는다.
+// 운영자가 승인한 고정 사양 페이지만 점검한다. 일치는 사양의 진실성이나 모델 동일성을 증명하지 않는다.
 const sources = new Map([
+  ["apple-airpods-pro-3", "https://www.apple.com/kr/airpods-pro/specs/"],
   ["qcy-t13-anc", "https://www.qcy.com/products/qcy-t13-anc"],
   ["qcy-t13-pro", "https://www.qcy.com/products/qcy-t13-pro"],
 ]);
@@ -50,7 +51,7 @@ export async function inspect(entries, fetchPage = fetch, now = new Date()) {
 }
 
 export function summary(results) {
-  const lines = ["## QCY 사양 출처 점검", "", "문구 존재는 모델 동일성·사양 정확성의 검증이 아닙니다. 확인 시각은 갱신하지 않습니다.", ""];
+  const lines = ["## 카탈로그 사양 출처 점검", "", "문구 존재는 모델 동일성·사양 정확성의 검증이 아닙니다. 확인 시각은 갱신하지 않습니다.", ""];
   if (!results.length) lines.push("점검할 등록 사양이 없습니다.");
   for (const row of results) lines.push(`- ${row.productId} / ${row.field}: ${row.observation}${row.failure ? ` (${row.failure})` : ""}, 점검 기한 ${row.dueAt}${row.due ? " (점검 기한 초과)" : row.dueSoon ? " (7일 이내 점검 필요)" : ""} · ${row.source}`);
   return lines.join("\n") + "\n";

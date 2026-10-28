@@ -33,3 +33,11 @@ test("비활성 제품과 등록되지 않은 출처를 자동 요청하지 않�
   assert.equal(rows[0].observation, "UNSUPPORTED_SOURCE");
   assert.equal(called, 0);
 });
+
+test("Apple의 승인된 사양 페이지도 점검하며 확인 시각을 변경하지 않는다", async () => {
+  const apple = { id: "apple-airpods-pro-3", active: true, facts: [{ cycle: "HARDWARE", evidence: { name: "ANC 지원", sourceUrl: "https://www.apple.com/kr/airpods-pro/specs/", quote: "액티브 노이즈 캔슬링", fetchedAt: "2026-10-28T00:00:00Z" } }] };
+  const before = JSON.stringify(apple);
+  const rows = await inspect([apple], async url => { assert.equal(url, apple.facts[0].evidence.sourceUrl); return new Response("액티브 노이즈 캔슬링"); });
+  assert.equal(rows[0].observation, "QUOTE_PRESENT");
+  assert.equal(JSON.stringify(apple), before);
+});

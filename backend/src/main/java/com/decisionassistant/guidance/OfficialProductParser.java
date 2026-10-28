@@ -92,6 +92,12 @@ final class OfficialProductParser {
         if (prices.size() != 1) return Result.rejected(Rejection.PRICE_AMBIGUOUS);
         var price = prices.first();
         var sku = product.path("sku").asText(product.path("productGroupID").asText("")).strip();
+        if (store.id().equals("apple-kr")) {
+            var offerSkus = rows.stream().map(row -> row.path("sku").asText("").strip()).distinct().toList();
+            if (offerSkus.size() != 1 || offerSkus.getFirst().isBlank()
+                    || !sku.isBlank() && !sku.equalsIgnoreCase(offerSkus.getFirst())) return Result.rejected(Rejection.IDENTITY_INVALID);
+            sku = offerSkus.getFirst();
+        }
         if (sku.length() > 300) return Result.rejected(Rejection.IDENTITY_INVALID);
         var visible = VisiblePrice.inspect(doc, requestedUrl, name, sku, price);
         if (visible.rejection() != null) return Result.rejected(visible.rejection());

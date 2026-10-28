@@ -18,6 +18,18 @@ class OfficialProductParserTest {
     }
     private String product(String offer) { return "{\"@type\":\"Product\",\"name\":\"Buds\",\"sku\":\"buds-1\",\"image\":\"/web/product/buds.jpg\"," + offer + "}"; }
 
+    @Test void applePriceRequiresSinglePurchaseLinkMatchingOfferSkuAndAmount() {
+        var url = "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3";
+        var data = "<title>AirPods Pro 3</title><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"AirPods Pro 3\",\"url\":\"" + url + "\",\"offers\":{\"@type\":\"Offer\",\"sku\":\"MFHP4KH/A\",\"price\":369000,\"priceCurrency\":\"KRW\"}}</script>";
+        var purchase = "<div class='product-selection-area'><a data-slot-name='productSelection' href='" + url + "?product=mfhp4kh/a&amp;step=select'><span class='current_price'>₩369,000</span></a></div>";
+        var result = OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + purchase, url), Instant.now());
+        assertThat(result.rejection()).isNull();
+        assertThat(result.product().identity()).isEqualTo("apple-kr:mfhp4kh/a");
+        for (var invalid : List.of(purchase.replace("mfhp4kh/a", "other"), purchase.replace("369,000", "199,000"), purchase + purchase, purchase.replace("₩369,000", "회원 ₩369,000"), purchase.replace("airpods-pro-3?", "airpods-5?"))) {
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + invalid, url), Instant.now()).product()).isNull();
+        }
+    }
+
     @Test void validatesPriceImageAndOfficialIdentityFromCollectedHtml() {
         var product = parse(product(OFFER));
         assertThat(product.name()).isEqualTo("Buds");

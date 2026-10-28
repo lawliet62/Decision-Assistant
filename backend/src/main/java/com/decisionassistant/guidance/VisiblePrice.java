@@ -29,6 +29,26 @@ final class VisiblePrice {
             };
             if (!selector.isEmpty()) for (var row : doc.select(selector)) if (row.text().length() <= 600) rows.add(row.text());
         }
+        // Apple 구매 링크의 SKU와 현재 상품의 표시 가격을 함께 대조한다.
+        if (OfficialStorePolicy.store(url).orElseThrow().id().equals("apple-kr") && ProductPageRegions.current(doc, url, name)) {
+            var links = doc.select(".product-selection-area a[data-slot-name=productSelection]");
+            if (links.size() == 1) {
+                var link = links.getFirst();
+                var target = java.net.URI.create(link.absUrl("href"));
+                var selected = Arrays.stream(Objects.toString(target.getQuery(), "").split("&"))
+                        .filter(item -> item.startsWith("product=")).map(item -> item.substring(8)).toList();
+                var prices = link.select(".current_price");
+                if (OfficialProductParser.samePage(url, target.toString()) && selected.size() == 1
+                        && !sku.isBlank() && selected.getFirst().equalsIgnoreCase(sku) && prices.size() == 1
+                        && !CONDITIONAL.matcher(link.text()).find()) {
+                    var text = prices.getFirst().text();
+                    if (text.matches("₩[0-9]{1,3}(?:,[0-9]{3})*")) {
+                        var amount = new BigDecimal(text.substring(1).replace(",", ""));
+                        if (amount.compareTo(price) == 0) return new Result("구매 선택 판매가 " + text, null);
+                    }
+                }
+            }
+        }
         String confirmed = null;
         for (var text : rows) {
             var amounts = new HashSet<BigDecimal>();
