@@ -44,11 +44,23 @@
   },
   {
     "id": "qcy-ht19",
-    "revision": 3,
+    "revision": 4,
     "name": "QCY HT19 멜로버즈 듀얼 블루투스 무선 이어폰 ANC 노이즈캔슬링 고음질 LDAC",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-ht19-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%9D%B4%EC%96%B4%ED%8F%B0-%EA%B2%8C%EC%9D%B4%EB%B0%8D-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EA%B3%A0%EC%9D%8C%EC%A7%88/1012/",
     "expectedIdentity": "qcy-kr:color-model:qcyht19멜로버즈듀얼블루투스무선이어폰anc노이즈캔슬링고음질ldac",
     "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.qcy.com/products/qcy-melobuds-n60",
+          "quote": "Bluetooth 6.0, 56dB ANC, Hi-Res, 45-Hour Playtime, HT19",
+          "fetchedAt": "2026-10-29T15:45:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
       {
         "evidence": {
           "name": "방수",

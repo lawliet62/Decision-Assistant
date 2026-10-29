@@ -8,13 +8,19 @@ final class QcySpecificationVerifier {
     private QcySpecificationVerifier() {}
 
     static boolean matchesHt19WaterResistance(String html) {
+        return matchesHt19ModelAndAnc(html) && matches(html, "QCY MeloBuds N60", "Water Resistance Range", "IPX5");
+    }
+
+    static boolean matchesHt19ModelAndAnc(String html) {
         if (html == null || html.length() > 2_000_000) return false;
         var doc = Jsoup.parse(html);
         var subtitles = doc.select("p.product__text.subtitle");
+        var models = doc.select(".specification-content").stream().filter(section -> rows(section).stream()
+                .anyMatch(row -> row.equals("Product Name: QCY MeloBuds N60"))).toList();
         return doc.title().equals("QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official")
                 && subtitles.size() == 1
                 && subtitles.first().text().equals("Bluetooth 6.0, 56dB ANC, Hi-Res, 45-Hour Playtime, HT19")
-                && matches(html, "QCY MeloBuds N60", "Water Resistance Range", "IPX5");
+                && models.size() == 1;
     }
 
     static boolean matchesAnc(String html) {

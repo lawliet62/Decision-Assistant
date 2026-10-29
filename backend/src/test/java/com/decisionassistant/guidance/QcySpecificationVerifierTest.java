@@ -35,5 +35,9 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesHt19WaterResistance(page.replace("IPX5", "IPX4"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesHt19WaterResistance(page + "<p class='product__text subtitle'>HT19</p>")).isFalse();
         assertThat(QcySpecificationVerifier.matchesHt19WaterResistance(page.replace("IPX5", "IPX5<br>Water Resistance Range: IPX4"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(page.replace("56dB ANC", "No ANC"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(page.replace("Product Name: QCY MeloBuds N60", "Product Name: another model"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(page.replace("IPX5", "IPX4"))).isTrue();
     }
 }

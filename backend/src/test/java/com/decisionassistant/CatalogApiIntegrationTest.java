@@ -154,13 +154,16 @@ class CatalogApiIntegrationTest {
         verify(specificationSource, never()).fetchN60();
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
         p.register(2, "QCY HT19", url(8), "qcy:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, "Bluetooth 6.0, 56dB ANC, Hi-Res, 45-Hour Playtime, HT19", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
                 new CatalogProduct.Fact(new ProductFact("방수", "IPX5", source, "Water Resistance Range: IPX5", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
         products.saveAndFlush(p);
         when(specificationSource.fetchN60()).thenReturn("<title>QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official</title>"
                 + "<p class='product__text subtitle'>Bluetooth 6.0, 56dB ANC, Hi-Res, 45-Hour Playtime, HT19</p>"
-                + "<div class='specification-content'><div class='spec-details'><p>Product Name: QCY MeloBuds N60<br>Water Resistance Range: IPX5</p></div></div>");
+                + "<div class='specification-content'><div class='spec-details'><p>Product Name: QCY MeloBuds N60<br>Water Resistance Range: IPX4</p></div></div>");
         worker.refresh(); worker.refresh();
-        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts.getFirst().fetchedAt()).isAfter(old);
+        assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
         verify(specificationSource, times(1)).fetchN60();
     }
     @Test void appleReviewUpdatesOnlyMatchingSpecification() throws Exception {
