@@ -272,6 +272,65 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         verify(marshallSpecificationSource, times(1)).fetch();
     }
+    @Test void concurrentSpecificationWorkersShareOneAttempt() throws Exception {
+        var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=990";
+        var p = new CatalogProduct(id);
+        p.register(1, "HT16", url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("ANC 지원", "지원", url, "ANC 노이즈캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        when(specificationSource.fetchHt16()).thenAnswer(call -> {
+            entered.countDown();
+            if (!release.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("timeout");
+            return "";
+        });
+        var worker = new Ht16SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        try (var executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var first = executor.submit(worker::refresh);
+            try {
+                assertThat(entered.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                worker.refresh();
+            } finally { release.countDown(); }
+            first.get(10, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        verify(specificationSource, times(1)).fetchHt16();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isEqualTo(old);
+    }
+    @Test void specificationResponseForPreviousRevisionCannotRefreshNewRevision() throws Exception {
+        var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=990";
+        var fact = new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", url, "ANC 노이즈캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE);
+        var p = new CatalogProduct(id); p.register(1, "HT16", url, "qcy:test", List.of(fact), true); products.saveAndFlush(p);
+        when(specificationSource.fetchHt16()).thenAnswer(call -> {
+            var changed = products.findById(id).orElseThrow();
+            changed.register(2, "HT16", url, "qcy:test", List.of(fact), true); products.saveAndFlush(changed);
+            var name = "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙";
+            return "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                    + "<link rel='canonical' href='https://qcystore.co.kr/product/model/990/'>"
+                    + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_990\"}</script>";
+        });
+        new Ht16SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager).refresh();
+        var updated = products.findById(id).orElseThrow();
+        assertThat(updated.revision()).isEqualTo(2);
+        assertThat(updated.usableFacts(Instant.now()).getFirst().fetchedAt()).isEqualTo(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
+    }
+    @Test void failedSpecificationRequestKeepsPreviousReviewAndWeeklyLimit() throws Exception {
+        var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=990";
+        var p = new CatalogProduct(id); p.register(1, "HT16", url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("ANC 지원", "지원", url, "ANC 노이즈캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchHt16()).thenThrow(new IllegalStateException("source unavailable"));
+        var worker = new Ht16SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        verify(specificationSource, times(1)).fetchHt16();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isEqualTo(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
+    }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(2))); product(2, null); product(3, null);
         when(web.scrapeProduct(anyString())).thenThrow(new IllegalStateException("private provider error"));
