@@ -6,6 +6,7 @@ const sources = new Map([
   ["apple-airpods-pro-3", "https://www.apple.com/kr/airpods-pro/specs/"],
   ["qcy-t13-anc", "https://www.qcy.com/products/qcy-t13-anc"],
   ["qcy-t13-pro", "https://www.qcy.com/products/qcy-t13-pro"],
+  ["qcy-ht19", "https://www.qcy.com/products/qcy-melobuds-n60"],
 ]);
 const MAX_BYTES = 2_000_000;
 const normalize = value => value.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ")

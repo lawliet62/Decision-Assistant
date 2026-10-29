@@ -11,8 +11,14 @@ import java.nio.charset.StandardCharsets;
 public class QcySpecificationSource {
     private static final URI URL = URI.create("https://www.qcy.com/products/qcy-t13-pro");
     public String fetch() throws Exception {
+        return fetch(URL);
+    }
+    public String fetchN60() throws Exception {
+        return fetch(URI.create("https://www.qcy.com/products/qcy-melobuds-n60"));
+    }
+    private String fetch(URI url) throws Exception {
         var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
-        var request = HttpRequest.newBuilder(URL).timeout(Duration.ofSeconds(15)).GET().build();
+        var request = HttpRequest.newBuilder(url).timeout(Duration.ofSeconds(15)).GET().build();
         var response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
         try (var body = response.body()) {
             if (response.statusCode() != 200) throw new IllegalStateException("SOURCE_UNAVAILABLE");

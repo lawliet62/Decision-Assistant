@@ -75,7 +75,8 @@ class CatalogPolicyTest {
                 assertThat(MinimumRequirementMatcher.check(template.minimumRequirements(), Map.of("anc", "required"), facts).getFirst().status()).isEqualTo(RequirementStatus.MEETS);
                 assertThat(CompatibilityMatcher.check(template.key(), "Android", facts, null, true).status()).isEqualTo(RequirementStatus.MEETS);
             }
-            assertThat(entries[1].facts()).isEmpty(); assertThat(entries[2].facts()).isEmpty(); assertThat(entries[4].facts()).isEmpty();
+            assertThat(entries[1].facts()).isEmpty(); assertThat(entries[4].facts()).isEmpty();
+            assertThat(entries[2].facts()).extracting(f -> f.evidence().value()).containsExactly("IPX5");
         }
     }
 }

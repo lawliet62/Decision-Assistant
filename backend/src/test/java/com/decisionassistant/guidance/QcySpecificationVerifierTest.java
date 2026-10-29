@@ -26,4 +26,14 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesAnc(page + "<meta name='description' content='No ANC'>")).isFalse();
         assertThat(QcySpecificationVerifier.matchesAnc(page.replace("Playtime", "Playtime without ANC"))).isFalse();
     }
+    @Test void ht19RequiresModelMappingAndUnambiguousWaterResistance() {
+        var page = "<title>QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official</title>"
+                + "<p class='product__text subtitle'>Bluetooth 6.0, 56dB ANC, Hi-Res, 45-Hour Playtime, HT19</p>"
+                + PAGE.replace("QCY T13 Pro", "QCY MeloBuds N60").replace("IPX4", "IPX5");
+        assertThat(QcySpecificationVerifier.matchesHt19WaterResistance(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesHt19WaterResistance(page.replace("HT19", "HT16"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt19WaterResistance(page.replace("IPX5", "IPX4"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt19WaterResistance(page + "<p class='product__text subtitle'>HT19</p>")).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt19WaterResistance(page.replace("IPX5", "IPX5<br>Water Resistance Range: IPX4"))).isFalse();
+    }
 }
