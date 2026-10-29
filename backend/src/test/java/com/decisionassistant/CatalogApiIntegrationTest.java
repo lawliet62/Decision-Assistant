@@ -173,6 +173,22 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         verify(specificationSource, times(1)).fetchHt16();
     }
+    @Test void t17ReviewPersistsOnlyExactOfficialModel() throws Exception {
+        var id = "qcy-t17-app"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=563";
+        var name = "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("형태", "커널형", url, "커널형", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchT17App()).thenReturn("<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/563/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_563\"}</script>");
+        var worker = new T17SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        verify(specificationSource, times(1)).fetchT17App();
+    }
     @Test void ht19ReviewRequiresExactSourceAndPersistsOnlyMatchingWaterResistance() throws Exception {
         var id = "qcy-ht19"; var old = Instant.now().minus(Duration.ofDays(91));
         var source = "https://www.qcy.com/products/qcy-melobuds-n60";

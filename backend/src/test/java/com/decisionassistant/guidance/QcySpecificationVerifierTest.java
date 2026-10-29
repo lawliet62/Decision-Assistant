@@ -51,4 +51,15 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesHt16Anc(page.replace("/990/", "/991/"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesHt16Anc(page + "<h1>다른 모델</h1>")).isFalse();
     }
+    @Test void t17AppFormRequiresExactProductAndExplicitTitle() {
+        var name = "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/563/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_563\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesT17AppForm(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("커널형", "오픈형"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("T17APP", "T17S"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("cafe24_ylintlshop_1_563", "cafe24_ylintlshop_1_564"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("/563/", "/564/"))).isFalse();
+    }
 }
