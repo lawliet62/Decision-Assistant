@@ -273,12 +273,13 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         verify(marshallSpecificationSource, times(1)).fetch();
     }
-    @Test void sennheiserPriceRefreshPersistsValidatedOffer() {
+    @Test void sennheiserPriceRefreshPersistsValidatedOfferAndSupportsRecommendations() throws Exception {
         var id = "sennheiser-momentum-tw5";
         var url = "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731";
         var canonical = "https://kr.sennheiser-hearing.com/product/모멘텀-트루-와이어리스-5/731/";
         var p = new CatalogProduct(id);
-        p.register(1, "모멘텀 트루 와이어리스 5", url, "sennheiser-kr:cafe24_bnispace_1_731", List.of(), true);
+        p.register(1, "모멘텀 트루 와이어리스 5", url, "sennheiser-kr:cafe24_bnispace_1_731", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", url, "하이브리드 적응형 ANC", Instant.now(), "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
         products.saveAndFlush(p);
         var colors = new String[]{"블랙 그래파이트", "크림", "데님", "라벤더", "코퍼"};
         var variants = new ArrayList<Map<String, Object>>(); var options = new StringBuilder("<option value='*'>선택</option>");
@@ -299,6 +300,24 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("429000");
         assertThat(jdbc.queryForObject("select outcome from catalog_observations where product_id=?", String.class, id)).isEqualTo("VERIFIED");
         assertThat(jdbc.queryForObject("select calls from catalog_monthly_usage", Integer.class)).isEqualTo(1);
+        var body = BODY.replace("\"maxBudget\":50000", "\"maxBudget\":500000").replace("\"compatibility\":\"Android\",", "");
+        var result = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        var decision = json.readTree(result).path("id").asText();
+        mvc.perform(get("/api/v1/decisions/" + decision).with(owner)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.discovery.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].name").value("모멘텀 트루 와이어리스 5"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer.price").value(429000))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].priceStatus").value("VERIFIED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
+        var lowBudget = body.replace("\"maxBudget\":500000", "\"maxBudget\":400000");
+        var lowResult = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(lowBudget))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        var lowDecision = json.readTree(lowResult).path("id").asText();
+        mvc.perform(get("/api/v1/decisions/" + lowDecision).with(owner)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].priceStatus").value("VERIFIED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("BELOW"));
     }
     @Test void sennheiserReviewsMatchingFactAndKeepsChangedFactUnconfirmed() throws Exception {
         var id = "sennheiser-momentum-tw5"; var old = Instant.now().minus(Duration.ofDays(91));
