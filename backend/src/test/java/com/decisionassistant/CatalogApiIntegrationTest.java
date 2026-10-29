@@ -128,13 +128,26 @@ class CatalogApiIntegrationTest {
         var id = "qcy-t13-pro"; var now = Instant.now().minus(Duration.ofDays(31));
         var sourceUrl = "https://www.qcy.com/products/qcy-t13-pro";
         var p = new CatalogProduct(id);
-        p.register(1, "QCY T13 Pro", url(9), "qcy:test", List.of(
+        p.register(1, "QCY T13 Pro", url(9), "qcy:test", List.of(), true);
+        products.saveAndFlush(p);
+        var specWorker = new QcySpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        specWorker.refresh();
+        verify(specificationSource, never()).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
+        p = products.findById(id).orElseThrow();
+        p.register(2, "QCY T13 Pro", url(9), "qcy:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("방수", "IPX5", sourceUrl, "Water Resistance Range: IPX5", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        specWorker.refresh();
+        verify(specificationSource, never()).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
+        p = products.findById(id).orElseThrow();
+        p.register(3, "QCY T13 Pro", url(9), "qcy:test", List.of(
                 new CatalogProduct.Fact(new ProductFact("호환성", "iOS / Android", sourceUrl, "Compatible Systems: iOS / Android", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.SOFTWARE),
                 new CatalogProduct.Fact(new ProductFact("방수", "IPX4", sourceUrl, "Water Resistance Range: IPX4", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
                 new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", sourceUrl, "50dB Adaptive ANC", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
         products.saveAndFlush(p);
         when(specificationSource.fetch()).thenReturn("<title>QCY T13 Pro – QCY Official</title><meta name='description' content='50dB Adaptive ANC Up to 47H Playtime'><div class='specification-content'><div class='spec-details'><p>Product Name: QCY T13 Pro</p><p>Compatible Systems: iOS / Android<br>Water Resistance Range: IPX5</p></div></div>");
-        var specWorker = new QcySpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
         specWorker.refresh(); specWorker.refresh();
         var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
         assertThat(facts).extracting(ProductFact::name).containsExactly("호환성", "방수", "ANC 지원");
@@ -170,12 +183,25 @@ class CatalogApiIntegrationTest {
         var id = "apple-airpods-pro-3"; var now = Instant.now().minus(Duration.ofDays(91));
         var source = "https://www.apple.com/kr/airpods-pro/specs/";
         var p = new CatalogProduct(id);
-        p.register(1, "AirPods Pro 3", "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3", "apple:test", List.of(
+        p.register(1, "AirPods Pro 3", "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3", "apple:test", List.of(), true);
+        products.saveAndFlush(p);
+        var worker = new AppleSpecificationRefreshWorker(true, catalogProperties, products, jdbc, appleSpecificationSource, transactionManager);
+        worker.refresh();
+        verify(appleSpecificationSource, never()).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
+        p = products.findById(id).orElseThrow();
+        p.register(2, "AirPods Pro 3", "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3", "apple:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", "https://www.apple.com/kr/other/", "액티브 노이즈 캔슬링", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        worker.refresh();
+        verify(appleSpecificationSource, never()).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
+        p = products.findById(id).orElseThrow();
+        p.register(3, "AirPods Pro 3", "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3", "apple:test", List.of(
                 new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, "액티브 노이즈 캔슬링", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
                 new CatalogProduct.Fact(new ProductFact("방수", "IP57", source, "먼지, 땀, 습기에 강한 방진 및 생활 방수 디자인(IP57)", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
         products.saveAndFlush(p);
         when(appleSpecificationSource.fetch()).thenReturn("<title>AirPods Pro 3 - 제품 사양 - Apple (KR)</title><div class='techspecs-section section-audio'><ul class='techspecs-list'><li>액티브 노이즈 캔슬링</li></ul></div><div class='techspecs-section section-water'><ul class='techspecs-list'><li>IP54</li></ul></div>");
-        var worker = new AppleSpecificationRefreshWorker(true, catalogProperties, products, jdbc, appleSpecificationSource, transactionManager);
         worker.refresh(); worker.refresh();
         var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
         assertThat(facts.getFirst().fetchedAt()).isAfter(now);

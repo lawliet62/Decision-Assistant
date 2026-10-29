@@ -8,7 +8,7 @@
 
 QCY T13 Pro의 ANC·호환성·방수, QCY HT19의 ANC·방수와 Apple AirPods Pro 3의 ANC·방수는 모델·항목·값이 일치하면 확인 시각을 자동 갱신할 수 있다. HT19는 제조사 페이지에서 MeloBuds N60과 HT19의 연결 및 ANC 지원을 확인하고, 방수는 사양표의 IPX5도 대조한다. 소니 Float Run의 단일 상품 DOM 가격 검증은 구현했지만 실제 Firecrawl 응답에서 검증에 실패하여 상품을 비활성으로 유지한다.
 
-사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro, HT19와 Apple AirPods Pro 3의 공식 페이지를 각각 7일 간격으로 확인한다. 기본값은 false다. 모델명과 사양 영역의 항목·값·기존 출처 및 인용이 일치한 항목만 갱신한다. QCY ANC는 같은 모델의 제품명과 공식 페이지 설명을 대조한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 시도는 요청 전에 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. 자동 확인 범위 밖의 사양은 기존 수동 검토 대상이다.
+사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro, HT19와 Apple AirPods Pro 3의 공식 페이지를 각각 7일 간격으로 확인한다. 기본값은 false다. 모델명과 사양 영역의 항목·값·기존 출처 및 인용이 일치한 항목만 갱신한다. QCY ANC는 같은 모델의 제품명과 공식 페이지 설명을 대조한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 확인 가능한 사양이 있을 때만 요청 전에 시도를 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. 자동 확인 범위 밖의 사양은 기존 수동 검토 대상이다.
 
 GitHub Actions의 출처 점검은 운영 DB에 접근하지 않으므로 자동 갱신된 DB 시각을 알지 못하고 manifest의 원래 시각 기준으로 기한 경고를 표시할 수 있다. 해당 경고를 DB 확인 결과와 대조한다. 개발 환경에서는 실제 QCY와 Apple 페이지 조회 후 각각 두 항목의 확인 시각과 다음 시도 시각이 PostgreSQL에 저장되는 것을 확인했다. 별도 개발 시험 DB에서는 실제 페이지 조회로 QCY T13 Pro의 ANC·호환성·방수, HT19의 ANC·방수와 Apple의 ANC·방수 확인 시각 및 다음 시도 시각이 저장됐다.
 

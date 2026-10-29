@@ -9,11 +9,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.*;
 import java.util.*;
 
-/** 승인된 단일 모델과 두 개의 구조화 사양만 재확인한다. */
+/** 승인된 단일 모델의 명시된 사양만 재확인한다. */
 @Component
 public class QcySpecificationRefreshWorker {
     private static final String ID = "qcy-t13-pro";
     private static final String URL = "https://www.qcy.com/products/qcy-t13-pro";
+    private static final Map<String, List<String>> CHECKS = Map.of(
+            "호환성", List.of("Compatible Systems", "iOS / Android"),
+            "방수", List.of("Water Resistance Range", "IPX4"));
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(QcySpecificationRefreshWorker.class);
     private final boolean enabled;
     private final CatalogProperties config;
@@ -34,6 +37,7 @@ public class QcySpecificationRefreshWorker {
         var revision = tx.execute(status -> {
             var product = products.findById(ID).orElse(null);
             if (product == null || products.findByActiveTrueOrderByIdAsc().stream().noneMatch(p -> ID.equals(p.id()))) return null;
+            if (product.facts().stream().noneMatch(f -> supports(f.evidence()))) return null;
             var updated = jdbc.update("""
                     insert into catalog_spec_attempts(product_id,next_attempt_at) values (?,?)
                     on conflict(product_id) do update set next_attempt_at=excluded.next_attempt_at
@@ -48,20 +52,17 @@ public class QcySpecificationRefreshWorker {
         tx.executeWithoutResult(status -> {
             var product = products.findById(ID).orElse(null);
             if (product == null || product.revision() != revision) return;
-            var checks = Map.of("호환성", List.of("Compatible Systems", "iOS / Android"),
-                    "방수", List.of("Water Resistance Range", "IPX4"));
             for (var fact : product.facts()) {
-                var e = fact.evidence(); var pair = checks.get(e.name());
-                if ("ANC 지원".equals(e.name()) && URL.equals(e.sourceUrl()) && "지원".equals(e.value())
-                        && "50dB Adaptive ANC".equals(e.quote())) {
+                var e = fact.evidence();
+                if (!supports(e)) continue;
+                if ("ANC 지원".equals(e.name())) {
                     if (QcySpecificationVerifier.matchesAnc(html)) {
                         product.reviewedFact(revision, e.name(), now);
                         log.info("catalog_spec_refresh product_id={} field={} outcome=VERIFIED", ID, e.name());
                     } else log.warn("catalog_spec_refresh product_id={} field={} outcome=UNVERIFIED", ID, e.name());
                     continue;
                 }
-                if (pair == null || !URL.equals(e.sourceUrl()) || !pair.get(1).equals(e.value())
-                        || !(pair.get(0) + ": " + pair.get(1)).equals(e.quote())) continue;
+                var pair = CHECKS.get(e.name());
                 if (QcySpecificationVerifier.matches(html, "QCY T13 Pro", pair.get(0), pair.get(1))) {
                     product.reviewedFact(revision, e.name(), now);
                     log.info("catalog_spec_refresh product_id={} field={} outcome=VERIFIED", ID, e.name());
@@ -69,5 +70,11 @@ public class QcySpecificationRefreshWorker {
             }
             products.save(product);
         });
+    }
+    private static boolean supports(DiscoveryContracts.ProductFact e) {
+        if (!URL.equals(e.sourceUrl())) return false;
+        if ("ANC 지원".equals(e.name())) return "지원".equals(e.value()) && "50dB Adaptive ANC".equals(e.quote());
+        var pair = CHECKS.get(e.name());
+        return pair != null && pair.get(1).equals(e.value()) && (pair.get(0) + ": " + pair.get(1)).equals(e.quote());
     }
 }
