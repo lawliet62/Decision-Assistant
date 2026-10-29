@@ -32,3 +32,14 @@ test("품절을 관측한 시점에 남은 가격을 잘못된 판매 가능 표
   assert.equal(result.cadence[0].falseAvailable, 1);
   assert.equal(result.cadence[0].references, 1);
 });
+
+test("사양 보고서는 유효한 DB 확인 시각을 적용하고 미래·과거·잘못된 값은 무시한다", () => {
+  const fact = name => ({ cycle: "SOFTWARE", evidence: { name, fetchedAt: "2026-09-01T00:00:00Z" } });
+  const numericOriginal = { cycle: "SOFTWARE", evidence: { name: "숫자 원본", fetchedAt: Date.parse("2026-09-01T00:00:00Z") / 1000 } };
+  const products = [{ id: "a", facts: [fact("숫자"), fact("문자열"), fact("미래"), fact("과거"), fact("오류"), fact("없음"), numericOriginal],
+    fact_reviews: { "숫자": Date.parse("2026-09-25T00:00:00Z") / 1000, "문자열": "2026-09-25T00:00:00Z",
+      "미래": "2026-10-02T00:00:00Z", "과거": "2026-08-01T00:00:00Z", "오류": "invalid" } }];
+  const result = summarize([], products, new Date("2026-10-01T00:00:00Z"));
+  assert.deepEqual(result.reviewsDue.map(r => r.field), ["미래", "과거", "오류", "없음", "숫자 원본"]);
+  assert.throws(() => summarize([], [{ id: "a", facts: [{ cycle: "SOFTWARE", evidence: { name: "오류", fetchedAt: null } }] }]), /사양 확인 시각이 잘못/);
+});

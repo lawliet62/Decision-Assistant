@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 
+const instantMillis = value => typeof value === "number" ? value * 1000 : typeof value === "string" ? Date.parse(value) : NaN;
+
 // DB에서 내보낸 관측만 사용한다. 실패와 미관측 구간을 실제 가격으로 추정하지 않는다.
 export function summarize(observations, products = [], now = new Date()) {
   const outcomes = {};
@@ -37,8 +39,15 @@ export function summarize(observations, products = [], now = new Date()) {
     }
     return { days, references, available, priceMismatches, budgetComparisons, falseBudgetPasses, unavailableReferences, falseAvailable };
   });
-  const reviewsDue = products.flatMap(product => (product.facts ?? []).filter(f =>
-    Date.parse(f.evidence.fetchedAt) + (f.cycle === "HARDWARE" ? 90 : 30) * 86400000 <= now.getTime())
+  const reviewsDue = products.flatMap(product => (product.facts ?? []).filter(f => {
+    const original = instantMillis(f.evidence.fetchedAt);
+    if (!Number.isFinite(original)) throw new Error(`사양 확인 시각이 잘못됐습니다: ${product.id} / ${f.evidence.name}`);
+    const review = product.fact_reviews?.[f.evidence.name];
+    // PostgreSQL JSONB의 Instant는 숫자(초) 또는 ISO 문자열일 수 있다.
+    const reviewed = instantMillis(review);
+    const effective = Number.isFinite(reviewed) && reviewed > original && reviewed <= now.getTime() ? reviewed : original;
+    return effective + (f.cycle === "HARDWARE" ? 90 : 30) * 86400000 <= now.getTime();
+  })
     .map(f => ({ productId: product.id, field: f.evidence.name, cycle: f.cycle })));
   const times = ordered.map(o => Date.parse(o.attempted_at)).filter(Number.isFinite);
   return { generatedAt: now.toISOString(), attempts: observations.length, outcomes,

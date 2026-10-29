@@ -59,7 +59,7 @@ FROM (SELECT product_id, attempted_at, completed_at, outcome, price, currency
       FROM catalog_observations) t;
 
 SELECT coalesce(json_agg(t), '[]'::json)
-FROM (SELECT id, facts FROM catalog_products WHERE active) t;
+FROM (SELECT id, facts, fact_reviews FROM catalog_products WHERE active) t;
 ```
 
 ```powershell
@@ -67,6 +67,8 @@ node scripts/catalog/report.mjs observations.json products.json
 ```
 
 보고서는 시도 수·결과별 수·관측 기간·점검 기한과 1/3/7일 가상 갱신 결과를 출력한다. `references`는 VERIFIED 관측 수, `available`은 24시간 내 가격이 남은 표본 수다. `priceMismatches`와 3/5/10/20만원 예산의 `falseBudgetPasses`를 함께 본다. `unavailableReferences`/`falseAvailable`은 관측된 품절과 그때 남아 있던 가격을 센다. 실패·미관측 구간은 정상 가격으로 간주하지 않는다. ATTEMPTED만 남은 관측은 프로세스 중단 가능성을 확인한다.
+
+`reviewsDue`는 `fact_reviews`의 유효한 자동 확인 시각이 원래 확인 시각보다 나중이면 이를 사용한다. 미래 시각이나 잘못된 자동 확인 값은 무시하고 원래 시각을 사용한다. 원래 시각이 잘못된 입력은 보고서 실행을 실패시킨다. 이전 형식으로 `fact_reviews` 없이 내보내면 원래 시각만 사용하므로 자동 확인 결과가 보고서에 반영되지 않는다. GitHub Actions의 출처 점검은 DB를 읽지 않으므로 이 보고서와 별개로 manifest 기준 경고가 남을 수 있다.
 
 주 1회 다음을 별도 기록한다: 수동 출처 점검 시간, 수정한 사양 수, 품절·잘못된 모델 발견, 사용자 신고. 근거가 충분하지 않으면 24시간을 유지한다. 3/7일은 가격 정답률이 높더라도 UNKNOWN 노출을 크게 늘릴 수 있다. 기간·품목·판매 채널이 좁으므로 불일치 0건만으로 주기를 늘리지 않는다. 2주 실측은 갱신 주기의 적절성을 판단하는 자료이며 기능 구현·배포를 위해 그 기간을 기다리는 필수 절차가 아니다. 실측과 관리 시간 기록은 배포 후 수행하며 구현 검증 결과와 구분한다.
 
