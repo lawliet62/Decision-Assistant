@@ -207,5 +207,27 @@
     "expectedIdentity": "sony-kr:109871591",
     "facts": [],
     "active": false
+  },
+  {
+    "id": "marshall-motif-ii-anc",
+    "revision": 1,
+    "name": "MOTIF II A.N.C.",
+    "purchaseUrl": "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450",
+    "expectedIdentity": "marshall-kr:1006450",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450",
+          "quote": "액티브 노이즈 캔슬링",
+          "fetchedAt": "2026-10-29T16:29:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": false
   }
 ]

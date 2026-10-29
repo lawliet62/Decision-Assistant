@@ -39,6 +39,23 @@ class OfficialProductParserTest {
                 .isEqualTo(OfficialProductParser.Rejection.PRODUCT_AMBIGUOUS);
     }
 
+    @Test void marshallRequiresExactProductInStockAndMatchingPurchasePrice() {
+        var url = "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450";
+        var data = "<h1>MOTIF II A.N.C.</h1><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"MOTIF II A.N.C.\",\"url\":\"" + url + "\",\"sku\":\"1006450\",\"offers\":{\"@type\":\"Offer\",\"price\":269000,\"priceCurrency\":\"KRW\",\"availability\":\"https://schema.org/InStock\"}}</script>";
+        var purchase = "<p aria-label='정상 가격: ₩ 269,000'>₩ 269,000</p><div><p>₩ 269,000</p><button>₩ 269,000 - 장바구니</button></div>";
+        var valid = OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + purchase, url), Instant.now());
+        assertThat(valid.product().identity()).isEqualTo("marshall-kr:1006450");
+        var unrelated = "<aside><p aria-label='정상 가격: ₩ 169,000'>₩ 169,000</p></aside>";
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + purchase + unrelated, url), Instant.now()).product()).isNotNull();
+        for (var invalid : List.of(data.replace("InStock", "OutOfStock") + purchase, data.replace("1006450\",\"offers", "1006451\",\"offers") + purchase,
+                data + purchase.replace("₩ 269,000 - 장바구니", "₩ 250,000 - 장바구니"), data + purchase.replace("<button>", "<button disabled>"),
+                data + purchase + purchase))
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now()).product()).isNull();
+        assertThat(OfficialStorePolicy.store(url.replace("1006450", "1006451"))).isEmpty();
+        assertThat(OfficialStorePolicy.store(url + "&other=1")).isEmpty();
+        assertThat(OfficialStorePolicy.store(url.replace("www.marshall.com", "marshall.com.evil.example"))).isEmpty();
+    }
+
     @Test void applePriceRequiresSinglePurchaseLinkMatchingOfferSkuAndAmount() {
         var url = "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3";
         var data = "<title>AirPods Pro 3</title><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"AirPods Pro 3\",\"url\":\"" + url + "\",\"offers\":{\"@type\":\"Offer\",\"sku\":\"MFHP4KH/A\",\"price\":369000,\"priceCurrency\":\"KRW\"}}</script>";

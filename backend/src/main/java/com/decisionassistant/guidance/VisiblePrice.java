@@ -56,6 +56,23 @@ final class VisiblePrice {
                 }
             }
         }
+        if (OfficialStorePolicy.store(url).orElseThrow().id().equals("marshall-kr")
+                && ProductPageRegions.current(doc, url, name) && "1006450".equals(sku)) {
+            var expected = "₩ " + String.format(java.util.Locale.US, "%,d", price.longValueExact());
+            var regular = doc.select("p[aria-label^='정상 가격']").stream()
+                    .filter(p -> p.text().equals(expected) && p.attr("aria-label").equals("정상 가격: " + expected)).toList();
+            var purchase = doc.select("p").stream().filter(p -> p.parent() != null
+                    && p.parent().children().stream().filter(e -> e.tagName().equals("button")).count() == 1
+                    && p.parent().children().stream().anyMatch(e -> e.tagName().equals("button") && e.text().contains("장바구니"))).toList();
+            if (regular.size() == 1 && purchase.size() == 1) {
+                var p = purchase.getFirst(); var button = p.parent().children().stream().filter(e -> e.tagName().equals("button")).findFirst().orElseThrow();
+                if (p.text().equals(expected) && regular.getFirst().text().equals(expected)
+                        && regular.getFirst().attr("aria-label").equals("정상 가격: " + expected)
+                        && button.text().equals(expected + " - 장바구니") && !button.hasAttr("disabled")
+                        && !"true".equalsIgnoreCase(button.attr("aria-disabled")))
+                    return new Result("구매 영역 판매가 " + expected, null);
+            }
+        }
         String confirmed = null;
         for (var text : rows) {
             var amounts = new HashSet<BigDecimal>();

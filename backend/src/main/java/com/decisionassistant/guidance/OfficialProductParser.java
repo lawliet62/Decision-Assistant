@@ -97,6 +97,10 @@ final class OfficialProductParser {
         if (prices.size() != 1) return Result.rejected(Rejection.PRICE_AMBIGUOUS);
         var price = prices.first();
         var sku = product.path("sku").asText(product.path("productGroupID").asText("")).strip();
+        if (store.id().equals("marshall-kr") && (!"1006450".equals(sku)
+                || !"MOTIF II A.N.C.".equals(name) || rows.size() != 1
+                || !rows.getFirst().path("availability").asText("").equals("https://schema.org/InStock")))
+            return Result.rejected(Rejection.IDENTITY_INVALID);
         if (store.id().equals("apple-kr")) {
             var offerSkus = rows.stream().map(row -> row.path("sku").asText("").strip()).distinct().toList();
             if (offerSkus.size() != 1 || offerSkus.getFirst().isBlank()

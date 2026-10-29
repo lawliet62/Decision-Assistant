@@ -8,6 +8,7 @@ const sources = new Map([
   ["qcy-t13-anc", "https://www.qcy.com/products/qcy-t13-anc"],
   ["qcy-t13-pro", "https://www.qcy.com/products/qcy-t13-pro"],
   ["qcy-ht19", "https://www.qcy.com/products/qcy-melobuds-n60"],
+  ["marshall-motif-ii-anc", "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450"],
 ]);
 const MAX_BYTES = 2_000_000;
 const normalize = value => value.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ")

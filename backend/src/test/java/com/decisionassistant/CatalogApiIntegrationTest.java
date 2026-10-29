@@ -50,6 +50,7 @@ class CatalogApiIntegrationTest {
     @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
     @MockitoBean QcySpecificationSource specificationSource;
     @MockitoBean AppleSpecificationSource appleSpecificationSource;
+    @MockitoBean MarshallSpecificationSource marshallSpecificationSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -223,6 +224,21 @@ class CatalogApiIntegrationTest {
         assertThat(facts.getFirst().fetchedAt()).isAfter(old);
         assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
         verify(appleSpecificationSource, times(1)).fetchAirpods5();
+    }
+    @Test void marshallReviewRequiresMatchingModelAndPersistsOncePerWeek() throws Exception {
+        var id = "marshall-motif-ii-anc"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450";
+        var p = new CatalogProduct(id);
+        p.register(1, "MOTIF II A.N.C.", url, "marshall-kr:1006450", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", url, "액티브 노이즈 캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(marshallSpecificationSource.fetch()).thenReturn("<link rel='canonical' href='" + url + "'><h1>MOTIF II A.N.C.</h1>"
+                + "<script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"MOTIF II A.N.C.\",\"sku\":\"1006450\",\"url\":\"" + url + "\"}</script>"
+                + "<div><p>액티브 노이즈 캔슬링</p><div><p>예</p></div></div>");
+        var worker = new MarshallSpecificationRefreshWorker(true, catalogProperties, products, jdbc, marshallSpecificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        verify(marshallSpecificationSource, times(1)).fetch();
     }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(2))); product(2, null); product(3, null);
