@@ -42,6 +42,7 @@ final class OfficialProductParser {
         var doc = Jsoup.parse(page.html(), requestedUrl);
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
+        if (store.id().equals("sony-kr")) return inspectSony(doc, requestedUrl, store, fetchedAt);
         var products = new ArrayList<JsonNode>();
         for (var script : doc.select("script[type=application/ld+json]")) {
             if (script.data().length() > 200_000) continue;
@@ -118,6 +119,33 @@ final class OfficialProductParser {
     }
 
     private static List<JsonNode> iterable(JsonNode node) { var items = new ArrayList<JsonNode>(); node.forEach(items::add); return items; }
+    private static Result inspectSony(org.jsoup.nodes.Document doc, String url, OfficialStorePolicy.Store store, Instant at) {
+        var regions = doc.select(".product_view_about");
+        if (regions.isEmpty()) return Result.rejected(Rejection.PRODUCT_MISSING);
+        if (regions.size() != 1) return Result.rejected(Rejection.PRODUCT_AMBIGUOUS);
+        var root = regions.first();
+        var names = root.select(".product_tit");
+        if (names.size() != 1 || !names.first().text().equals("플로트 런 Float Run")
+                || !ProductPageRegions.current(doc, url, names.first().text())) return Result.rejected(Rejection.IDENTITY_INVALID);
+        if (!root.select(".color_select, .prd_select_box select, .prd_select_box input, .prd_select_box button, .prd_select_box a, .selected_opt li").isEmpty())
+            return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
+        var buy = root.select(".result_btn_box a.direct[href=/order/sheet]");
+        if (buy.size() != 1 || buy.first().hasAttr("disabled") || "true".equalsIgnoreCase(buy.first().attr("aria-disabled"))
+                || buy.first().className().matches("(?i).*(disabled|soldout).*")
+                || root.text().matches("(?is).*(품절|판매종료|구매불가|sold\\s*out).*"))
+            return Result.rejected(Rejection.UNAVAILABLE);
+        var amounts = root.select(".product_price .sale .price");
+        if (amounts.size() != 1) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+        var sale = amounts.first().parent(); var raw = amounts.first().text();
+        if (sale == null || sale.text().matches("(?is).*(회원|쿠폰|카드|구독|월\\s*납).*")) return Result.rejected(Rejection.CONDITIONAL_PRICE);
+        if (!sale.text().replaceAll("\\s+", "").equals(raw + "원")) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+        if (!raw.matches("[0-9]{1,3}(?:,[0-9]{3})+")) return Result.rejected(Rejection.PRICE_INVALID);
+        var price = new BigDecimal(raw.replace(",", ""));
+        if (price.signum() <= 0 || price.compareTo(new BigDecimal("100000000")) > 0) return Result.rejected(Rejection.PRICE_INVALID);
+        var name = names.first().text();
+        return new Result(new OfficialProduct(name, "sony-kr:109871591", new OfficialOffer(url, store.name(), price,
+                "KRW", null, at, "공식 상품 구매 영역의 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + raw + "원"), null);
+    }
     private static boolean qcyColorSelection(OfficialStorePolicy.Store store, JsonNode product, List<JsonNode> variants, List<JsonNode> dimensions) {
         if (!store.id().equals("qcy-kr") || dimensions.size() != 1 || !dimensions.getFirst().asText("").equals("선택") || variants.isEmpty()) return false;
         var name = product.path("name").asText("").strip();

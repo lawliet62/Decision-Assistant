@@ -139,5 +139,14 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "sony-float-run",
+    "revision": 2,
+    "name": "플로트 런 Float Run",
+    "purchaseUrl": "https://store.sony.co.kr/product-view/109871591",
+    "expectedIdentity": "sony-kr:109871591",
+    "facts": [],
+    "active": false
   }
 ]

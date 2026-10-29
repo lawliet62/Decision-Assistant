@@ -30,3 +30,7 @@ Apple은 [현재 구매 페이지](https://www.apple.com/kr/shop/buy-airpods/air
 ## 추천 API smoke
 
 정정된 manifest를 재기동으로 반영한 뒤 외부 수집을 끄고 실제 로컬 API를 호출했다. EARBUDS·ANC 필수·예산 500,000원·플랫폼 미선택·모든 외부 동의 false 요청이 HTTP 201을 반환했고, AirPods Pro 3는 RECOMMENDED / VERIFIED / 369,000 KRW로 노출됐다. QCY T13 Pro도 RECOMMENDED / VERIFIED / 24,300 KRW였다. HT19는 가격 미확인, T13 ANC는 비활성으로 새 후보에서 제외됐다. 이는 실제 DB→추천 응답 검증이며 실제 브라우저 렌더링·운영 배포는 포함하지 않는다.
+
+## 추가 실제 수집
+
+같은 날 정정된 HT19는 Firecrawl→DB 갱신 결과 VERIFIED, 48,500 KRW였다. 소니 Float Run은 상품 상세의 DOM 구조를 브라우저에서 확인하고 단일 상품 전용 검증을 추가했지만 실제 Firecrawl 응답의 결과는 PRODUCT_AMBIGUOUS였다. 당시 검사에서는 구매 영역이 없을 때와 여러 개일 때를 같은 코드로 기록했으므로 어느 경우인지는 확인하지 못했다. 이후 사유를 구분하도록 수정했으며 추가 유료 호출을 반복하지 않고 상품을 비활성으로 보류한다.

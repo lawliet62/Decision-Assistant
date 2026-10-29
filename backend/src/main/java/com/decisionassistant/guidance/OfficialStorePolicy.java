@@ -18,6 +18,7 @@ public final class OfficialStorePolicy {
             new Store("samsung-kr", "삼성닷컴", "www.samsung.com", "/sec/(buds|smartphones|tablets|galaxybook|monitors)/[^/]+/[^/]+/?", Set.of("images.samsung.com")),
             new Store("apple-kr", "Apple 공식 스토어", "www.apple.com", "/kr/shop/(buy-[^/]+|product)/.+", Set.of("store.storeimages.cdn-apple.com", "www.apple.com")),
             new Store("lg-kr", "LG전자", "www.lge.co.kr", "/(?:product/)?(?:monitors|notebook)/[^/]+/?", Set.of("www.lge.co.kr")),
+            new Store("sony-kr", "소니 공식 스토어", "store.sony.co.kr", "/product-view/109871591/?", Set.of("store.sony.co.kr")),
             new Store("qcy-kr", "QCY 공식몰", "qcystore.co.kr", "/product/(?:detail.html|[^/]+/[0-9]+(?:/.*)?)", Set.of("qcystore.co.kr")),
             new Store("qcy-naver", "QCY 공식 스마트스토어", "smartstore.naver.com", "/ylintl/products/[0-9]+/?", Set.of("shop-phinf.pstatic.net")));
 
@@ -28,6 +29,7 @@ public final class OfficialStorePolicy {
                     || uri.getRawPath().toLowerCase(Locale.ROOT).matches(".*%(?:2f|5c|2e|25).*" )
                     || !uri.normalize().getPath().equals(uri.getPath())) return Optional.empty();
             return STORES.stream().filter(store -> store.host().equalsIgnoreCase(uri.getHost()) && uri.getPath().matches(store.productPath()))
+                    .filter(store -> !store.id().equals("sony-kr") || uri.getRawQuery() == null)
                     .filter(store -> !uri.getPath().equals("/product/detail.html") || Objects.toString(uri.getQuery(), "").matches("(?:.*&)?product_no=[0-9]+(?:&.*)?"))
                     .findFirst();
         } catch (RuntimeException ignored) { return Optional.empty(); }

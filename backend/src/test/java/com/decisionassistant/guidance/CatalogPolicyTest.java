@@ -65,7 +65,7 @@ class CatalogPolicyTest {
     @Test void seedFactsAreExplicitAndDoNotPretendUnsupportedAliasesAreVerified() throws Exception {
         try (var in = getClass().getResourceAsStream("/catalog/earbuds.json")) {
             var entries = new tools.jackson.databind.ObjectMapper().readValue(in, CatalogImporter.Entry[].class);
-            assertThat(entries).hasSize(6);
+            assertThat(entries).hasSize(7);
             assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(5);
             assertThat(entries[0].active()).isFalse();
             for (var entry : entries) CatalogImporter.validate(entry, Instant.parse("2030-01-01T00:00:00Z"));
