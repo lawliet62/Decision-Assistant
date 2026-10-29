@@ -32,6 +32,19 @@ class CatalogPolicyTest {
         assertThat(p.usableFacts(checked.plus(Duration.ofDays(100)))).hasSize(1);
         assertThat(p.facts().getFirst().reviewDueAt()).isEqualTo(checked.plus(Duration.ofDays(90)));
     }
+    @Test void verifiedReviewExtendsOnlyItsFactAndIsDiscardedWhenRegistrationChanges() {
+        var p = product();
+        var review = checked.plus(Duration.ofDays(29));
+        p.reviewedFact(1, "호환성", review);
+        assertThat(p.usableFacts(checked.plus(Duration.ofDays(31)))).extracting(ProductFact::name)
+                .containsExactly("ANC 지원", "호환성");
+        assertThat(p.usableFacts(checked.plus(Duration.ofDays(31))).get(1).fetchedAt()).isEqualTo(review);
+        assertThatThrownBy(() -> p.reviewedFact(2, "호환성", review)).isInstanceOf(IllegalArgumentException.class);
+        p.register(1, p.name(), url, "qcy:test", p.facts(), true);
+        assertThat(p.usableFacts(checked.plus(Duration.ofDays(31)))).hasSize(2);
+        p.register(2, p.name(), url, "qcy:test", p.facts(), true);
+        assertThat(p.usableFacts(checked.plus(Duration.ofDays(31)))).hasSize(1);
+    }
     @Test void catalogRevisionCannotSilentlyHideChangedRegistration() {
         var p = product();
         assertThatThrownBy(() -> p.register(1, "Changed", url, "qcy:test", p.facts(), true)).isInstanceOf(IllegalArgumentException.class);

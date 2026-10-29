@@ -6,6 +6,8 @@
 
 모델·사양 값 일치에 따른 확인 시각 자동 갱신과 소니 공식몰 전용 DOM 가격 검증은 승인된 방향이지만 아직 구현·검증되지 않았다. 현재 동작과 수동 검토 절차는 아래를 따른다.
 
+사양 확인 시각은 manifest와 별도의 DB 필드에 저장하도록 준비했다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. 현재 이 필드에 자동 검증 결과를 기록하는 주기 작업은 연결되지 않았다.
+
 기본 추천은 활성 이어폰 5개(QCY 4개, Apple 한국 스토어 1개)를 사용한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
 
 ## 첫 실행과 가격 갱신

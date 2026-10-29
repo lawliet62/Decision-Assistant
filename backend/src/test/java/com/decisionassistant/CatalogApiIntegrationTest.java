@@ -110,6 +110,16 @@ class CatalogApiIntegrationTest {
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("UNKNOWN"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].reason").value(org.hamcrest.Matchers.containsString("예산 충족 여부를 판정하지 않았습니다")));
     }
+    @Test void storedFactReviewIsLoadedWithoutChangingManifestFacts() throws Exception {
+        var p = product(1, Instant.now());
+        var original = p.facts().get(1).evidence().fetchedAt();
+        var reviewed = original.plusSeconds(10);
+        jdbc.update("update catalog_products set fact_reviews = cast(? as jsonb) where id = ?",
+                json.writeValueAsString(Map.of("호환성", reviewed.toString())), p.id());
+        var loaded = products.findById(p.id()).orElseThrow();
+        assertThat(loaded.facts().get(1).evidence().fetchedAt()).isEqualTo(original);
+        assertThat(loaded.usableFacts(reviewed.plusSeconds(1)).get(1).fetchedAt()).isEqualTo(reviewed);
+    }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(2))); product(2, null); product(3, null);
         when(web.scrapeProduct(anyString())).thenThrow(new IllegalStateException("private provider error"));
