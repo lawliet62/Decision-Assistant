@@ -66,8 +66,11 @@ class CatalogPolicyTest {
         try (var in = getClass().getResourceAsStream("/catalog/earbuds.json")) {
             var entries = new tools.jackson.databind.ObjectMapper().readValue(in, CatalogImporter.Entry[].class);
             assertThat(entries).hasSize(9);
-            assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(6);
+            assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(7);
             assertThat(entries[0].active()).isFalse();
+            var marshall = Arrays.stream(entries).filter(e -> e.id().equals("marshall-motif-ii-anc")).findFirst().orElseThrow();
+            assertThat(marshall.active()).isTrue();
+            assertThat(marshall.revision()).isEqualTo(2);
             for (var entry : entries) CatalogImporter.validate(entry, Instant.parse("2030-01-01T00:00:00Z"));
             var template = new com.decisionassistant.template.IntakeTemplates().required(com.decisionassistant.decision.DecisionTypes.TemplateKey.EARBUDS);
             for (int index : List.of(0, 3)) {

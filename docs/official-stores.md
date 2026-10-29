@@ -10,7 +10,7 @@
 | QCY 한국 공식몰 | `qcystore.co.kr/product/`의 상품 번호가 있는 경로. [QCY KOREA 공식 유통 안내](https://www.qcykorea.com/default/customer/customer17.php?com_board_basic=read_form&com_board_id=17&com_board_idx=1&com_board_page=&com_board_search_code=&com_board_search_value1=&com_board_search_value2=&sub=01)에서 연결한 판매처 |
 | QCY 공식 스마트스토어 | 위 공식 유통 안내로 확인한 `smartstore.naver.com/ylintl/products/` 경로만 허용. 다른 판매자나 네이버 전체 도메인은 허용하지 않음 |
 | 소니 한국 공식 스토어 | `store.sony.co.kr/product-view/109871591` 한 상품에 한정. [공식 이어폰 목록](https://store.sony.co.kr/products/audio/wireless_earphones)에서 연결된 Float Run. 실제 Firecrawl의 구매 영역 검증이 실패하여 카탈로그에서는 비활성 상태 |
-| Marshall 한국 공식 스토어 | [공식 이어폰 목록](https://www.marshall.com/kr/ko/headphones/earbuds)에서 연결한 `www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450` 한 상품에 한정. 개발 시험에서 가격·ANC를 확인했으며 월 호출 상한 결정 전까지 비활성 상태 |
+| Marshall 한국 공식 스토어 | [공식 이어폰 목록](https://www.marshall.com/kr/ko/headphones/earbuds)에서 연결한 `www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450` 한 상품에 한정. 개발 시험에서 가격·ANC를 확인했으며 활성 등록 |
 
 등록 근거 확인일: 2026-09-24. 판매처 추가·변경 시 공식 브랜드 페이지의 연결 근거를 이 문서에 남기고, 다른 호스트·판매자·경로·리다이렉트를 배제하는 테스트를 함께 갱신한다. 검색은 카테고리별 공식 상품 경로의 OR 질의 한 번으로 제한하며, 찾지 못한 브랜드를 임의 사이트로 대체하지 않는다.
 

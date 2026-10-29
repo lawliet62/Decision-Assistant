@@ -236,7 +236,7 @@
   },
   {
     "id": "marshall-motif-ii-anc",
-    "revision": 1,
+    "revision": 2,
     "name": "MOTIF II A.N.C.",
     "purchaseUrl": "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450",
     "expectedIdentity": "marshall-kr:1006450",
@@ -254,6 +254,6 @@
         "cycle": "HARDWARE"
       }
     ],
-    "active": false
+    "active": true
   }
 ]
