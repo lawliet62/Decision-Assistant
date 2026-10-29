@@ -52,6 +52,14 @@ public class QcySpecificationRefreshWorker {
                     "방수", List.of("Water Resistance Range", "IPX4"));
             for (var fact : product.facts()) {
                 var e = fact.evidence(); var pair = checks.get(e.name());
+                if ("ANC 지원".equals(e.name()) && URL.equals(e.sourceUrl()) && "지원".equals(e.value())
+                        && "50dB Adaptive ANC".equals(e.quote())) {
+                    if (QcySpecificationVerifier.matchesAnc(html)) {
+                        product.reviewedFact(revision, e.name(), now);
+                        log.info("catalog_spec_refresh product_id={} field={} outcome=VERIFIED", ID, e.name());
+                    } else log.warn("catalog_spec_refresh product_id={} field={} outcome=UNVERIFIED", ID, e.name());
+                    continue;
+                }
                 if (pair == null || !URL.equals(e.sourceUrl()) || !pair.get(1).equals(e.value())
                         || !(pair.get(0) + ": " + pair.get(1)).equals(e.quote())) continue;
                 if (QcySpecificationVerifier.matches(html, "QCY T13 Pro", pair.get(0), pair.get(1))) {

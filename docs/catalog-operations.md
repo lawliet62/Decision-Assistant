@@ -4,11 +4,11 @@
 
 반복 갱신은 애플리케이션 코드와 간단한 자동화를 우선한다. 선택 이유와 에이전트 방식의 비용을 다시 비교하는 기준은 [ADR 0016](decisions/0016-curated-catalog.md#갱신-방식과-비용-판단)에 기록한다. 개발 환경에서 실제 동작을 확인한 뒤 운영 호스팅과 PostgreSQL을 설계한다.
 
-QCY T13 Pro의 호환성과 방수는 모델·항목·값이 일치하면 확인 시각을 자동 갱신할 수 있다. 소니 Float Run의 단일 상품 DOM 가격 검증은 구현했지만 실제 Firecrawl 응답에서 검증에 실패하여 상품을 비활성으로 유지한다.
+QCY T13 Pro의 ANC·호환성·방수와 Apple AirPods Pro 3의 ANC·방수는 모델·항목·값이 일치하면 확인 시각을 자동 갱신할 수 있다. 소니 Float Run의 단일 상품 DOM 가격 검증은 구현했지만 실제 Firecrawl 응답에서 검증에 실패하여 상품을 비활성으로 유지한다.
 
-사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro 공식 페이지를 제품별 7일 간격으로 확인한다. 기본값은 false다. 사양 표의 모델명과 항목·값·기존 출처 및 인용이 일치한 두 항목만 갱신한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 시도는 요청 전에 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. ANC와 다른 제품은 기존 수동 검토 대상이다.
+사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro와 Apple AirPods Pro 3의 공식 페이지를 각각 7일 간격으로 확인한다. 기본값은 false다. 모델명과 사양 영역의 항목·값·기존 출처 및 인용이 일치한 항목만 갱신한다. QCY ANC는 같은 모델의 제품명과 공식 페이지 설명을 대조한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 시도는 요청 전에 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. 자동 확인 범위 밖의 사양은 기존 수동 검토 대상이다.
 
-GitHub Actions의 출처 점검은 운영 DB에 접근하지 않으므로 자동 갱신된 DB 시각을 알지 못하고 manifest의 원래 시각 기준으로 기한 경고를 표시할 수 있다. 해당 경고를 DB 확인 결과와 대조한다. 개발 환경에서는 실제 QCY 페이지 조회 후 두 항목의 확인 시각과 다음 시도 시각이 PostgreSQL에 저장되는 것을 확인했다.
+GitHub Actions의 출처 점검은 운영 DB에 접근하지 않으므로 자동 갱신된 DB 시각을 알지 못하고 manifest의 원래 시각 기준으로 기한 경고를 표시할 수 있다. 해당 경고를 DB 확인 결과와 대조한다. 개발 환경에서는 실제 QCY와 Apple 페이지 조회 후 각각 두 항목의 확인 시각과 다음 시도 시각이 PostgreSQL에 저장되는 것을 확인했다. QCY ANC는 실제 페이지로 모델·문구 검증을 확인했으며 다음 예약 실행의 DB 갱신은 아직 확인하지 않았다.
 
 기본 추천은 활성 이어폰 5개(QCY 4개, Apple 한국 스토어 1개)를 사용한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
 
