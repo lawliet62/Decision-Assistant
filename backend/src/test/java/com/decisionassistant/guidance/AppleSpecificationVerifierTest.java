@@ -17,4 +17,12 @@ class AppleSpecificationVerifierTest {
         assertThat(AppleSpecificationVerifier.matches(PAGE.replace("<li>액티브 노이즈 캔슬링</li>", "<li>액티브 노이즈 캔슬링</li><li>액티브 노이즈 캔슬링 미지원</li>"), "ANC 지원")).isFalse();
         assertThat(AppleSpecificationVerifier.matches(PAGE.replace("section-water", "section-other") + "<aside>IP57</aside>", "방수")).isFalse();
     }
+    @Test void airpods5RequiresItsOwnModelAndSpecification() {
+        var page = PAGE.replace("AirPods Pro 3", "AirPods 5").replace(": AirPods&nbsp;Pro&nbsp;및 충전 케이스", "");
+        assertThat(AppleSpecificationVerifier.matchesAirpods5(page, "ANC 지원")).isTrue();
+        assertThat(AppleSpecificationVerifier.matchesAirpods5(page, "방수")).isTrue();
+        assertThat(AppleSpecificationVerifier.matchesAirpods5(PAGE, "ANC 지원")).isFalse();
+        assertThat(AppleSpecificationVerifier.matchesAirpods5(page.replace("IP57", "IP54"), "방수")).isFalse();
+        assertThat(AppleSpecificationVerifier.matchesAirpods5(page.replace("액티브 노이즈 캔슬링</li>", "액티브 노이즈 캔슬링 미지원</li>"), "ANC 지원")).isFalse();
+    }
 }

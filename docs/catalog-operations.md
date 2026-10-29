@@ -6,13 +6,13 @@
 
 판매처별 개발·수정 및 장애 조사 시간, 수집 API 비용을 에이전트 사용량과 결과 검토 비용에 비교한다. 코드 방식의 총비용이 더 크다는 근거가 생기면 에이전트 갱신을 권고하고 판단 근거와 미측정 비용을 기록한다. 현재 두 방식의 총비용과 장기 안정성은 비교되지 않았다. 결정과 대안은 [ADR 0016](decisions/0016-curated-catalog.md#갱신-방식과-비용-판단)에 기록한다. 개발 환경에서 실제 동작을 확인한 뒤 운영 호스팅과 PostgreSQL을 설계한다.
 
-QCY T13 Pro의 ANC·호환성·방수, QCY HT19의 ANC·방수와 Apple AirPods Pro 3의 ANC·방수는 모델·항목·값이 일치하면 확인 시각을 자동 갱신할 수 있다. HT19는 제조사 페이지에서 MeloBuds N60과 HT19의 연결 및 ANC 지원을 확인하고, 방수는 사양표의 IPX5도 대조한다. 소니 Float Run의 단일 상품 DOM 가격 검증은 구현했지만 실제 Firecrawl 응답에서 검증에 실패하여 상품을 비활성으로 유지한다.
+QCY T13 Pro의 ANC·호환성·방수, QCY HT19의 ANC·방수와 Apple AirPods Pro 3와 AirPods 5 무선 충전 케이스 모델의 ANC·방수는 모델·항목·값이 일치하면 확인 시각을 자동 갱신할 수 있다. HT19는 제조사 페이지에서 MeloBuds N60과 HT19의 연결 및 ANC 지원을 확인하고, 방수는 사양표의 IPX5도 대조한다. 소니 Float Run의 단일 상품 DOM 가격 검증은 구현했지만 실제 Firecrawl 응답에서 검증에 실패하여 상품을 비활성으로 유지한다.
 
-사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro, HT19와 Apple AirPods Pro 3의 공식 페이지를 각각 7일 간격으로 확인한다. 기본값은 false다. 모델명과 사양 영역의 항목·값·기존 출처 및 인용이 일치한 항목만 갱신한다. QCY ANC는 같은 모델의 제품명과 공식 페이지 설명을 대조한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 확인 가능한 사양이 있을 때만 요청 전에 시도를 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. 자동 확인 범위 밖의 사양은 기존 수동 검토 대상이다.
+사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro, HT19와 Apple AirPods Pro 3 및 AirPods 5의 공식 페이지를 각각 7일 간격으로 확인한다. 기본값은 false다. 모델명과 사양 영역의 항목·값·기존 출처 및 인용이 일치한 항목만 갱신한다. QCY ANC는 같은 모델의 제품명과 공식 페이지 설명을 대조한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 확인 가능한 사양이 있을 때만 요청 전에 시도를 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. 자동 확인 범위 밖의 사양은 기존 수동 검토 대상이다.
 
 GitHub Actions의 출처 점검은 운영 DB에 접근하지 않으므로 자동 갱신된 DB 시각을 알지 못하고 manifest의 원래 시각 기준으로 기한 경고를 표시할 수 있다. 해당 경고를 DB 확인 결과와 대조한다. 개발 환경에서는 실제 QCY와 Apple 페이지 조회 후 각각 두 항목의 확인 시각과 다음 시도 시각이 PostgreSQL에 저장되는 것을 확인했다. 별도 개발 시험 DB에서는 실제 페이지 조회로 QCY T13 Pro의 ANC·호환성·방수, HT19의 ANC·방수와 Apple의 ANC·방수 확인 시각 및 다음 시도 시각이 저장됐다.
 
-기본 추천은 활성 이어폰 5개(QCY 4개, Apple 한국 스토어 1개)를 사용한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
+기본 추천은 활성 이어폰 6개(QCY 4개, Apple 한국 스토어 2개)를 사용한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
 
 ## 첫 실행과 가격 갱신
 
@@ -28,15 +28,15 @@ DECISION_ASSISTANT_WEB_ENABLED=true
 FIRECRAWL_SECRET_VERSION=1
 ```
 
-초기 2주 관측은 월 상한 100회를 사용한다. 5개 × 14일은 약 70회다. 기본 설정값 200은 5개의 월 운영 여유를 위한 상한이며 가격·provider 과금 단위를 보장하는 금액 상한은 아니다. 기존 사용자 수집·다른 프로그램의 Firecrawl 사용과는 별도이므로 계정 비용도 확인한다.
+초기 2주 관측은 월 상한 100회를 사용한다. 6개 × 14일은 약 84회다. 기본 설정값 200은 6개의 월 운영 여유를 위한 상한이며 가격·provider 과금 단위를 보장하는 금액 상한은 아니다. 기존 사용자 수집·다른 프로그램의 Firecrawl 사용과는 별도이므로 계정 비용도 확인한다.
 
-worker는 기본 60초마다 최대 한 제품을 claim하고 제품별 시도 간격은 24시간이다. 초기 5개는 약 5분에 걸쳐 시도한다. `catalog_monthly_usage`는 UTC 달을 사용한다. 실패·중단도 예약 호출을 소비하고 같은 제품을 즉시 재시도하지 않는다. 단순 재시작으로 호출 한도가 초기화되지 않는다. 스케줄 지연이나 실패로 가격이 24시간을 넘으면 잠시 UNKNOWN으로 떨어질 수 있다.
+worker는 기본 60초마다 최대 한 제품을 claim하고 제품별 시도 간격은 24시간이다. 6개 제품은 약 6분에 걸쳐 시도한다. `catalog_monthly_usage`는 UTC 달을 사용한다. 실패·중단도 예약 호출을 소비하고 같은 제품을 즉시 재시도하지 않는다. 단순 재시작으로 호출 한도가 초기화되지 않는다. 스케줄 지연이나 실패로 가격이 24시간을 넘으면 잠시 UNKNOWN으로 떨어질 수 있다.
 
 기동 후 `catalog_observations`에서 성공/실패를 확인하고 실제 화면의 모델·구매 링크·확인 가격을 대조한다. HTTP 200만으로 판매가 검증 성공으로 취급하지 않는다. strict parser가 구조를 지원하지 못하면 가격을 수동 조작해서 통과시키지 않고 원인을 수정하거나 등록 제품을 비활성화한다.
 
 ## 제품·사양 관리
 
-매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT19와 AirPods Pro 3의 공식 페이지 세 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
+매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT19, AirPods Pro 3와 AirPods 5의 공식 페이지 네 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
 
 작업 요약에서 `QUOTE_PRESENT`는 단순 문구 존재, `QUOTE_MISSING`은 미발견, `UNAVAILABLE`은 접근 실패, `UNSUPPORTED_SOURCE`는 허용된 고정 주소가 아닌 사양이다. 문구가 다른 상품·추천 영역에 나타날 수도 있으므로 **일치가 동일 모델이나 사양의 정확성을 검증하지 않는다**. 점검 기한이 7일 이내이거나 문구 미발견·접근 실패가 있으면 작업을 실패로 표시해 확인할 수 있게 한다. 수집 실패의 HTTP 상태와 크기 초과는 간단한 코드만 남긴다. GitHub 알림 수신 여부는 계정 설정에 달려 있으며 예약 자체가 누락된 경우 이 workflow가 알림을 보장하지 않는다.
 
@@ -73,7 +73,7 @@ node scripts/catalog/report.mjs observations.json products.json
 ## 성능과 장애 대응
 
 - 가격 worker는 관측의 성공 또는 실패를 `catalog_refresh` 로그에 제품 ID와 결과 코드로 남긴다. 마지막으로 사용할 수 있는 가격 대비 2배 이상 또는 절반 이하인 새 가격은 `catalog_price_change` 경고를 추가하지만 자동으로 거절하지 않는다. 할인 등 정상 변동도 포함될 수 있어 경고는 원인 확인 신호다. DB 관측 기록이 최종 결과의 기준이며 로그는 별도 알림 시스템이 아니다.
-- `CATALOG_MONTHLY_LIMIT=100`은 2주 파일럿 예시다. 5개 제품의 한 달 일간 시도에는 약 150~155회가 필요하므로 계속 운영할 때 상한과 provider 계정 비용을 함께 검토한다. 실패도 한도를 소비한다.
+- `CATALOG_MONTHLY_LIMIT=100`은 2주 파일럿 예시다. 6개 제품의 한 달 일간 시도에는 약 180~186회가 필요하므로 계속 운영할 때 상한과 provider 계정 비용을 함께 검토한다. 실패도 한도를 소비한다.
 
 - `CatalogApiIntegrationTest.measureDatabaseBaselineAtFiveAndThirtyProductsWithoutCache`는 제품 5/30개, 동시 요청 1/5개에서 비교 생성 API를 측정하고 `backend/build/reports/catalog-benchmark.json`을 만든다. 운영 트래픽·브라우저 지연을 포함하지 않는다.
 - `catalog.db.read`, `catalog.discovery` Micrometer timer로 DB 조회와 전체 후보 생성을 구분한다. 외부에 metrics endpoint를 새로 노출하지 않는다. 운영 지연이 관찰되면 DB 시간과 요청 전체 시간부터 확인하고 캐시 효과를 별도 비교한다.

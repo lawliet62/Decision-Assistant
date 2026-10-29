@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 // 운영자가 승인한 고정 사양 페이지만 점검한다. 일치는 사양의 진실성이나 모델 동일성을 증명하지 않는다.
 const sources = new Map([
   ["apple-airpods-pro-3", "https://www.apple.com/kr/airpods-pro/specs/"],
+  ["apple-airpods-5-wireless", "https://www.apple.com/kr/airpods-5/specs/"],
   ["qcy-t13-anc", "https://www.qcy.com/products/qcy-t13-anc"],
   ["qcy-t13-pro", "https://www.qcy.com/products/qcy-t13-pro"],
   ["qcy-ht19", "https://www.qcy.com/products/qcy-melobuds-n60"],

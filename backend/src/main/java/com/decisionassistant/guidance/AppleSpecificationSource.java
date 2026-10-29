@@ -10,8 +10,14 @@ import java.time.Duration;
 @Component
 public class AppleSpecificationSource {
     public String fetch() throws Exception {
+        return fetch("https://www.apple.com/kr/airpods-pro/specs/");
+    }
+    public String fetchAirpods5() throws Exception {
+        return fetch("https://www.apple.com/kr/airpods-5/specs/");
+    }
+    private String fetch(String url) throws Exception {
         var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
-        var request = HttpRequest.newBuilder(URI.create("https://www.apple.com/kr/airpods-pro/specs/"))
+        var request = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(15)).GET().build();
         var response = client.send(request, HttpResponse.BodyHandlers.ofInputStream());
         try (var body = response.body()) {

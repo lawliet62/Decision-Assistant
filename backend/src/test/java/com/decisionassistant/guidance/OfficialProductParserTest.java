@@ -51,6 +51,20 @@ class OfficialProductParserTest {
         }
     }
 
+    @Test void appleAirpods5SelectedConfigurationMustMatchSkuAndPrice() {
+        var url = "https://www.apple.com/kr/shop/buy-airpods/airpods-5/무선-충전-케이스-포함";
+        var data = "<title>AirPods 5 무선 충전 케이스 모델</title><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"AirPods 5 무선 충전 케이스 모델\",\"url\":\"" + url + "\",\"offers\":{\"@type\":\"Offer\",\"sku\":\"MKFT4KH/A\",\"price\":229000,\"priceCurrency\":\"KRW\"}}</script>";
+        var selected = "<div class='item selection'><a data-slot-name='productSelection' href='" + url + "?product=mkft4kh/a'><span class='current_price'>₩229,000</span></a></div>";
+        var other = "<div class='item'><a data-slot-name='productSelection' href='/kr/shop/buy-airpods/airpods-5/무선-충전-케이스-미포함?product=mkft4kh/a'><span class='current_price'>₩199,000</span></a></div>";
+        var html = data + "<div class='product-selection-area'>" + other + selected + "</div>";
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now()).product().identity()).isEqualTo("apple-kr:mkft4kh/a");
+        for (var invalid : List.of(html.replace("mkft4kh/a'><span class='current_price'>₩229,000", "other'><span class='current_price'>₩229,000"),
+                html.replace("₩229,000", "₩199,000"), html.replace("item selection", "item"),
+                html.replace(other, other.replace("class='item'", "class='item selection'")),
+                html.replace("무선-충전-케이스-포함?product=mkft4kh", "무선-충전-케이스-미포함?product=mkft4kh")))
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now()).product()).isNull();
+    }
+
     @Test void validatesPriceImageAndOfficialIdentityFromCollectedHtml() {
         var product = parse(product(OFFER));
         assertThat(product.name()).isEqualTo("Buds");

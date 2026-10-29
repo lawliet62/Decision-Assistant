@@ -43,4 +43,4 @@ v2는 JSON-LD 금액을 같은 상품 구매 영역의 라벨·금액과 대조�
 
 v2의 기본 추천에는 선택한 호환성도 충족해야 한다. 이어폰의 기본 플랫폼 연결·사용과 앱·기기별 추가 기능을 구분하며 후자는 사양과 제약으로 별도 표시한다. 설명은 검증 결과에서 서버가 구성한다. v1 후보·설명은 새 기준으로 재작성하지 않고 과거 기준임을 표시한다. [ADR 0014](decisions/0014-evidence-based-discovery-validation.md)에 변경 이유와 한계를 기록한다.
 
-2026-10-29 카탈로그 확장에서는 [AirPods Pro 3 구매 페이지](https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3)의 Offer SKU `MFHP4KH/A`, 단일 구매 선택 링크와 표시 금액을 확인했다. Apple의 금액은 `₩`가 숫자 앞에 오므로 전용 구매 영역에서만 처리한다. 기존 AirPods 4 구매 주소가 AirPods 5로 이동하는 사례를 확인했으며 다른 세대로의 이동은 계속 거절한다. 삼성 버즈3 FE의 확인한 직접 응답은 제품 JSON-LD가 없는 공통 페이지여서 신규 카탈로그로 등록하지 않았다. 이는 모든 삼성 제품이나 Firecrawl 응답이 수집 불가능하다는 결론은 아니다.
+2026-10-29 카탈로그 확장에서는 [AirPods Pro 3 구매 페이지](https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3)의 Offer SKU `MFHP4KH/A`, 단일 구매 선택 링크와 표시 금액을 확인했다. AirPods 5 무선 충전 케이스 모델은 두 구매 선택지 중 유일하게 선택된 항목의 URL·SKU·가격을 단일 Offer와 대조한다. Apple의 금액은 `₩`가 숫자 앞에 오므로 전용 구매 영역에서만 처리한다. 기존 AirPods 4 구매 주소가 AirPods 5로 이동하는 사례를 확인했으며 다른 세대로의 이동은 계속 거절한다. 삼성 버즈3 FE의 확인한 직접 응답은 제품 JSON-LD가 없는 공통 페이지여서 신규 카탈로그로 등록하지 않았다. 이는 모든 삼성 제품이나 Firecrawl 응답이 수집 불가능하다는 결론은 아니다.

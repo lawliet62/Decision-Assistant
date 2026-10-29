@@ -32,6 +32,13 @@ final class VisiblePrice {
         // Apple 구매 링크의 SKU와 현재 상품의 표시 가격을 함께 대조한다.
         if (OfficialStorePolicy.store(url).orElseThrow().id().equals("apple-kr") && ProductPageRegions.current(doc, url, name)) {
             var links = doc.select(".product-selection-area a[data-slot-name=productSelection]");
+            // AirPods 5의 충전 케이스 구성은 선택된 항목만 해당 SKU·URL과 대조한다.
+            if (links.size() > 1 && java.net.URI.create(url).getPath().equals("/kr/shop/buy-airpods/airpods-5/무선-충전-케이스-포함")) {
+                var areas = doc.select(".product-selection-area");
+                var selections = doc.select(".product-selection-area .item.selection");
+                if (areas.size() == 1 && selections.size() == 1)
+                    links = selections.first().select("a[data-slot-name=productSelection]");
+            }
             if (links.size() == 1) {
                 var link = links.getFirst();
                 var target = java.net.URI.create(link.absUrl("href"));

@@ -208,6 +208,22 @@ class CatalogApiIntegrationTest {
         assertThat(facts.get(1).fetchedAt()).isEqualTo(now);
         verify(appleSpecificationSource, times(1)).fetch();
     }
+    @Test void airpods5ReviewPersistsOnlyMatchingSpecification() throws Exception {
+        var id = "apple-airpods-5-wireless"; var old = Instant.now().minus(Duration.ofDays(91));
+        var source = "https://www.apple.com/kr/airpods-5/specs/";
+        var p = new CatalogProduct(id);
+        p.register(1, "AirPods 5", "https://www.apple.com/kr/shop/buy-airpods/airpods-5/무선-충전-케이스-포함", "apple:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, "액티브 노이즈 캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                new CatalogProduct.Fact(new ProductFact("방수", "IP57", source, "먼지, 땀, 습기에 강한 방진 및 생활 방수 디자인(IP57)", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(appleSpecificationSource.fetchAirpods5()).thenReturn("<title>AirPods 5 - 제품 사양 - Apple (KR)</title><div class='techspecs-section section-audio'><ul class='techspecs-list'><li>액티브 노이즈 캔슬링</li></ul></div><div class='techspecs-section section-water'><ul class='techspecs-list'><li>IP54</li></ul></div>");
+        var worker = new Apple5SpecificationRefreshWorker(true, catalogProperties, products, jdbc, appleSpecificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts.getFirst().fetchedAt()).isAfter(old);
+        assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
+        verify(appleSpecificationSource, times(1)).fetchAirpods5();
+    }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(2))); product(2, null); product(3, null);
         when(web.scrapeProduct(anyString())).thenThrow(new IllegalStateException("private provider error"));
