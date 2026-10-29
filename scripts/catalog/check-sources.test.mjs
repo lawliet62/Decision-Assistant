@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { inspect, summary } from "./check-sources.mjs";
+import { inspect, requiresAttention, summary } from "./check-sources.mjs";
 
 test("점검 대상에 등록되지 않은 활성 상품 사양은 누락하지 않고 미지원으로 보고한다", async () => {
   const item = { id: "new-product", active: true, facts: [{ cycle: "HARDWARE", evidence: {
@@ -48,4 +48,20 @@ test("Apple의 승인된 사양 페이지도 점검하며 확인 시각을 변�
   const rows = await inspect([apple], async url => { assert.equal(url, apple.facts[0].evidence.sourceUrl); return new Response("액티브 노이즈 캔슬링"); });
   assert.equal(rows[0].observation, "QUOTE_PRESENT");
   assert.equal(JSON.stringify(apple), before);
+});
+
+test("문구가 있어도 제목 누락·다른 모델·복수 제목은 점검 대상으로 표시한다", async () => {
+  const product = { id: "qcy-t13-pro", active: true, facts: [{ cycle: "HARDWARE", evidence: {
+    name: "ANC 지원", sourceUrl: "https://www.qcy.com/products/qcy-t13-pro", quote: "50dB Adaptive ANC", fetchedAt: "2026-10-01T00:00:00Z" } }] };
+  const inspectHtml = html => inspect([product], async () => new Response(html), new Date("2026-10-02T00:00:00Z"));
+  const good = "<title>QCY T13 Pro &ndash; QCY Official</title><p>50dB Adaptive ANC</p>";
+  const valid = await inspectHtml(good);
+  assert.equal(valid[0].titleCheck, "MATCH");
+  assert.equal(requiresAttention(valid), false);
+  for (const html of [good.replace("T13 Pro", "T13 ANC"), good.replace(/<title>.*?<\/title>/, ""), good + "<title>다른 제품</title>"]) {
+    const rows = await inspectHtml(html);
+    assert.equal(rows[0].observation, "QUOTE_PRESENT");
+    assert.equal(rows[0].titleCheck, "MISMATCH");
+    assert.equal(requiresAttention(rows), true);
+  }
 });
