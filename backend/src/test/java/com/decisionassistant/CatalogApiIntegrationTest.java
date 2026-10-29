@@ -46,6 +46,9 @@ class CatalogApiIntegrationTest {
     @Autowired CatalogProductRepository products;
     @Autowired CatalogRefreshWorker worker;
     @Autowired JdbcTemplate jdbc;
+    @Autowired CatalogProperties catalogProperties;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+    @MockitoBean QcySpecificationSource specificationSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -59,7 +62,7 @@ class CatalogApiIntegrationTest {
             "searchConsent":false,"collectionConsent":false,"aiConsent":false,"sensitiveDataAcknowledged":false}}
             """;
     @BeforeEach void setup() {
-        jdbc.update("delete from catalog_observations"); jdbc.update("delete from catalog_products"); jdbc.update("delete from catalog_monthly_usage");
+        jdbc.update("delete from catalog_observations"); jdbc.update("delete from catalog_spec_attempts"); jdbc.update("delete from catalog_products"); jdbc.update("delete from catalog_monthly_usage");
         owner = owner();
     }
     private RequestPostProcessor owner() {
@@ -119,6 +122,23 @@ class CatalogApiIntegrationTest {
         var loaded = products.findById(p.id()).orElseThrow();
         assertThat(loaded.facts().get(1).evidence().fetchedAt()).isEqualTo(original);
         assertThat(loaded.usableFacts(reviewed.plusSeconds(1)).get(1).fetchedAt()).isEqualTo(reviewed);
+    }
+    @Test void scheduledSpecificationReviewPersistsOnlyMatchingFactsAndRespectsAttemptInterval() throws Exception {
+        var id = "qcy-t13-pro"; var now = Instant.now().minus(Duration.ofDays(31));
+        var sourceUrl = "https://www.qcy.com/products/qcy-t13-pro";
+        var p = new CatalogProduct(id);
+        p.register(1, "QCY T13 Pro", url(9), "qcy:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("호환성", "iOS / Android", sourceUrl, "Compatible Systems: iOS / Android", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.SOFTWARE),
+                new CatalogProduct.Fact(new ProductFact("방수", "IPX4", sourceUrl, "Water Resistance Range: IPX4", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetch()).thenReturn("<div class='specification-content'><div class='spec-details'><p>Product Name: QCY T13 Pro</p><p>Compatible Systems: iOS / Android<br>Water Resistance Range: IPX5</p></div></div>");
+        var specWorker = new QcySpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        specWorker.refresh(); specWorker.refresh();
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts).extracting(ProductFact::name).containsExactly("호환성", "방수");
+        assertThat(facts.getFirst().fetchedAt()).isAfter(now);
+        assertThat(facts.get(1).fetchedAt()).isEqualTo(now);
+        verify(specificationSource, times(1)).fetch();
     }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(2))); product(2, null); product(3, null);
