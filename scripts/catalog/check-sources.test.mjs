@@ -2,6 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { inspect, summary } from "./check-sources.mjs";
 
+test("점검 대상에 등록되지 않은 활성 상품 사양은 누락하지 않고 미지원으로 보고한다", async () => {
+  const item = { id: "new-product", active: true, facts: [{ cycle: "HARDWARE", evidence: {
+    name: "ANC", sourceUrl: "https://example.com/product", quote: "ANC", fetchedAt: "2026-10-01T00:00:00Z" } }] };
+  const rows = await inspect([item], () => { throw new Error("승인되지 않은 출처 요청"); });
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].observation, "UNSUPPORTED_SOURCE");
+});
+
 const source = "https://www.qcy.com/products/qcy-t13-anc";
 const entry = { id: "qcy-t13-anc", active: true, facts: [
   { cycle: "SOFTWARE", evidence: { name: "호환성", sourceUrl: source, quote: "Compatible system: iOS/Android", fetchedAt: "2026-10-01T00:00:00Z" } },

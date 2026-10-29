@@ -13,6 +13,16 @@ const normalize = value => value.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;
 
 export async function inspect(entries, fetchPage = fetch, now = new Date()) {
   const results = [];
+  // 등록된 사양이 점검 목록에서 빠져도 정상으로 보고하지 않는다.
+  for (const entry of entries.filter(item => item.active && !sources.has(item.id))) {
+    for (const item of entry.facts) {
+      const fact = item.evidence;
+      const dueAt = new Date(Date.parse(fact.fetchedAt) + (item.cycle === "HARDWARE" ? 90 : 30) * 86400000);
+      results.push({ productId: entry.id, field: fact.name, source: fact.sourceUrl, reviewedAt: fact.fetchedAt,
+        dueAt: dueAt.toISOString(), due: dueAt <= now, dueSoon: now.getTime() >= dueAt.getTime() - 7 * 86400000,
+        observation: "UNSUPPORTED_SOURCE", failure: null });
+    }
+  }
   for (const [id, url] of sources) {
     const entry = entries.find(item => item.id === id && item.active);
     if (!entry) continue;
