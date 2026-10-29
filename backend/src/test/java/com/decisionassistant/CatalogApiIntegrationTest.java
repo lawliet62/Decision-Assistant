@@ -51,6 +51,7 @@ class CatalogApiIntegrationTest {
     @MockitoBean QcySpecificationSource specificationSource;
     @MockitoBean AppleSpecificationSource appleSpecificationSource;
     @MockitoBean MarshallSpecificationSource marshallSpecificationSource;
+    @MockitoBean SennheiserSpecificationSource sennheiserSpecificationSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -271,6 +272,52 @@ class CatalogApiIntegrationTest {
         worker.refresh(); worker.refresh();
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         verify(marshallSpecificationSource, times(1)).fetch();
+    }
+    @Test void sennheiserPriceRefreshPersistsValidatedOffer() {
+        var id = "sennheiser-momentum-tw5";
+        var url = "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731";
+        var canonical = "https://kr.sennheiser-hearing.com/product/모멘텀-트루-와이어리스-5/731/";
+        var p = new CatalogProduct(id);
+        p.register(1, "모멘텀 트루 와이어리스 5", url, "sennheiser-kr:cafe24_bnispace_1_731", List.of(), true);
+        products.saveAndFlush(p);
+        var colors = new String[]{"블랙 그래파이트", "크림", "데님", "라벤더", "코퍼"};
+        var variants = new ArrayList<Map<String, Object>>(); var options = new StringBuilder("<option value='*'>선택</option>");
+        for (int i = 0; i < colors.length; i++) {
+            var color = colors[i]; var code = "P0000BCD000" + (char)('B' + i);
+            variants.add(Map.of("@type", "Product", "name", "모멘텀 트루 와이어리스 5 " + color, "color", color,
+                    "sku", "cafe24_bnispace_1_731_" + code, "offers", Map.of("@type", "Offer", "price", 429000,
+                    "priceCurrency", "KRW", "availability", "https://schema.org/InStock", "url", canonical + "?item_code=" + code)));
+            options.append("<option value='").append(color).append("'>").append(color).append("</option>");
+        }
+        var data = json.writeValueAsString(Map.of("@type", "ProductGroup", "name", "모멘텀 트루 와이어리스 5",
+                "productGroupID", "cafe24_bnispace_1_731", "variesBy", List.of("color"), "hasVariant", variants));
+        var html = "<link rel='canonical' href='" + canonical + "'><script type='application/ld+json'>" + data + "</script>"
+                + "<div class='xans-product-detail'><span class='senn-final-price'>₩429,000</span><select product_type='product_option' option_product_no='731' option_title='컬러'>"
+                + options + "</select><div class='productAction'><a class='btnSubmit gFull' href='#none'><span id='actionBuy'>바로 구매하기</span></a></div></div>";
+        when(web.scrapeProduct(url)).thenReturn(new WebEvidenceProvider.Page("", "", html, url));
+        worker.refreshNext();
+        assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("429000");
+        assertThat(jdbc.queryForObject("select outcome from catalog_observations where product_id=?", String.class, id)).isEqualTo("VERIFIED");
+        assertThat(jdbc.queryForObject("select calls from catalog_monthly_usage", Integer.class)).isEqualTo(1);
+    }
+    @Test void sennheiserReviewsMatchingFactAndKeepsChangedFactUnconfirmed() throws Exception {
+        var id = "sennheiser-momentum-tw5"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731";
+        var p = new CatalogProduct(id);
+        p.register(1, "모멘텀 트루 와이어리스 5", url, "sennheiser-kr:cafe24_bnispace_1_731", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", url, "하이브리드 적응형 ANC", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                new CatalogProduct.Fact(new ProductFact("방수", "IP54", url, "IP54 방진 및 생활 방수 (이어버드만 해당)", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(sennheiserSpecificationSource.fetch()).thenReturn("<link rel='canonical' href='https://kr.sennheiser-hearing.com/product/모멘텀-트루-와이어리스-5/731/'>"
+                + "<h1>모멘텀 트루 와이어리스 5</h1><script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"모멘텀 트루 와이어리스 5\",\"productGroupID\":\"cafe24_bnispace_1_731\"}</script>"
+                + "<div class='table-wrapper'><div class='table-row'><div class='label'>액티브 노이즈 캔슬링</div><div class='description'>하이브리드 적응형 ANC</div></div>"
+                + "<div class='table-row'><div class='label'>방진·방수 등급</div><div class='description'>IP55</div></div></div>");
+        var spec = new SennheiserSpecificationRefreshWorker(true, catalogProperties, products, jdbc, sennheiserSpecificationSource, transactionManager);
+        spec.refresh(); spec.refresh();
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts.getFirst().fetchedAt()).isAfter(old);
+        assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
+        verify(sennheiserSpecificationSource, times(1)).fetch();
     }
     @Test void concurrentSpecificationWorkersShareOneAttempt() throws Exception {
         var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));

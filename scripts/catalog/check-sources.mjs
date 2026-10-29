@@ -11,6 +11,7 @@ const sources = new Map([
   ["qcy-t17-app", ["https://qcystore.co.kr/product/detail.html?product_no=563", "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙 - QCY스토어"]],
   ["qcy-ht19", ["https://www.qcy.com/products/qcy-melobuds-n60", "QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official"]],
   ["marshall-motif-ii-anc", ["https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450", "Motif II A.N.C. Black - 노이즈 캔슬링 이어버드 | Marshall.com"]],
+  ["sennheiser-momentum-tw5", ["https://kr.sennheiser-hearing.com/product/detail.html?product_no=731", "한국어 쇼핑몰 | 모멘텀 트루 와이어리스 5"]],
 ]);
 const MAX_BYTES = 2_000_000;
 const normalize = value => value.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ")

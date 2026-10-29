@@ -226,6 +226,40 @@
     "active": true
   },
   {
+    "id": "sennheiser-momentum-tw5",
+    "revision": 1,
+    "name": "모멘텀 트루 와이어리스 5",
+    "purchaseUrl": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+    "expectedIdentity": "sennheiser-kr:cafe24_bnispace_1_731",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+          "quote": "하이브리드 적응형 ANC",
+          "fetchedAt": "2026-10-29T20:02:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IP54",
+          "sourceUrl": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+          "quote": "IP54 방진 및 생활 방수 (이어버드만 해당)",
+          "fetchedAt": "2026-10-29T20:02:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
     "id": "sony-float-run",
     "revision": 2,
     "name": "플로트 런 Float Run",
