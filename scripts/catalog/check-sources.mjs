@@ -7,6 +7,7 @@ const sources = new Map([
   ["apple-airpods-5-wireless", ["https://www.apple.com/kr/airpods-5/specs/", "AirPods 5 - 제품 사양 - Apple (KR)"]],
   ["qcy-t13-anc", ["https://www.qcy.com/products/qcy-t13-anc", "QCY T13 ANC True Wireless Earbuds, 30H Playtime – QCY Official"]],
   ["qcy-t13-pro", ["https://www.qcy.com/products/qcy-t13-pro", "QCY T13 Pro – QCY Official"]],
+  ["qcy-ht16", ["https://qcystore.co.kr/product/detail.html?product_no=990", "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙 - QCY스토어"]],
   ["qcy-ht19", ["https://www.qcy.com/products/qcy-melobuds-n60", "QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official"]],
   ["marshall-motif-ii-anc", ["https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450", "Motif II A.N.C. Black - 노이즈 캔슬링 이어버드 | Marshall.com"]],
 ]);

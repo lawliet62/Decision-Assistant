@@ -16,6 +16,9 @@ public class QcySpecificationSource {
     public String fetchN60() throws Exception {
         return fetch(URI.create("https://www.qcy.com/products/qcy-melobuds-n60"));
     }
+    public String fetchHt16() throws Exception {
+        return fetch(URI.create("https://qcystore.co.kr/product/detail.html?product_no=990"));
+    }
     private String fetch(URI url) throws Exception {
         var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
         var request = HttpRequest.newBuilder(url).timeout(Duration.ofSeconds(15)).GET().build();

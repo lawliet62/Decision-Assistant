@@ -40,4 +40,15 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(page.replace("Product Name: QCY MeloBuds N60", "Product Name: another model"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(page.replace("IPX5", "IPX4"))).isTrue();
     }
+    @Test void ht16AncRequiresExactProductAndExplicitTitle() {
+        var name = "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/990/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_990\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesHt16Anc(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesHt16Anc(page.replace("ANC 노이즈캔슬링", "일반 이어폰"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt16Anc(page.replace("cafe24_ylintlshop_1_990", "cafe24_ylintlshop_1_991"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt16Anc(page.replace("/990/", "/991/"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt16Anc(page + "<h1>다른 모델</h1>")).isFalse();
+    }
 }

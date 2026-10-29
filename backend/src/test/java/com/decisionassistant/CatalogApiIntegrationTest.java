@@ -157,6 +157,22 @@ class CatalogApiIntegrationTest {
         assertThat(facts.get(2).fetchedAt()).isAfter(now);
         verify(specificationSource, times(1)).fetch();
     }
+    @Test void ht16ReviewPersistsOnlyExactOfficialModel() throws Exception {
+        var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=990";
+        var name = "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("ANC 지원", "지원", url, "ANC 노이즈캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchHt16()).thenReturn("<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/990/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_990\"}</script>");
+        var worker = new Ht16SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        verify(specificationSource, times(1)).fetchHt16();
+    }
     @Test void ht19ReviewRequiresExactSourceAndPersistsOnlyMatchingWaterResistance() throws Exception {
         var id = "qcy-ht19"; var old = Instant.now().minus(Duration.ofDays(91));
         var source = "https://www.qcy.com/products/qcy-melobuds-n60";

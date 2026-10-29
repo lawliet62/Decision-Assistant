@@ -6,9 +6,9 @@
 
 판매처별 개발·수정 및 장애 조사 시간, 수집 API 비용을 에이전트 사용량과 결과 검토 비용에 비교한다. 코드 방식의 총비용이 더 크다는 근거가 생기면 에이전트 갱신을 권고하고 판단 근거와 미측정 비용을 기록한다. 현재 두 방식의 총비용과 장기 안정성은 비교되지 않았다. 결정과 대안은 [ADR 0016](decisions/0016-curated-catalog.md#갱신-방식과-비용-판단)에 기록한다. 개발 환경에서 실제 동작을 확인한 뒤 운영 호스팅과 PostgreSQL을 설계한다.
 
-QCY T13 Pro의 ANC·호환성·방수, QCY HT19의 ANC·방수와 Apple AirPods Pro 3와 AirPods 5 무선 충전 케이스 모델의 ANC·방수는 모델·항목·값이 일치하면 확인 시각을 자동 갱신할 수 있다. HT19는 제조사 페이지에서 MeloBuds N60과 HT19의 연결 및 ANC 지원을 확인하고, 방수는 사양표의 IPX5도 대조한다. 소니 Float Run의 단일 상품 DOM 가격 검증은 구현했지만 실제 Firecrawl 응답에서 검증에 실패하여 상품을 비활성으로 유지한다.
+QCY T13 Pro의 ANC·호환성·방수, QCY HT16의 ANC, HT19의 ANC·방수와 Apple AirPods Pro 3와 AirPods 5 무선 충전 케이스 모델의 ANC·방수는 모델·항목·값이 일치하면 확인 시각을 자동 갱신할 수 있다. HT16은 국내 공식 판매 페이지의 제품명과 상품 번호를 함께 확인한다. HT19는 제조사 페이지에서 MeloBuds N60과 HT19의 연결 및 ANC 지원을 확인하고, 방수는 사양표의 IPX5도 대조한다. 소니 Float Run의 단일 상품 DOM 가격 검증은 구현했지만 실제 Firecrawl 응답에서 검증에 실패하여 상품을 비활성으로 유지한다.
 
-사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro, HT19와 Apple AirPods Pro 3 및 AirPods 5의 공식 페이지를 각각 7일 간격으로 확인한다. 기본값은 false다. 모델명과 사양 영역의 항목·값·기존 출처 및 인용이 일치한 항목만 갱신한다. QCY ANC는 같은 모델의 제품명과 공식 페이지 설명을 대조한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 확인 가능한 사양이 있을 때만 요청 전에 시도를 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. 자동 확인 범위 밖의 사양은 기존 수동 검토 대상이다.
+사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro, HT16, HT19와 Apple AirPods Pro 3 및 AirPods 5의 공식 페이지를 각각 7일 간격으로 확인한다. 기본값은 false다. 모델명과 사양 영역의 항목·값·기존 출처 및 인용이 일치한 항목만 갱신한다. QCY ANC는 같은 모델의 제품명과 공식 페이지 설명을 대조한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 확인 가능한 사양이 있을 때만 요청 전에 시도를 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. 자동 확인 범위 밖의 사양은 기존 수동 검토 대상이다.
 
 GitHub Actions의 출처 점검은 운영 DB에 접근하지 않으므로 자동 갱신된 DB 시각을 알지 못하고 manifest의 원래 시각 기준으로 기한 경고를 표시할 수 있다. 해당 경고를 DB 확인 결과와 대조한다. 개발 환경에서는 실제 QCY와 Apple 페이지 조회 후 각각 두 항목의 확인 시각과 다음 시도 시각이 PostgreSQL에 저장되는 것을 확인했다. 별도 개발 시험 DB에서는 실제 페이지 조회로 QCY T13 Pro의 ANC·호환성·방수, HT19의 ANC·방수와 Apple의 ANC·방수 확인 시각 및 다음 시도 시각이 저장됐다.
 
@@ -36,7 +36,7 @@ worker는 기본 60초마다 최대 한 제품을 claim하고 제품별 시도 �
 
 ## 제품·사양 관리
 
-매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT19, AirPods Pro 3와 AirPods 5의 공식 페이지 네 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
+매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT16, HT19, AirPods Pro 3와 AirPods 5의 공식 페이지 다섯 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
 
 작업 요약에서 `QUOTE_PRESENT`는 단순 문구 존재, `QUOTE_MISSING`은 미발견, `UNAVAILABLE`은 접근 실패, `UNSUPPORTED_SOURCE`는 허용된 고정 주소가 아닌 사양이다. 제목은 등록된 예상 제목과 비교하며 `MATCH`, `MISMATCH`, `UNAVAILABLE`로 표시한다. 문구가 다른 상품·추천 영역에 나타날 수도 있고 제목만으로 모델을 확정할 수 없으므로 **제목과 문구 일치는 동일 모델이나 사양의 정확성을 검증하지 않는다**. 점검 기한이 7일 이내이거나 제목 불일치·문구 미발견·접근 실패가 있으면 작업을 실패로 표시한다. 광고 문구 등 제목의 무해한 변경도 경고가 될 수 있으므로 실제 모델을 확인한 뒤 예상 제목을 수정한다. 수집 실패의 HTTP 상태와 크기 초과는 간단한 코드만 남긴다. GitHub 알림 수신 여부는 계정 설정에 달려 있으며 예약 자체가 누락된 경우 이 workflow가 알림을 보장하지 않는다.
 

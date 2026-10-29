@@ -7,6 +7,28 @@ import java.util.*;
 final class QcySpecificationVerifier {
     private QcySpecificationVerifier() {}
 
+    static boolean matchesHt16Anc(String html) {
+        if (html == null || html.length() > 2_000_000) return false;
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=990";
+        var name = "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙";
+        var doc = Jsoup.parse(html, url);
+        var canonical = doc.select("link[rel=canonical]");
+        var headings = doc.select("h1");
+        if (canonical.size() != 1 || !OfficialProductParser.samePage(url, canonical.first().absUrl("href"))
+                || !doc.title().equals(name + " - QCY스토어") || headings.size() != 1 || !headings.first().text().equals(name)) return false;
+        int matches = 0;
+        for (var script : doc.select("script[type=application/ld+json]")) {
+            try {
+                var item = tools.jackson.databind.json.JsonMapper.builder().build().readTree(script.data());
+                if ("ProductGroup".equals(item.path("@type").asText(""))) {
+                    if (!name.equals(item.path("name").asText("")) || !"cafe24_ylintlshop_1_990".equals(item.path("productGroupID").asText(""))) return false;
+                    matches++;
+                }
+            } catch (RuntimeException ignored) { return false; }
+        }
+        return matches == 1;
+    }
+
     static boolean matchesHt19WaterResistance(String html) {
         return matchesHt19ModelAndAnc(html) && matches(html, "QCY MeloBuds N60", "Water Resistance Range", "IPX5");
     }
