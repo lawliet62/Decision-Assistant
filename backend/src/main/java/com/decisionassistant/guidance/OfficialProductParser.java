@@ -47,6 +47,14 @@ final class OfficialProductParser {
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
+        if (store.id().equals("sennheiser-kr")) {
+            if (!catalog || !"https://kr.sennheiser-hearing.com/product/detail.html?product_no=731".equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var verified = SennheiserProductVerifier.price(page.html()).orElse(null);
+            if (verified == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct("모멘텀 트루 와이어리스 5", "sennheiser-kr:cafe24_bnispace_1_731",
+                    new OfficialOffer(requestedUrl, store.name(), verified, "KRW", null, fetchedAt,
+                            "공식 상품 색상별 가격과 구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + verified + "원"), null);
+        }
         var products = new ArrayList<JsonNode>();
         for (var script : doc.select("script[type=application/ld+json]")) {
             if (script.data().length() > 200_000) continue;
@@ -195,6 +203,7 @@ final class OfficialProductParser {
             var parts = uri.getPath().split("/");
             if (parts.length > 3) return parts[3];
         }
+        if ("kr.sennheiser-hearing.com".equalsIgnoreCase(uri.getHost())) return "731";
         return uri.getPath().replaceFirst("/$", "");
     }
 }
