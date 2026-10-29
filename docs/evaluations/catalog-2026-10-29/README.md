@@ -114,3 +114,20 @@ QCY 한국 공식몰의 상품 번호 563에서 T17 APP의 커널형 제품명�
 사양 페이지 조회에 응답 본문 완료까지 15초와 2MB 제한을 적용한 뒤 별도 개발 DB에서 QCY·Apple 활성 상품 6개와 시험용 Marshall 페이지를 다시 확인했다. 모든 항목의 확인 시각이 저장됐으며 추가 Firecrawl 호출은 없었다. 헤더 이후 전송이 멈춘 응답, 크기 초과와 리다이렉트는 로컬 서버 테스트로 별도 검증했다.
 
 동일 사양 영역에 모델명 행이 여러 개 있으면 거절하도록 강화한 뒤 공식 T13 Pro와 MeloBuds N60 페이지를 직접 다시 조회했다. 실제 응답을 현재 검증기에 전달한 결과 T13 Pro의 ANC·호환성·방수와 HT19의 ANC·방수가 모두 일치했다. 이 검사는 단일 시점의 페이지·검증기 대조이며 DB 갱신이나 장기 안정성을 재검증한 것은 아니다. 추가 Firecrawl 호출은 없었다.
+
+## 활성 8개 제품의 실제 가격 갱신
+
+2026-10-30 05:48~05:49 KST, 현재 manifest의 활성 8개 제품을 임시 PostgreSQL에 등록한 뒤 개발 Secret Manager 인증과 실제 Firecrawl adapter를 사용하는 가격 worker를 제품당 한 번씩 순차 실행했다. 각 요청 전에 시험 DB에 호출을 예약했으며 관측과 판매가를 저장했다. 시험에서는 실제 스케줄러의 24시간 대기를 기다리지 않고 worker를 직접 호출했다.
+
+| 상품 ID | 결과 | 확인 판매가 |
+| --- | --- | ---: |
+| apple-airpods-5-wireless | VERIFIED | 229,000 KRW |
+| apple-airpods-pro-3 | VERIFIED | 369,000 KRW |
+| marshall-motif-ii-anc | VERIFIED | 269,000 KRW |
+| qcy-ht16 | VERIFIED | 31,800 KRW |
+| qcy-ht19 | VERIFIED | 48,500 KRW |
+| qcy-t13-pro | VERIFIED | 22,900 KRW |
+| qcy-t17-app | VERIFIED | 29,900 KRW |
+| sennheiser-momentum-tw5 | VERIFIED | 429,000 KRW |
+
+8건 모두 시험 DB에 VERIFIED 관측으로 저장됐다. 별도 개발 DB의 월 예약도 호출 전에 37회에서 45회로 올렸고, 이전 별도 시험 DB의 세 건까지 이번 달 관측 예약은 총 48회다. 계정의 다른 사용량은 확인하지 않았다. 시험 코드는 제거했고 원문과 자격 증명은 저장하지 않았다. 이 결과는 단일 시점의 실제 수집·DB 경로 확인이며 가격의 일중 정확성, 예약 실행의 지속성이나 실제 주문 성공을 보증하지 않는다.
