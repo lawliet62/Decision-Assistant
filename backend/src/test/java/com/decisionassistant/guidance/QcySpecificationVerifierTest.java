@@ -17,6 +17,7 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matches(PAGE.replace("IPX4", "IPX5"), "QCY T13 Pro", "Water Resistance Range", "IPX4")).isFalse();
         assertThat(QcySpecificationVerifier.matches(PAGE.replace("IPX4", "IPX4<br>Water Resistance Range: IPX5"), "QCY T13 Pro", "Water Resistance Range", "IPX4")).isFalse();
         assertThat(QcySpecificationVerifier.matches(PAGE.replace("IPX4", "IPX5") + "<aside>Water Resistance Range: IPX4</aside>", "QCY T13 Pro", "Water Resistance Range", "IPX4")).isFalse();
+        assertThat(QcySpecificationVerifier.matches(PAGE.replace("Product Name: QCY T13 Pro", "Product Name: QCY T13 Pro<br>Product Name: another model"), "QCY T13 Pro", "Water Resistance Range", "IPX4")).isFalse();
     }
     @Test void ancRequiresTheExactModelAndItsDescription() {
         var page = "<title>QCY T13 Pro – QCY Official</title><meta name='description' content='50dB Adaptive ANC Up to 47H Playtime'>" + PAGE;
@@ -25,6 +26,7 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesAnc(page.replace("50dB Adaptive ANC", "No ANC"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesAnc(page + "<meta name='description' content='No ANC'>")).isFalse();
         assertThat(QcySpecificationVerifier.matchesAnc(page.replace("Playtime", "Playtime without ANC"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesAnc(page.replace("Product Name: QCY T13 Pro", "Product Name: QCY T13 Pro<br>Product Name: another model"))).isFalse();
     }
     @Test void ht19RequiresModelMappingAndUnambiguousWaterResistance() {
         var page = "<title>QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official</title>"
@@ -39,6 +41,9 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(page.replace("56dB ANC", "No ANC"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(page.replace("Product Name: QCY MeloBuds N60", "Product Name: another model"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(page.replace("IPX5", "IPX4"))).isTrue();
+        var ambiguous = page.replace("Product Name: QCY MeloBuds N60", "Product Name: QCY MeloBuds N60<br>Product Name: another model");
+        assertThat(QcySpecificationVerifier.matchesHt19ModelAndAnc(ambiguous)).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt19WaterResistance(ambiguous)).isFalse();
     }
     @Test void ht16AncRequiresExactProductAndExplicitTitle() {
         var name = "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙";

@@ -47,7 +47,7 @@ final class QcySpecificationVerifier {
         return doc.title().equals("QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official")
                 && subtitles.size() == 1
                 && subtitles.first().text().equals("Bluetooth 6.0, 56dB ANC, Hi-Res, 45-Hour Playtime, HT19")
-                && models.size() == 1;
+                && models.size() == 1 && hasOnlyModel(models.getFirst(), "QCY MeloBuds N60");
     }
 
     static boolean matchesAnc(String html) {
@@ -57,7 +57,7 @@ final class QcySpecificationVerifier {
         var models = doc.select(".specification-content").stream().filter(section -> rows(section).stream()
                 .anyMatch(row -> row.equals("Product Name: QCY T13 Pro"))).toList();
         var descriptions = doc.select("meta[name=description]");
-        if (models.size() != 1 || descriptions.size() != 1) return false;
+        if (models.size() != 1 || !hasOnlyModel(models.getFirst(), "QCY T13 Pro") || descriptions.size() != 1) return false;
         var description = descriptions.first().attr("content").replaceAll("\\s+", " ").strip();
         return description.startsWith("50dB Adaptive ANC ")
                 && !description.matches("(?is).*(?:no\\s+anc|without\\s+anc|anc\\s+(?:not supported|unsupported)).*");
@@ -69,10 +69,15 @@ final class QcySpecificationVerifier {
         var sections = doc.select(".specification-content");
         var modelSections = sections.stream().filter(section -> rows(section).stream()
                 .anyMatch(row -> row.equals("Product Name: " + model))).toList();
-        if (modelSections.size() != 1) return false;
+        if (modelSections.size() != 1 || !hasOnlyModel(modelSections.getFirst(), model)) return false;
         var prefix = label + ":";
         var entries = rows(modelSections.getFirst()).stream().filter(row -> row.startsWith(prefix)).toList();
         return entries.size() == 1 && entries.getFirst().equals(prefix + " " + value);
+    }
+
+    private static boolean hasOnlyModel(org.jsoup.nodes.Element section, String model) {
+        var modelRows = rows(section).stream().filter(row -> row.startsWith("Product Name:")).toList();
+        return modelRows.size() == 1 && modelRows.getFirst().equals("Product Name: " + model);
     }
 
     private static List<String> rows(org.jsoup.nodes.Element section) {
