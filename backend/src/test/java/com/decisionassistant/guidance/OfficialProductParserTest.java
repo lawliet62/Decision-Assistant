@@ -24,17 +24,18 @@ class OfficialProductParserTest {
                 + "<p class='product_tit'>플로트 런 Float Run</p><div class='product_price has_sale'>"
                 + "<div class='original'><span class='price'>169,000</span>원</div><div class='sale'><strong class='price'>159,000</strong>원</div></div>"
                 + "<div class='prd_select_box'></div><div class='result_btn_box'><a class='direct' href='/order/sheet'>바로 구매</a></div></div>";
-        var result = OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now());
+        var result = OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now(), true);
         assertThat(result.product().offer().price()).isEqualByComparingTo("159000");
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now()).product()).isNull();
         for (var invalid : List.of(html.replace("159,000", "회원 159,000"), html.replace("prd_select_box", "color_select"),
                 html.replace("/order/sheet", "/other"), html.replace("바로 구매", "일시품절"), html.replace("Float Run</p>", "다른 모델</p>"),
                 html.replace("159,000</strong>", "159,000</strong><b class='price'>140,000</b>")))
-            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now()).product()).isNull();
-        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url + "2"), Instant.now()).product()).isNull();
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now(), true).product()).isNull();
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url + "2"), Instant.now(), true).product()).isNull();
         assertThat(OfficialStorePolicy.store(url + "?option=other")).isEmpty();
-        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", "<title>소니</title>", url), Instant.now()).rejection())
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", "<title>소니</title>", url), Instant.now(), true).rejection())
                 .isEqualTo(OfficialProductParser.Rejection.PRODUCT_MISSING);
-        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html + html, url), Instant.now()).rejection())
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html + html, url), Instant.now(), true).rejection())
                 .isEqualTo(OfficialProductParser.Rejection.PRODUCT_AMBIGUOUS);
     }
 

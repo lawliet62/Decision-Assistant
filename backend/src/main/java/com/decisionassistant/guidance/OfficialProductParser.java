@@ -32,6 +32,10 @@ final class OfficialProductParser {
     }
 
     static Result inspect(String requestedUrl, WebEvidenceProvider.Page page, Instant fetchedAt) {
+        return inspect(requestedUrl, page, fetchedAt, false);
+    }
+
+    static Result inspect(String requestedUrl, WebEvidenceProvider.Page page, Instant fetchedAt, boolean catalog) {
         var store = OfficialStorePolicy.store(requestedUrl).orElse(null);
         if (store == null) return Result.rejected(Rejection.UNREGISTERED_STORE);
         if (page.html() == null) return Result.rejected(Rejection.HTML_MISSING);
@@ -42,7 +46,7 @@ final class OfficialProductParser {
         var doc = Jsoup.parse(page.html(), requestedUrl);
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
-        if (store.id().equals("sony-kr")) return inspectSony(doc, requestedUrl, store, fetchedAt);
+        if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
         var products = new ArrayList<JsonNode>();
         for (var script : doc.select("script[type=application/ld+json]")) {
             if (script.data().length() > 200_000) continue;

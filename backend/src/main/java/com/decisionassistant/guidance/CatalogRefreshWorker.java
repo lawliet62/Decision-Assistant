@@ -48,7 +48,7 @@ public class CatalogRefreshWorker {
         OfficialProductParser.Result inspected = null;
         String outcome;
         try {
-            inspected = OfficialProductParser.inspect(work.url(), provider.scrapeProduct(work.url()), Instant.now());
+            inspected = OfficialProductParser.inspect(work.url(), provider.scrapeProduct(work.url()), Instant.now(), true);
             outcome = inspected.product() == null ? inspected.rejection().name()
                     : work.identity().equals(inspected.product().identity()) ? "VERIFIED" : "MODEL_MISMATCH";
         } catch (RuntimeException ex) { outcome = "COLLECTION_FAILED"; }
