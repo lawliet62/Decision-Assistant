@@ -56,6 +56,7 @@ public class CatalogImporter implements ApplicationRunner {
                          || AnkerProductVerifier.AERO_URL.equals(f.sourceUrl()) && AnkerProductVerifier.AERO_URL.equals(e.purchaseUrl())
                          || AnkerLibertySpecificationVerifier.URL.equals(f.sourceUrl()) && AnkerProductVerifier.LIBERTY_URL.equals(e.purchaseUrl())
                          || AnkerLibertyProSpecificationVerifier.URL.equals(f.sourceUrl()) && AnkerProductVerifier.PRO_URL.equals(e.purchaseUrl())
+                         || AnkerP41iVerifier.SPEC_URL.equals(f.sourceUrl()) && AnkerP41iVerifier.URL.equals(e.purchaseUrl())
                          || Set.of("marshall-kr", "sennheiser-kr").contains(OfficialStorePolicy.store(f.sourceUrl()).map(OfficialStorePolicy.Store::id).orElse(""))))
                 throw new IllegalArgumentException("등록된 공식 출처만 사양 근거로 허용합니다.");
         }

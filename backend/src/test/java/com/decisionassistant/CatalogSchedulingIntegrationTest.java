@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
 @SpringBootTest(properties = {"decision-assistant.catalog.enabled=true", "decision-assistant.catalog.manifest=classpath:catalog/earbuds.json",
         "decision-assistant.catalog.refresh-enabled=true", "decision-assistant.catalog.poll-interval=200",
         "decision-assistant.catalog.spec-refresh-enabled=true", "decision-assistant.catalog.spec-poll-interval=200",
-        "decision-assistant.catalog.monthly-limit=19", "decision-assistant.web.enabled=true", "decision-assistant.web.api-key=test"})
+        "decision-assistant.catalog.monthly-limit=20", "decision-assistant.web.enabled=true", "decision-assistant.web.api-key=test"})
 @ActiveProfiles("test") @Import(DecisionApiIntegrationTest.TestSecurityConfiguration.class)
 @org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 class CatalogSchedulingIntegrationTest {
@@ -39,6 +39,7 @@ class CatalogSchedulingIntegrationTest {
     @MockitoBean AnkerAeroclipSpecificationSource aeroclip;
     @MockitoBean AnkerLibertySpecificationSource liberty;
     @MockitoBean AnkerLibertyProSpecificationSource libertyPro;
+    @MockitoBean AnkerP41iSpecificationSource p41i;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean ProductDiscoverer ai;
@@ -50,16 +51,16 @@ class CatalogSchedulingIntegrationTest {
         while (Instant.now().isBefore(deadline)) {
             priceAttempts = jdbc.queryForObject("select count(*) from catalog_observations where outcome='COLLECTION_FAILED'", Integer.class);
             specAttempts = jdbc.queryForObject("select count(*) from catalog_spec_attempts", Integer.class);
-            if (priceAttempts == 19 && specAttempts == 18) break;
+            if (priceAttempts == 20 && specAttempts == 19) break;
             Thread.sleep(100);
         }
-        assertThat(priceAttempts).isEqualTo(19);
-        assertThat(specAttempts).isEqualTo(18);
+        assertThat(priceAttempts).isEqualTo(20);
+        assertThat(specAttempts).isEqualTo(19);
         Thread.sleep(1000); // 여러 scheduler tick에서 재시도가 발생하지 않는지 확인한다.
-        assertThat(jdbc.queryForObject("select count(*) from catalog_observations", Integer.class)).isEqualTo(19);
-        assertThat(jdbc.queryForObject("select calls from catalog_monthly_usage", Integer.class)).isEqualTo(19);
-        assertThat(jdbc.queryForObject("select count(*) from catalog_products where active and next_attempt_at >= last_attempt_at + interval '24 hours'", Integer.class)).isEqualTo(19);
-        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where next_attempt_at > now() + interval '6 days'", Integer.class)).isEqualTo(18);
-        verify(web, times(19)).scrapeProduct(anyString());
+        assertThat(jdbc.queryForObject("select count(*) from catalog_observations", Integer.class)).isEqualTo(20);
+        assertThat(jdbc.queryForObject("select calls from catalog_monthly_usage", Integer.class)).isEqualTo(20);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_products where active and next_attempt_at >= last_attempt_at + interval '24 hours'", Integer.class)).isEqualTo(20);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where next_attempt_at > now() + interval '6 days'", Integer.class)).isEqualTo(19);
+        verify(web, times(20)).scrapeProduct(anyString());
     }
 }

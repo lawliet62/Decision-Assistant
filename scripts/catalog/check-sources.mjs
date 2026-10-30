@@ -16,6 +16,7 @@ const sources = new Map([
   ["anker-aeroclip-a3388", ["https://ankerkorea.co.kr/product/detail.html?product_no=45", "에어로클립 오픈형 러닝 블루투스이어폰 A3388"]],
   ["anker-liberty5-a3957", ["https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds", "soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby 3D Audio"]],
   ["anker-liberty5-pro-d1203", ["https://www.ankerjapan.com/products/d1203", "Soundcore Liberty 5 Pro | ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア"]],
+  ["anker-p41i-a3937", ["https://www.ankerjapan.com/products/a3937", "Soundcore P41i | 完全ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア"]],
   ["qcy-t29-app", ["https://qcystore.co.kr/product/detail.html?product_no=709", "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버 - QCY스토어"]],
   ["qcy-t17-app", ["https://qcystore.co.kr/product/detail.html?product_no=563", "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙 - QCY스토어"]],
   ["qcy-ht19", ["https://www.qcy.com/products/qcy-melobuds-n60", "QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official"]],

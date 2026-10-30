@@ -4,6 +4,8 @@
 
 ## 추가 상품 후보의 가격 검증 경계
 
+2026-10-31 KST, [앤커 P41i A3937](https://ankerkorea.co.kr/product/detail.html?product_no=91)의 비회원 화면에서 기본가 129,990원과 총 결제금액 69,900원을 확인했다. 실제 Firecrawl 응답도 단일 상품·재고·할인가를 대조하는 당시 파서를 통과했다. 이후 구조화 offer의 URL query와 상품 상태에 대한 조건을 추가했으며 원 응답은 다시 수집하지 않았다. 호출 전 개발 DB의 UTC 월 예약은 59회에서 60회로 늘렸다. [동일 모델 제조사 페이지](https://www.ankerjapan.com/products/a3937)의 적응형 노이즈 캔슬링 설명도 전용 검증기에 통과했다. 실제 가격 DB 저장과 장기 예약 실행은 아직 확인하지 않았다. 주문·결제와 OpenAI 호출은 없었다.
+
 2026-10-31 KST, [앤커 리버티 5 프로 D1203](https://ankerkorea.co.kr/product/detail.html?product_no=154)의 비회원 화면에서 네 색상 모두 기본가 249,900원과 총 결제금액 214,900원을 확인했다. 실제 Firecrawl 응답도 같은 모델·색상·가격을 대조하는 파서를 통과했다. 호출 전 개발 DB의 UTC 월 예약은 58회에서 59회로 늘렸다. [제조사 공식 페이지](https://www.ankerjapan.com/products/d1203)의 같은 모델·IP55 사양도 전용 검증기에 통과했다. 실제 가격 DB 저장과 장기 예약 실행은 아직 확인하지 않았다. ANC는 제조사 지원 페이지에 설명이 있지만 현재 출처 점검이 요구하는 고유 HTML 제목을 확인할 수 없었고 다른 공식 페이지는 크기 제한을 초과해 자동 갱신 근거로 등록하지 않았다. 주문·결제와 OpenAI 호출은 없었다.
 
 2026-10-31 KST, [앤커 리버티 5 A3957 상품 40](https://ankerkorea.co.kr/product/detail.html?product_no=40)은 로그인하지 않은 화면에서 블랙·화이트 모두 기본가 139,990원과 총 결제금액 99,900원을 표시했다. 실제 공식 HTML과 Firecrawl 응답은 상품·두 색상·추가금·할인 가격을 확인하는 파서에서 99,900원으로 검증됐다. Firecrawl 호출 전 개발 DB의 UTC 월 예약을 57회에서 58회로 늘렸다. 같은 A3957 모델의 [제조사 페이지](https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds)에서 ANC 지원을 확인했다. 실제 가격 DB 저장과 장기 예약 실행은 아직 확인하지 않았다. 주문·결제와 OpenAI 호출은 없었으며 원문과 일회성 시험 코드는 보관하지 않았다.

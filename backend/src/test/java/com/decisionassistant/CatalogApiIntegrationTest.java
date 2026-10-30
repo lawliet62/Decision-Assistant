@@ -56,6 +56,7 @@ class CatalogApiIntegrationTest {
     @MockitoBean AnkerAeroclipSpecificationSource ankerAeroclipSpecificationSource;
     @MockitoBean AnkerLibertySpecificationSource ankerLibertySpecificationSource;
     @MockitoBean AnkerLibertyProSpecificationSource ankerLibertyProSpecificationSource;
+    @MockitoBean AnkerP41iSpecificationSource ankerP41iSpecificationSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -328,6 +329,33 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
         verify(marshallSpecificationSource, times(1)).fetchMinorIv();
+    }
+    @Test void p41iRefreshStoresDiscountAndAnc() throws Exception {
+        var id = "anker-p41i-a3937"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=91";
+        var source = "https://www.ankerjapan.com/products/a3937"; var old = Instant.now().minus(Duration.ofDays(91));
+        var name = "앤커 사운드코어 P41i 노이즈캔슬링 블루투스이어폰 A3937";
+        var quote = "周囲の騒音レベルに応じてノイズキャンセリングの強さを自動で調節";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "anker-kr:91", List.of(new CatalogProduct.Fact(
+                new ProductFact("ANC 지원", "지원", source, quote, old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(web.scrapeProduct(url)).thenReturn(new WebEvidenceProvider.Page("", "", AnkerP41iVerifierTest.page(), url));
+        worker.refreshNext();
+        assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("69900");
+        when(ankerP41iSpecificationSource.fetch()).thenReturn(AnkerP41iVerifierTest.spec());
+        var spec = new AnkerP41iSpecificationRefreshWorker(true, catalogProperties, products, jdbc, ankerP41iSpecificationSource, transactionManager);
+        spec.refresh(); spec.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
+        verify(ankerP41iSpecificationSource, times(1)).fetch();
+        var body = BODY.replace("\"maxBudget\":50000", "\"maxBudget\":100000").replace("\"compatibility\":\"Android\",", "");
+        var result = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        var decision = json.readTree(result).path("id").asText();
+        mvc.perform(get("/api/v1/decisions/" + decision).with(owner)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer.price").value(69900))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
     }
     @Test void libertyProRefreshStoresDiscountAndWaterResistance() throws Exception {
         var id = "anker-liberty5-pro-d1203"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=154";
