@@ -11,17 +11,21 @@ class AnkerProductVerifierTest {
     private static final String[] COLORS = {"블랙", "블루", "핑크", "화이트"};
     private static final String[] CODES = {"P00000BR000B", "P00000BR000C", "P00000BR000D", "P00000BR000E"};
     private static final Instant NOW = Instant.parse("2026-10-30T00:00:00Z");
-    private static String page() { return page(false); }
-    private static String page(boolean aero) {
+    private static String page() { return page(0); }
+    private static String page(boolean aero) { return page(aero ? 1 : 0); }
+    private static String page(int type) {
         var variants = new ArrayList<Map<String, Object>>(); var stock = new LinkedHashMap<String, Object>();
         var options = new StringBuilder("<option value='*'>선택</option><option value='**' disabled>---</option>");
-        var colors = aero ? new String[]{"블랙", "화이트", "핑크", "블루"} : COLORS;
-        var codes = aero ? new String[]{"P00000BT000B", "P00000BT000C", "P00000BT000D", "P00000BT000E"} : CODES;
-        var number = aero ? "45" : "43"; var name = aero ? AnkerProductVerifier.AERO_NAME : AnkerProductVerifier.NAME;
-        for (int i = 0; i < COLORS.length; i++) {
+        var colors = type == 1 ? new String[]{"블랙", "화이트", "핑크", "블루"} : type == 2 ? new String[]{"블랙", "화이트"} : COLORS;
+        var codes = type == 1 ? new String[]{"P00000BT000B", "P00000BT000C", "P00000BT000D", "P00000BT000E"}
+                : type == 2 ? new String[]{"P00000BO000B", "P00000BO000C"} : CODES;
+        var number = type == 1 ? "45" : type == 2 ? "40" : "43";
+        var name = type == 1 ? AnkerProductVerifier.AERO_NAME : type == 2 ? AnkerProductVerifier.LIBERTY_NAME : AnkerProductVerifier.NAME;
+        var dimension = type == 2 ? "옵션선택" : "색상선택";
+        for (int i = 0; i < colors.length; i++) {
             var color = colors[i]; var code = codes[i];
             variants.add(Map.of("@type", "Product", "name", name + " " + color, "sku", "cafe24_ankerkr_1_" + number + "_" + code,
-                    "additionalProperty", List.of(Map.of("@type", "PropertyValue", "name", "색상선택", "value", color)),
+                    "additionalProperty", List.of(Map.of("@type", "PropertyValue", "name", dimension, "value", color)),
                     "offers", Map.of("@type", "Offer", "url", "https://ankerkorea.co.kr/product/anker/" + number + "/?item_code=" + code,
                             "price", 59990, "priceCurrency", "KRW", "availability", "https://schema.org/InStock", "priceValidUntil", "2030-12-31 00:00")));
             stock.put(code, Map.of("option_value", color, "is_selling", "T", "is_display", "T", "is_auto_soldout", "F", "is_reserve_stat", "N",
@@ -29,14 +33,36 @@ class AnkerProductVerifierTest {
             options.append("<option value='").append(color).append("'>").append(color).append("</option>");
         }
         var group = JSON.writeValueAsString(Map.of("@type", "ProductGroup", "name", name,
-                "productGroupID", "cafe24_ankerkr_1_" + number, "variesBy", List.of("색상선택"), "hasVariant", variants));
+                "productGroupID", "cafe24_ankerkr_1_" + number, "variesBy", List.of(dimension), "hasVariant", variants));
         var stockString = JSON.writeValueAsString(stock).replace("\\", "\\\\").replace("\"", "\\\"");
         return "<link rel='canonical' href='https://ankerkorea.co.kr/product/anker/" + number + "/'>"
                 + "<script type='application/ld+json'>" + group + "</script><script>var option_stock_data = '" + stockString + "';var product_sale_price = 39900;</script>"
                 + "<div class='xans-product-detail'><table><tr><th>판매가</th><td><strong id='span_product_price_text'>59,990원</strong></td></tr>"
                 + "<tr><th>할인가</th><td><span id='span_optimum_discount_price'>39,900원</span></td></tr></table>"
-                + "<select product_type='product_option' option_product_no='" + number + "' option_title='색상선택'>" + options + "</select>"
+                + "<select product_type='product_option' option_product_no='" + number + "' option_title='" + dimension + "'>" + options + "</select>"
                 + "<div class='productAction'><a><span id='actionBuy'>구매하기</span></a></div></div>";
+    }
+    @Test void libertyRequiresItsOwnModelAndTwoOptions() {
+        var html = page(2);
+        assertThat(AnkerProductVerifier.libertyPrice(html, NOW)).hasValueSatisfying(p -> assertThat(p).isEqualByComparingTo("39900"));
+        assertThat(AnkerProductVerifier.aeroclipPrice(html, NOW)).isEmpty();
+        assertThat(AnkerProductVerifier.libertyPrice(html.replace("P00000BO000C", "P00000BO000D"), NOW)).isEmpty();
+        assertThat(AnkerProductVerifier.libertyPrice(html.replace("옵션선택", "사은품"), NOW)).isEmpty();
+        assertThat(AnkerProductVerifier.libertyPrice(html.replace("InStock", "OutOfStock"), NOW)).isEmpty();
+        assertThat(OfficialStorePolicy.store(AnkerProductVerifier.LIBERTY_URL)).isPresent();
+        assertThat(OfficialStorePolicy.store("https://ankerkorea.co.kr/product/anker/40/?item_code=P00000BT000B")).isEmpty();
+    }
+    @Test void libertyAncRequiresExactManufacturerModelAndPositiveFeature() {
+        var url = AnkerLibertySpecificationVerifier.URL;
+        var html = "<title>soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby 3D Audio</title>"
+                + "<link rel='canonical' href='" + url + "'><h1>soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio</h1>"
+                + "<meta name='description' content='Buy soundcore Liberty 5 earbuds with Dolby 3D Audio, adaptive ANC, and premium sound.'>"
+                + "<strong>Real-Time Adaptive ANC 3.0:</strong>";
+        assertThat(AnkerLibertySpecificationVerifier.matches(html)).isTrue();
+        assertThat(AnkerLibertySpecificationVerifier.matches(html.replace("a3957", "a3954"))).isFalse();
+        assertThat(AnkerLibertySpecificationVerifier.matches(html.replace("Liberty 5", "Liberty 4"))).isFalse();
+        assertThat(AnkerLibertySpecificationVerifier.matches(html.replace("adaptive ANC", "without ANC"))).isFalse();
+        assertThat(AnkerLibertySpecificationVerifier.matches(html.replace("Real-Time Adaptive ANC 3.0", "No ANC"))).isFalse();
     }
     @Test void aeroclipUsesOnlyItsOwnModelAndColorCodes() {
         var html = page(true);

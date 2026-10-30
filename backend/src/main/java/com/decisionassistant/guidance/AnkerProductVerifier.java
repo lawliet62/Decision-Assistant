@@ -16,9 +16,12 @@ final class AnkerProductVerifier {
     static final String NAME = "앤커 사운드코어 P31i(R60i NC) 노이즈캔슬링 무선 블루투스 이어폰 D1202";
     static final String AERO_URL = "https://ankerkorea.co.kr/product/detail.html?product_no=45";
     static final String AERO_NAME = "앤커 사운드코어 에어로클립 오픈형 블루투스이어폰 A3388";
-    private record Product(String url, String name, String number, Map<String, String> colors) {}
-    private static final Product P31I = new Product(URL, NAME, "43", Map.of("블랙", "P00000BR000B", "블루", "P00000BR000C", "핑크", "P00000BR000D", "화이트", "P00000BR000E"));
-    private static final Product AERO = new Product(AERO_URL, AERO_NAME, "45", Map.of("블랙", "P00000BT000B", "화이트", "P00000BT000C", "핑크", "P00000BT000D", "블루", "P00000BT000E"));
+    static final String LIBERTY_URL = "https://ankerkorea.co.kr/product/detail.html?product_no=40";
+    static final String LIBERTY_NAME = "앤커 사운드코어 리버티5 노이즈캔슬링 블루투스 이어폰 A3957";
+    private record Product(String url, String name, String number, String option, Map<String, String> colors) {}
+    private static final Product P31I = new Product(URL, NAME, "43", "색상선택", Map.of("블랙", "P00000BR000B", "블루", "P00000BR000C", "핑크", "P00000BR000D", "화이트", "P00000BR000E"));
+    private static final Product AERO = new Product(AERO_URL, AERO_NAME, "45", "색상선택", Map.of("블랙", "P00000BT000B", "화이트", "P00000BT000C", "핑크", "P00000BT000D", "블루", "P00000BT000E"));
+    private static final Product LIBERTY = new Product(LIBERTY_URL, LIBERTY_NAME, "40", "옵션선택", Map.of("블랙", "P00000BO000B", "화이트", "P00000BO000C"));
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final Pattern SALE = Pattern.compile("\\bvar\\s+product_sale_price\\s*=\\s*([0-9]+)\\s*;");
     private AnkerProductVerifier() {}
@@ -28,6 +31,9 @@ final class AnkerProductVerifier {
     }
     static Optional<BigDecimal> aeroclipPrice(String html, Instant now) {
         return price(html, now, AERO);
+    }
+    static Optional<BigDecimal> libertyPrice(String html, Instant now) {
+        return price(html, now, LIBERTY);
     }
     private static Optional<BigDecimal> price(String html, Instant now, Product product) {
         if (html == null || now == null || html.length() > 2_000_000) return Optional.empty();
@@ -43,13 +49,13 @@ final class AnkerProductVerifier {
         var group = groups.getFirst();
         if (!product.name().equals(group.path("name").asText("")) || !("cafe24_ankerkr_1_" + product.number()).equals(group.path("productGroupID").asText(""))
                 || !group.path("variesBy").isArray() || group.path("variesBy").size() != 1
-                || !"색상선택".equals(group.path("variesBy").get(0).asText("")) || !group.path("hasVariant").isArray()
+                || !product.option().equals(group.path("variesBy").get(0).asText("")) || !group.path("hasVariant").isArray()
                 || group.path("hasVariant").size() != product.colors().size()) return Optional.empty();
         var seen = new HashSet<String>(); var prices = new HashSet<BigDecimal>();
         for (var variant : group.path("hasVariant")) {
             var properties = variant.path("additionalProperty");
             if (!properties.isArray() || properties.size() != 1 || !"PropertyValue".equals(properties.get(0).path("@type").asText(""))
-                    || !"색상선택".equals(properties.get(0).path("name").asText(""))) return Optional.empty();
+                    || !product.option().equals(properties.get(0).path("name").asText(""))) return Optional.empty();
             var color = properties.get(0).path("value").asText(""); var code = product.colors().get(color); var offer = variant.path("offers");
             if (code == null || !seen.add(color) || !"Product".equals(variant.path("@type").asText(""))
                     || !(product.name() + " " + color).equals(variant.path("name").asText(""))
@@ -74,7 +80,7 @@ final class AnkerProductVerifier {
         var regular = prices.iterator().next();
         var selections = doc.select(".xans-product-detail select[product_type=product_option]");
         if (selections.size() != 1 || !product.number().equals(selections.first().attr("option_product_no"))
-                || !"색상선택".equals(selections.first().attr("option_title")) || selections.first().hasAttr("disabled")) return Optional.empty();
+                || !product.option().equals(selections.first().attr("option_title")) || selections.first().hasAttr("disabled")) return Optional.empty();
         var options = new HashSet<String>();
         for (var option : selections.first().select("option")) {
             var value = option.attr("value");

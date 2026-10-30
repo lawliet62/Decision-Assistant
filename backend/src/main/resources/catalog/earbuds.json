@@ -474,5 +474,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "anker-liberty5-a3957",
+    "revision": 1,
+    "name": "앤커 사운드코어 리버티5 노이즈캔슬링 블루투스 이어폰 A3957",
+    "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=40",
+    "expectedIdentity": "anker-kr:40",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds",
+          "quote": "Real-Time Adaptive ANC 3.0",
+          "fetchedAt": "2026-10-30T19:40:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

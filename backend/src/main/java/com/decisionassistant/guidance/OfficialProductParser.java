@@ -48,11 +48,15 @@ final class OfficialProductParser {
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
         if (store.id().equals("anker-kr")) {
-            if (!catalog || !(AnkerProductVerifier.URL.equals(requestedUrl) || AnkerProductVerifier.AERO_URL.equals(requestedUrl))) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            if (!catalog || !(AnkerProductVerifier.URL.equals(requestedUrl) || AnkerProductVerifier.AERO_URL.equals(requestedUrl)
+                    || AnkerProductVerifier.LIBERTY_URL.equals(requestedUrl))) return Result.rejected(Rejection.UNREGISTERED_STORE);
             var aero = AnkerProductVerifier.AERO_URL.equals(requestedUrl);
-            var verified = (aero ? AnkerProductVerifier.aeroclipPrice(page.html(), fetchedAt) : AnkerProductVerifier.price(page.html(), fetchedAt)).orElse(null);
+            var liberty = AnkerProductVerifier.LIBERTY_URL.equals(requestedUrl);
+            var verified = (aero ? AnkerProductVerifier.aeroclipPrice(page.html(), fetchedAt)
+                    : liberty ? AnkerProductVerifier.libertyPrice(page.html(), fetchedAt) : AnkerProductVerifier.price(page.html(), fetchedAt)).orElse(null);
             if (verified == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
-            return new Result(new OfficialProduct(aero ? AnkerProductVerifier.AERO_NAME : AnkerProductVerifier.NAME, aero ? "anker-kr:45" : "anker-kr:43", new OfficialOffer(requestedUrl, store.name(), verified,
+            return new Result(new OfficialProduct(aero ? AnkerProductVerifier.AERO_NAME : liberty ? AnkerProductVerifier.LIBERTY_NAME : AnkerProductVerifier.NAME,
+                    aero ? "anker-kr:45" : liberty ? "anker-kr:40" : "anker-kr:43", new OfficialOffer(requestedUrl, store.name(), verified,
                     "KRW", null, fetchedAt, "공식 상품의 색상·할인 판매가와 구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + verified + "원"), null);
         }
         if (store.id().equals("bose-kr")) {

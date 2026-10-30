@@ -54,6 +54,7 @@ class CatalogApiIntegrationTest {
     @MockitoBean SennheiserSpecificationSource sennheiserSpecificationSource;
     @MockitoBean AnkerP31iSpecificationSource ankerSpecificationSource;
     @MockitoBean AnkerAeroclipSpecificationSource ankerAeroclipSpecificationSource;
+    @MockitoBean AnkerLibertySpecificationSource ankerLibertySpecificationSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -326,6 +327,56 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
         verify(marshallSpecificationSource, times(1)).fetchMinorIv();
+    }
+    @Test void libertyRefreshStoresDiscountAndAnc() throws Exception {
+        var id = "anker-liberty5-a3957"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=40";
+        var source = "https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds"; var old = Instant.now().minus(Duration.ofDays(91));
+        var name = "앤커 사운드코어 리버티5 노이즈캔슬링 블루투스 이어폰 A3957";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "anker-kr:40", List.of(new CatalogProduct.Fact(
+                new ProductFact("ANC 지원", "지원", source, "Real-Time Adaptive ANC 3.0", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        var colors = new String[]{"블랙", "화이트"};
+        var variants = new ArrayList<Map<String, Object>>(); var stocks = new LinkedHashMap<String, Object>();
+        var options = new StringBuilder("<option value='*'>선택</option>");
+        for (int i = 0; i < colors.length; i++) {
+            var color = colors[i]; var code = "P00000BO000" + (char)('B' + i);
+            variants.add(Map.of("@type", "Product", "name", name + " " + color, "sku", "cafe24_ankerkr_1_40_" + code,
+                    "additionalProperty", List.of(Map.of("@type", "PropertyValue", "name", "옵션선택", "value", color)),
+                    "offers", Map.of("@type", "Offer", "url", "https://ankerkorea.co.kr/product/anker/40/?item_code=" + code,
+                            "price", 139990, "priceCurrency", "KRW", "availability", "https://schema.org/InStock",
+                            "priceValidUntil", LocalDate.now(ZoneId.of("Asia/Seoul")).plusYears(2) + " 00:00")));
+            stocks.put(code, Map.of("option_value", color, "is_selling", "T", "is_display", "T", "is_auto_soldout", "F", "is_reserve_stat", "N",
+                    "option_price", 139990, "stock_price", "0.00", "origin_option_added_price", "0.00"));
+            options.append("<option value='").append(color).append("'>").append(color).append("</option>");
+        }
+        var group = json.writeValueAsString(Map.of("@type", "ProductGroup", "name", name, "productGroupID", "cafe24_ankerkr_1_40",
+                "variesBy", List.of("옵션선택"), "hasVariant", variants));
+        var stock = json.writeValueAsString(stocks).replace("\\", "\\\\").replace("\"", "\\\"");
+        var html = "<link rel='canonical' href='https://ankerkorea.co.kr/product/anker/40/'><script type='application/ld+json'>" + group
+                + "</script><script>var option_stock_data = '" + stock + "';var product_sale_price = 99900;</script>"
+                + "<div class='xans-product-detail'><table><tr><th>판매가</th><td><strong id='span_product_price_text'>139,990원</strong></td></tr>"
+                + "<tr><th>할인가</th><td><span id='span_optimum_discount_price'>99,900원</span></td></tr></table>"
+                + "<select product_type='product_option' option_product_no='40' option_title='옵션선택'>" + options + "</select>"
+                + "<div class='productAction'><a><span id='actionBuy'>구매하기</span></a></div></div>";
+        when(web.scrapeProduct(url)).thenReturn(new WebEvidenceProvider.Page("", "", html, url));
+        worker.refreshNext();
+        assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("99900");
+        when(ankerLibertySpecificationSource.fetch()).thenReturn("<title>soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby 3D Audio</title>"
+                + "<link rel='canonical' href='" + source + "'><h1>soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio</h1>"
+                + "<meta name='description' content='Buy soundcore Liberty 5 earbuds with Dolby 3D Audio, adaptive ANC, and premium sound.'><strong>Real-Time Adaptive ANC 3.0:</strong>");
+        var spec = new AnkerLibertySpecificationRefreshWorker(true, catalogProperties, products, jdbc, ankerLibertySpecificationSource, transactionManager);
+        spec.refresh(); spec.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        verify(ankerLibertySpecificationSource, times(1)).fetch();
+        var body = BODY.replace("\"maxBudget\":50000", "\"maxBudget\":100000").replace("\"compatibility\":\"Android\",", "");
+        var result = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        var decision = json.readTree(result).path("id").asText();
+        mvc.perform(get("/api/v1/decisions/" + decision).with(owner)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer.price").value(99900))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
     }
     @Test void aeroclipRefreshStoresDiscountAndOpenForm() throws Exception {
         var id = "anker-aeroclip-a3388"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=45";
