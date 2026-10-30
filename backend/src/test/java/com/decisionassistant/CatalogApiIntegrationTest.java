@@ -338,6 +338,23 @@ class CatalogApiIntegrationTest {
         assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
         verify(sennheiserSpecificationSource, times(1)).fetch();
     }
+    @Test void ht10SpecificationRefreshSavesVerifiedAncOnce() throws Exception {
+        var id = "qcy-ht10-hires"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=924";
+        var name = "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("ANC 지원", "지원", url, "ANC APP 노이즈캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchHt10()).thenReturn("<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/924/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_924\"}</script>");
+        var worker = new Ht10SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
+        verify(specificationSource, times(1)).fetchHt10();
+    }
     @Test void t29SpecificationRefreshSavesVerifiedFormOnce() throws Exception {
         var id = "qcy-t29-app"; var old = Instant.now().minus(Duration.ofDays(91));
         var url = "https://qcystore.co.kr/product/detail.html?product_no=709";

@@ -67,6 +67,17 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("cafe24_ylintlshop_1_563", "cafe24_ylintlshop_1_564"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("/563/", "/564/"))).isFalse();
     }
+    @Test void ht10AncRequiresExactProductAndExplicitTitle() {
+        var name = "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/924/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_924\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page.replace("ANC", "ENC"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page.replace("HT10", "HT20"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page.replace("cafe24_ylintlshop_1_924", "cafe24_ylintlshop_1_925"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page.replace("/924/", "/925/"))).isFalse();
+    }
     @Test void t29FormRequiresExactProductAndExplicitTitle() {
         var name = "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버";
         var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"

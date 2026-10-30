@@ -16,6 +16,9 @@ final class QcySpecificationVerifier {
     static boolean matchesHt20Form(String html) {
         return matchesStoreProduct(html, "1028", "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍");
     }
+    static boolean matchesHt10Anc(String html) {
+        return matchesStoreProduct(html, "924", "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙");
+    }
     static boolean matchesT29Form(String html) {
         return matchesStoreProduct(html, "709", "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버");
     }

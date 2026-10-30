@@ -333,5 +333,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "qcy-ht10-hires",
+    "revision": 1,
+    "name": "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙",
+    "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=924",
+    "expectedIdentity": "qcy-kr:color-model:qcyht10hiresancapp노이즈캔슬링블루투스이어폰ldac",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://qcystore.co.kr/product/detail.html?product_no=924",
+          "quote": "ANC APP 노이즈캔슬링",
+          "fetchedAt": "2026-10-30T17:26:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

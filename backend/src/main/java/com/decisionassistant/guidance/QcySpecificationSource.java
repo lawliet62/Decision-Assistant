@@ -22,6 +22,9 @@ public class QcySpecificationSource {
     public String fetchHt20() throws Exception {
         return fetch(URI.create("https://qcystore.co.kr/product/detail.html?product_no=1028"));
     }
+    public String fetchHt10() throws Exception {
+        return fetch(URI.create("https://qcystore.co.kr/product/detail.html?product_no=924"));
+    }
     public String fetchT29() throws Exception {
         return fetch(URI.create("https://qcystore.co.kr/product/detail.html?product_no=709"));
     }

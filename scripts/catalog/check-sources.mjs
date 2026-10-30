@@ -9,6 +9,7 @@ const sources = new Map([
   ["qcy-t13-pro", ["https://www.qcy.com/products/qcy-t13-pro", "QCY T13 Pro – QCY Official"]],
   ["qcy-ht16", ["https://qcystore.co.kr/product/detail.html?product_no=990", "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙 - QCY스토어"]],
   ["qcy-ht20", ["https://qcystore.co.kr/product/detail.html?product_no=1028", "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍 - QCY스토어"]],
+  ["qcy-ht10-hires", ["https://qcystore.co.kr/product/detail.html?product_no=924", "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙 - QCY스토어"]],
   ["qcy-t29-app", ["https://qcystore.co.kr/product/detail.html?product_no=709", "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버 - QCY스토어"]],
   ["qcy-t17-app", ["https://qcystore.co.kr/product/detail.html?product_no=563", "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙 - QCY스토어"]],
   ["qcy-ht19", ["https://www.qcy.com/products/qcy-melobuds-n60", "QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official"]],
