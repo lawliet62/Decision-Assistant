@@ -73,7 +73,7 @@ final class OfficialProductParser {
             var varies = product.path("variesBy");
             var dimensions = varies.isArray() ? iterable(varies) : List.of(varies);
             if ((dimensions.isEmpty() || dimensions.stream().anyMatch(item -> !Set.of("color", "https://schema.org/color", "http://schema.org/color").contains(item.asText(""))))
-                    && !qcyColorSelection(store, product, variants, dimensions)) return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
+                    && !qcyColorSelection(store, product, variants, dimensions, requestedUrl)) return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
         }
         var rows = new ArrayList<JsonNode>();
         for (var variant : variants) {
@@ -162,16 +162,32 @@ final class OfficialProductParser {
         return new Result(new OfficialProduct(name, "sony-kr:109871591", new OfficialOffer(url, store.name(), price,
                 "KRW", null, at, "공식 상품 구매 영역의 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + raw + "원"), null);
     }
-    private static boolean qcyColorSelection(OfficialStorePolicy.Store store, JsonNode product, List<JsonNode> variants, List<JsonNode> dimensions) {
-        if (!store.id().equals("qcy-kr") || dimensions.size() != 1 || !dimensions.getFirst().asText("").equals("선택") || variants.isEmpty()) return false;
+    private static boolean qcyColorSelection(OfficialStorePolicy.Store store, JsonNode product, List<JsonNode> variants, List<JsonNode> dimensions, String requestedUrl) {
+        if (!store.id().equals("qcy-kr") || dimensions.size() != 1 || variants.isEmpty()) return false;
+        var dimension = dimensions.getFirst().asText("");
+        var ht20 = dimension.equals("옵션") && samePage(requestedUrl, "https://qcystore.co.kr/product/detail.html?product_no=1028")
+                && product.path("productGroupID").asText("").equals("cafe24_ylintlshop_1_1028")
+                && product.path("name").asText("").equals("QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍");
+        if (!dimension.equals("선택") && !ht20) return false;
+        var colors = ht20 ? Set.of("블랙", "화이트", "퍼플") : Set.of("블랙", "화이트");
+        if (ht20) {
+            var seen = new HashSet<String>();
+            for (var variant : variants) {
+                var properties = variant.path("additionalProperty");
+                if (!properties.isArray() || properties.size() != 1
+                        || !seen.add(properties.get(0).path("value").asText(""))
+                        || !variant.path("offers").path("availability").asText("").equals("https://schema.org/InStock")) return false;
+            }
+            if (!seen.equals(colors)) return false;
+        }
         var name = product.path("name").asText("").strip();
         return variants.stream().allMatch(variant -> {
             var properties = variant.path("additionalProperty");
             if (!type(variant, "Product") || !properties.isArray() || properties.size() != 1) return false;
             var property = properties.path(0);
             var color = property.path("value").asText("");
-            return type(property, "PropertyValue") && property.path("name").asText("").equals("선택")
-                    && Set.of("블랙", "화이트").contains(color)
+            return type(property, "PropertyValue") && property.path("name").asText("").equals(dimension)
+                    && colors.contains(color)
                     && variant.path("name").asText("").strip().equals(name + " " + color);
         });
     }

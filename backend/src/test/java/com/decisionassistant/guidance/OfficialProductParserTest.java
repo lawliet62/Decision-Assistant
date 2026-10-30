@@ -132,6 +132,20 @@ class OfficialProductParserTest {
         assertThat(parse(variants.replaceFirst("21900", "12900"))).isNull();
         assertThat(OfficialProductParser.samePage(URL, "https://qcystore.co.kr/product/이어폰/1033/category/1/")).isTrue();
     }
+    @Test void ht20OnlyAcceptsKnownColorOptionsWithMatchingPrices() {
+        var name = "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍";
+        var variant = "{\"@type\":\"Product\",\"name\":\"" + name + " %s\",\"additionalProperty\":[{\"@type\":\"PropertyValue\",\"name\":\"옵션\",\"value\":\"%s\"}]," + OFFER.replace("\"KRW\"}", "\"KRW\",\"availability\":\"https://schema.org/InStock\"}") + "}";
+        var group = "{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_1028\",\"variesBy\":[\"옵션\"],\"hasVariant\":["
+                + String.join(",", variant.formatted("블랙", "블랙"), variant.formatted("화이트", "화이트"), variant.formatted("퍼플", "퍼플")) + "]}";
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=1028";
+        var html = "<script type='application/ld+json'>" + group + "</script>" + PURCHASE.replace("Buds", name);
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now(), true).product()).isNotNull();
+        for (var invalid : List.of(html.replace("퍼플", "대용량"), html.replaceFirst("21900", "19900"),
+                html.replace("cafe24_ylintlshop_1_1028", "cafe24_ylintlshop_1_999"), html.replace("옵션", "용량"),
+                html.replaceFirst("InStock", "OutOfStock"), html.replace("퍼플", "블랙")))
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now(), true).product()).isNull();
+        assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", html, URL), Instant.now(), true).product()).isNull();
+    }
     @Test void categoriesHaveSearchScopesAndSourceKindsDoNotCertifyLegacyPages() {
         for (var key : com.decisionassistant.decision.DecisionTypes.TemplateKey.values()) {
             if (key != com.decisionassistant.decision.DecisionTypes.TemplateKey.CUSTOM) assertThat(OfficialStorePolicy.searchScope(key)).contains("site:");
