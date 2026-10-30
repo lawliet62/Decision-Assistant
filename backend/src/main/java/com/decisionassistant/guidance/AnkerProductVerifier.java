@@ -18,10 +18,13 @@ final class AnkerProductVerifier {
     static final String AERO_NAME = "앤커 사운드코어 에어로클립 오픈형 블루투스이어폰 A3388";
     static final String LIBERTY_URL = "https://ankerkorea.co.kr/product/detail.html?product_no=40";
     static final String LIBERTY_NAME = "앤커 사운드코어 리버티5 노이즈캔슬링 블루투스 이어폰 A3957";
+    static final String PRO_URL = "https://ankerkorea.co.kr/product/detail.html?product_no=154";
+    static final String PRO_NAME = "앤커 사운드코어 리버티 5 프로 무선 블루투스 이어폰 D1203";
     private record Product(String url, String name, String number, String option, Map<String, String> colors) {}
     private static final Product P31I = new Product(URL, NAME, "43", "색상선택", Map.of("블랙", "P00000BR000B", "블루", "P00000BR000C", "핑크", "P00000BR000D", "화이트", "P00000BR000E"));
     private static final Product AERO = new Product(AERO_URL, AERO_NAME, "45", "색상선택", Map.of("블랙", "P00000BT000B", "화이트", "P00000BT000C", "핑크", "P00000BT000D", "블루", "P00000BT000E"));
     private static final Product LIBERTY = new Product(LIBERTY_URL, LIBERTY_NAME, "40", "옵션선택", Map.of("블랙", "P00000BO000B", "화이트", "P00000BO000C"));
+    private static final Product PRO = new Product(PRO_URL, PRO_NAME, "154", "색상선택", Map.of("미드나잇 블랙", "P00000FY000A", "펄 화이트", "P00000FY000B", "스카이 블루", "P00000FY000C", "실버 핑크", "P00000FY000D"));
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final Pattern SALE = Pattern.compile("\\bvar\\s+product_sale_price\\s*=\\s*([0-9]+)\\s*;");
     private AnkerProductVerifier() {}
@@ -34,6 +37,9 @@ final class AnkerProductVerifier {
     }
     static Optional<BigDecimal> libertyPrice(String html, Instant now) {
         return price(html, now, LIBERTY);
+    }
+    static Optional<BigDecimal> libertyProPrice(String html, Instant now) {
+        return price(html, now, PRO);
     }
     private static Optional<BigDecimal> price(String html, Instant now, Product product) {
         if (html == null || now == null || html.length() > 2_000_000) return Optional.empty();

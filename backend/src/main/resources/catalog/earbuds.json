@@ -496,5 +496,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "anker-liberty5-pro-d1203",
+    "revision": 1,
+    "name": "앤커 사운드코어 리버티 5 프로 무선 블루투스 이어폰 D1203",
+    "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=154",
+    "expectedIdentity": "anker-kr:154",
+    "facts": [
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IP55",
+          "sourceUrl": "https://www.ankerjapan.com/products/d1203",
+          "quote": "IP55",
+          "fetchedAt": "2026-10-30T19:50:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

@@ -55,6 +55,7 @@ class CatalogApiIntegrationTest {
     @MockitoBean AnkerP31iSpecificationSource ankerSpecificationSource;
     @MockitoBean AnkerAeroclipSpecificationSource ankerAeroclipSpecificationSource;
     @MockitoBean AnkerLibertySpecificationSource ankerLibertySpecificationSource;
+    @MockitoBean AnkerLibertyProSpecificationSource ankerLibertyProSpecificationSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -327,6 +328,49 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
         verify(marshallSpecificationSource, times(1)).fetchMinorIv();
+    }
+    @Test void libertyProRefreshStoresDiscountAndWaterResistance() throws Exception {
+        var id = "anker-liberty5-pro-d1203"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=154";
+        var source = "https://www.ankerjapan.com/products/d1203"; var old = Instant.now().minus(Duration.ofDays(91));
+        var name = "앤커 사운드코어 리버티 5 프로 무선 블루투스 이어폰 D1203";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "anker-kr:154", List.of(new CatalogProduct.Fact(
+                new ProductFact("방수", "IP55", source, "IP55", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        var colors = new String[]{"미드나잇 블랙", "펄 화이트", "스카이 블루", "실버 핑크"};
+        var variants = new ArrayList<Map<String, Object>>(); var stocks = new LinkedHashMap<String, Object>();
+        var options = new StringBuilder("<option value='*'>선택</option>");
+        for (int i = 0; i < colors.length; i++) {
+            var color = colors[i]; var code = "P00000FY000" + (char)('A' + i);
+            variants.add(Map.of("@type", "Product", "name", name + " " + color, "sku", "cafe24_ankerkr_1_154_" + code,
+                    "additionalProperty", List.of(Map.of("@type", "PropertyValue", "name", "색상선택", "value", color)),
+                    "offers", Map.of("@type", "Offer", "url", "https://ankerkorea.co.kr/product/anker/154/?item_code=" + code,
+                            "price", 249900, "priceCurrency", "KRW", "availability", "https://schema.org/InStock",
+                            "priceValidUntil", LocalDate.now(ZoneId.of("Asia/Seoul")).plusYears(2) + " 00:00")));
+            stocks.put(code, Map.of("option_value", color, "is_selling", "T", "is_display", "T", "is_auto_soldout", "F", "is_reserve_stat", "N",
+                    "option_price", 249900, "stock_price", "0.00", "origin_option_added_price", "0.00"));
+            options.append("<option value='").append(color).append("'>").append(color).append("</option>");
+        }
+        var group = json.writeValueAsString(Map.of("@type", "ProductGroup", "name", name, "productGroupID", "cafe24_ankerkr_1_154",
+                "variesBy", List.of("색상선택"), "hasVariant", variants));
+        var stock = json.writeValueAsString(stocks).replace("\\", "\\\\").replace("\"", "\\\"");
+        var html = "<link rel='canonical' href='https://ankerkorea.co.kr/product/anker/154/'><script type='application/ld+json'>" + group
+                + "</script><script>var option_stock_data = '" + stock + "';var product_sale_price = 214900;</script>"
+                + "<div class='xans-product-detail'><table><tr><th>판매가</th><td><strong id='span_product_price_text'>249,900원</strong></td></tr>"
+                + "<tr><th>할인가</th><td><span id='span_optimum_discount_price'>214,900원</span></td></tr></table>"
+                + "<select product_type='product_option' option_product_no='154' option_title='색상선택'>" + options + "</select>"
+                + "<div class='productAction'><a><span id='actionBuy'>구매하기</span></a></div></div>";
+        when(web.scrapeProduct(url)).thenReturn(new WebEvidenceProvider.Page("", "", html, url));
+        worker.refreshNext();
+        assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("214900");
+        when(ankerLibertyProSpecificationSource.fetch()).thenReturn("<title>Soundcore Liberty 5 Pro | ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア</title>"
+                + "<link rel='canonical' href='" + source + "'><h1>Soundcore Liberty 5 Pro</h1>"
+                + "<div class='pfs-text'><h3>IP55 防塵・防水規格</h3><p>IP55の防塵・防水規格に対応</p></div>");
+        var spec = new AnkerLibertyProSpecificationRefreshWorker(true, catalogProperties, products, jdbc, ankerLibertyProSpecificationSource, transactionManager);
+        spec.refresh(); spec.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
+        verify(ankerLibertyProSpecificationSource, times(1)).fetch();
     }
     @Test void libertyRefreshStoresDiscountAndAnc() throws Exception {
         var id = "anker-liberty5-a3957"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=40";

@@ -49,14 +49,16 @@ final class OfficialProductParser {
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
         if (store.id().equals("anker-kr")) {
             if (!catalog || !(AnkerProductVerifier.URL.equals(requestedUrl) || AnkerProductVerifier.AERO_URL.equals(requestedUrl)
-                    || AnkerProductVerifier.LIBERTY_URL.equals(requestedUrl))) return Result.rejected(Rejection.UNREGISTERED_STORE);
+                    || AnkerProductVerifier.LIBERTY_URL.equals(requestedUrl) || AnkerProductVerifier.PRO_URL.equals(requestedUrl))) return Result.rejected(Rejection.UNREGISTERED_STORE);
             var aero = AnkerProductVerifier.AERO_URL.equals(requestedUrl);
             var liberty = AnkerProductVerifier.LIBERTY_URL.equals(requestedUrl);
+            var pro = AnkerProductVerifier.PRO_URL.equals(requestedUrl);
             var verified = (aero ? AnkerProductVerifier.aeroclipPrice(page.html(), fetchedAt)
-                    : liberty ? AnkerProductVerifier.libertyPrice(page.html(), fetchedAt) : AnkerProductVerifier.price(page.html(), fetchedAt)).orElse(null);
+                    : liberty ? AnkerProductVerifier.libertyPrice(page.html(), fetchedAt)
+                    : pro ? AnkerProductVerifier.libertyProPrice(page.html(), fetchedAt) : AnkerProductVerifier.price(page.html(), fetchedAt)).orElse(null);
             if (verified == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
-            return new Result(new OfficialProduct(aero ? AnkerProductVerifier.AERO_NAME : liberty ? AnkerProductVerifier.LIBERTY_NAME : AnkerProductVerifier.NAME,
-                    aero ? "anker-kr:45" : liberty ? "anker-kr:40" : "anker-kr:43", new OfficialOffer(requestedUrl, store.name(), verified,
+            return new Result(new OfficialProduct(aero ? AnkerProductVerifier.AERO_NAME : liberty ? AnkerProductVerifier.LIBERTY_NAME : pro ? AnkerProductVerifier.PRO_NAME : AnkerProductVerifier.NAME,
+                    aero ? "anker-kr:45" : liberty ? "anker-kr:40" : pro ? "anker-kr:154" : "anker-kr:43", new OfficialOffer(requestedUrl, store.name(), verified,
                     "KRW", null, fetchedAt, "공식 상품의 색상·할인 판매가와 구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + verified + "원"), null);
         }
         if (store.id().equals("bose-kr")) {

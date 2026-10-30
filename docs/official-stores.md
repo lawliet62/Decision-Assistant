@@ -12,7 +12,7 @@
 | 소니 한국 공식 스토어 | `store.sony.co.kr/product-view/109871591` 한 상품에 한정. [공식 이어폰 목록](https://store.sony.co.kr/products/audio/wireless_earphones)에서 연결된 Float Run. 실제 Firecrawl의 구매 영역 검증이 실패하여 카탈로그에서는 비활성 상태 |
 | Marshall 한국 공식 스토어 | [공식 이어폰 목록](https://www.marshall.com/kr/ko/headphones/earbuds)에서 연결한 MOTIF II A.N.C. 블랙(`pid=1006450`)과 MINOR IV 블랙(`pid=1006653`)에 한정. 실제 응답과 검증 범위는 [평가](evaluations/catalog-2026-10-29/README.md)에 기록 |
 | BOSE 한국 공식 온라인 스토어 | [QC 이어버드(New) 아이스 블루](https://www.bose.co.kr/357/?idx=307) 한 상품에 한정. 단일 색상·상품 번호·구매 가격을 검증하며 사양은 미확인 |
-| 앤커코리아 공식 스토어 | [P31i(R60i NC) D1202](https://ankerkorea.co.kr/product/detail.html?product_no=43), [에어로클립 A3388](https://ankerkorea.co.kr/product/detail.html?product_no=45), [리버티 5 A3957](https://ankerkorea.co.kr/product/detail.html?product_no=40)에 한정. 등록된 색상과 할인 판매가를 대조하고 사양은 각각 동일 모델 공식 페이지에서 확인 |
+| 앤커코리아 공식 스토어 | [P31i(R60i NC) D1202](https://ankerkorea.co.kr/product/detail.html?product_no=43), [에어로클립 A3388](https://ankerkorea.co.kr/product/detail.html?product_no=45), [리버티 5 A3957](https://ankerkorea.co.kr/product/detail.html?product_no=40), [리버티 5 프로 D1203](https://ankerkorea.co.kr/product/detail.html?product_no=154)에 한정. 등록된 색상과 할인 판매가를 대조하고 사양은 각각 동일 모델 공식 페이지에서 확인 |
 | 젠하이저 한국 공식 스토어 | [공식 스토어](https://kr.sennheiser-hearing.com/)의 MOMENTUM True Wireless 5 상품 731과 해당 색상 구성에 한정. 가격 검증은 카탈로그 전용이며 해당 상품을 활성 등록 |
 
 등록 근거 확인일: 2026-09-24. 판매처 추가·변경 시 공식 브랜드 페이지의 연결 근거를 이 문서에 남기고, 다른 호스트·판매자·경로·리다이렉트를 배제하는 테스트를 함께 갱신한다. 검색은 카테고리별 공식 상품 경로의 OR 질의 한 번으로 제한하며, 찾지 못한 브랜드를 임의 사이트로 대체하지 않는다.
@@ -41,7 +41,7 @@ BOSE 상품 307은 단일 아이스 블루 옵션의 코드와 표시가, 상품
 
 QCY CT06 상품 994는 세 색상의 상품 코드·재고와 동일 판매가를 구매 선택지와 대조한다. 다른 색상이나 구성이 추가되거나 한 색상이라도 품절이면 가격을 보류한다.
 
-앤커 상품 43·45·40은 각각 구조화 기본 판매가·등록된 색상·재고와 선택지 및 추가금, 일반 할인 판매가와 페이지의 가격 변수를 대조한다. 구조화 가격의 만료 시각까지 24시간보다 적게 남았다면 가격을 보류한다. 회원·쿠폰 등 조건부 금액은 사용하지 않으며 구조가 바뀌거나 색상 중 하나라도 확인이 안 되면 가격을 보류한다.
+앤커 상품 43·45·40·154는 각각 구조화 기본 판매가·등록된 색상·재고와 선택지 및 추가금, 일반 할인 판매가와 페이지의 가격 변수를 대조한다. 구조화 가격의 만료 시각까지 24시간보다 적게 남았다면 가격을 보류한다. 회원·쿠폰 등 조건부 금액은 사용하지 않으며 구조가 바뀌거나 색상 중 하나라도 확인이 안 되면 가격을 보류한다.
 
 젠하이저 상품 731은 다섯 색상의 SKU·공식 상품 URL·InStock·동일 가격과 구매 영역의 선택 항목·표시 가격·구매 버튼을 대조한다. 조건부 가격과 불일치, 숨겨진 버튼은 거절한다. Firecrawl이 구매 링크의 JavaScript 동작을 제거하므로 링크의 동작 자체를 검증했다는 뜻은 아니다. 이 예외는 카탈로그 가격 경로에서만 사용하며 실제 Firecrawl 파서 검증은 단일 시점이다. ANC·이어버드 IP54의 주간 사양 자동 확인을 지원한다.
 

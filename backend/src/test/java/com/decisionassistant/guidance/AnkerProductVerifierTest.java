@@ -16,11 +16,14 @@ class AnkerProductVerifierTest {
     private static String page(int type) {
         var variants = new ArrayList<Map<String, Object>>(); var stock = new LinkedHashMap<String, Object>();
         var options = new StringBuilder("<option value='*'>선택</option><option value='**' disabled>---</option>");
-        var colors = type == 1 ? new String[]{"블랙", "화이트", "핑크", "블루"} : type == 2 ? new String[]{"블랙", "화이트"} : COLORS;
+        var colors = type == 1 ? new String[]{"블랙", "화이트", "핑크", "블루"} : type == 2 ? new String[]{"블랙", "화이트"}
+                : type == 3 ? new String[]{"미드나잇 블랙", "펄 화이트", "스카이 블루", "실버 핑크"} : COLORS;
         var codes = type == 1 ? new String[]{"P00000BT000B", "P00000BT000C", "P00000BT000D", "P00000BT000E"}
-                : type == 2 ? new String[]{"P00000BO000B", "P00000BO000C"} : CODES;
-        var number = type == 1 ? "45" : type == 2 ? "40" : "43";
-        var name = type == 1 ? AnkerProductVerifier.AERO_NAME : type == 2 ? AnkerProductVerifier.LIBERTY_NAME : AnkerProductVerifier.NAME;
+                : type == 2 ? new String[]{"P00000BO000B", "P00000BO000C"}
+                : type == 3 ? new String[]{"P00000FY000A", "P00000FY000B", "P00000FY000C", "P00000FY000D"} : CODES;
+        var number = type == 1 ? "45" : type == 2 ? "40" : type == 3 ? "154" : "43";
+        var name = type == 1 ? AnkerProductVerifier.AERO_NAME : type == 2 ? AnkerProductVerifier.LIBERTY_NAME
+                : type == 3 ? AnkerProductVerifier.PRO_NAME : AnkerProductVerifier.NAME;
         var dimension = type == 2 ? "옵션선택" : "색상선택";
         for (int i = 0; i < colors.length; i++) {
             var color = colors[i]; var code = codes[i];
@@ -41,6 +44,26 @@ class AnkerProductVerifierTest {
                 + "<tr><th>할인가</th><td><span id='span_optimum_discount_price'>39,900원</span></td></tr></table>"
                 + "<select product_type='product_option' option_product_no='" + number + "' option_title='" + dimension + "'>" + options + "</select>"
                 + "<div class='productAction'><a><span id='actionBuy'>구매하기</span></a></div></div>";
+    }
+    @Test void libertyProRequiresItsOwnModelAndFourOptions() {
+        var html = page(3);
+        assertThat(AnkerProductVerifier.libertyProPrice(html, NOW)).hasValueSatisfying(p -> assertThat(p).isEqualByComparingTo("39900"));
+        assertThat(AnkerProductVerifier.libertyPrice(html, NOW)).isEmpty();
+        assertThat(AnkerProductVerifier.libertyProPrice(html.replace("P00000FY000C", "P00000FY000Z"), NOW)).isEmpty();
+        assertThat(AnkerProductVerifier.libertyProPrice(html.replace("InStock", "OutOfStock"), NOW)).isEmpty();
+        assertThat(OfficialStorePolicy.store(AnkerProductVerifier.PRO_URL)).isPresent();
+        assertThat(OfficialStorePolicy.store("https://ankerkorea.co.kr/product/anker/154/?item_code=P00000BO000B")).isEmpty();
+    }
+    @Test void libertyProWaterRequiresExactManufacturerModelAndSpecification() {
+        var url = AnkerLibertyProSpecificationVerifier.URL;
+        var html = "<title>Soundcore Liberty 5 Pro | ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア</title>"
+                + "<link rel='canonical' href='" + url + "'><h1>Soundcore Liberty 5 Pro</h1>"
+                + "<div class='pfs-text'><h3>IP55 防塵・防水規格</h3><p>IP55の防塵・防水規格に対応しています。</p></div>";
+        assertThat(AnkerLibertyProSpecificationVerifier.matches(html)).isTrue();
+        assertThat(AnkerLibertyProSpecificationVerifier.matches(html.replace("d1203", "d1202"))).isFalse();
+        assertThat(AnkerLibertyProSpecificationVerifier.matches(html.replace("Liberty 5 Pro", "Liberty 5"))).isFalse();
+        assertThat(AnkerLibertyProSpecificationVerifier.matches(html.replace("IP55", "IP54"))).isFalse();
+        assertThat(AnkerLibertyProSpecificationVerifier.matches(html + "<h1>別のモデル</h1>")).isFalse();
     }
     @Test void libertyRequiresItsOwnModelAndTwoOptions() {
         var html = page(2);
