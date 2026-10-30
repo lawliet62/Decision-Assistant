@@ -338,6 +338,23 @@ class CatalogApiIntegrationTest {
         assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
         verify(sennheiserSpecificationSource, times(1)).fetch();
     }
+    @Test void ht20SpecificationRefreshSavesVerifiedFormOnce() throws Exception {
+        var id = "qcy-ht20"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=1028";
+        var name = "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("형태", "커널형", url, "커널형", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchHt20()).thenReturn("<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/1028/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_1028\"}</script>");
+        var worker = new Ht20SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
+        verify(specificationSource, times(1)).fetchHt20();
+    }
     @Test void concurrentSpecificationWorkersShareOneAttempt() throws Exception {
         var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));
         var url = "https://qcystore.co.kr/product/detail.html?product_no=990";

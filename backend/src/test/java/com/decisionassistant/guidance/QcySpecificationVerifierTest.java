@@ -67,4 +67,15 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("cafe24_ylintlshop_1_563", "cafe24_ylintlshop_1_564"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("/563/", "/564/"))).isFalse();
     }
+    @Test void ht20FormRequiresExactProductAndExplicitTitle() {
+        var name = "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/1028/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_1028\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page.replace("커널형", "오픈형"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page.replace("HT20", "HT19"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page.replace("cafe24_ylintlshop_1_1028", "cafe24_ylintlshop_1_1029"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page.replace("/1028/", "/1029/"))).isFalse();
+    }
 }

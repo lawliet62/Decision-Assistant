@@ -19,5 +19,8 @@ public class QcySpecificationSource {
     public String fetchT17App() throws Exception {
         return fetch(URI.create("https://qcystore.co.kr/product/detail.html?product_no=563"));
     }
+    public String fetchHt20() throws Exception {
+        return fetch(URI.create("https://qcystore.co.kr/product/detail.html?product_no=1028"));
+    }
     private String fetch(URI url) throws Exception { return SpecificationPageFetcher.fetch(url); }
 }

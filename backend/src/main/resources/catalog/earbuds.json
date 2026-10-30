@@ -289,5 +289,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "qcy-ht20",
+    "revision": 1,
+    "name": "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍",
+    "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=1028",
+    "expectedIdentity": "qcy-kr:color-model:qcyht20멜로버즈블루투스무선이어폰노이즈캔슬링ai마이크c타입커널형게이밍",
+    "facts": [
+      {
+        "evidence": {
+          "name": "형태",
+          "value": "커널형",
+          "sourceUrl": "https://qcystore.co.kr/product/detail.html?product_no=1028",
+          "quote": "커널형",
+          "fetchedAt": "2026-10-30T16:00:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

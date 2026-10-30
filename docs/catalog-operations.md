@@ -6,13 +6,13 @@
 
 판매처별 개발·수정 및 장애 조사 시간, 수집 API 비용을 에이전트 사용량과 결과 검토 비용에 비교한다. 코드 방식의 총비용이 더 크다는 근거가 생기면 에이전트 갱신을 권고하고 판단 근거와 미측정 비용을 기록한다. 현재 두 방식의 총비용과 장기 안정성은 비교되지 않았다. 결정과 대안은 [ADR 0016](decisions/0016-curated-catalog.md#갱신-방식과-비용-판단)에 기록한다. 개발 환경에서 실제 동작을 확인한 뒤 운영 호스팅과 PostgreSQL을 설계한다.
 
-QCY T13 Pro의 ANC·호환성·방수, QCY HT16의 ANC, T17 APP의 형태, HT19의 ANC·방수, Apple AirPods Pro 3와 AirPods 5 무선 충전 케이스 모델의 ANC·방수 Marshall MOTIF II A.N.C.의 ANC 및 젠하이저 MOMENTUM True Wireless 5의 ANC·이어버드 IP54는 모델·항목·값이 일치하면 확인 시각을 자동 갱신할 수 있다. HT16과 T17 APP은 국내 공식 판매 페이지의 제품명과 상품 번호를 함께 확인한다. HT19는 제조사 페이지에서 MeloBuds N60과 HT19의 연결 및 ANC 지원을 확인하고, 방수는 사양표의 IPX5도 대조한다. 소니 Float Run의 단일 상품 DOM 가격 검증은 구현했지만 실제 Firecrawl 응답에서 검증에 실패하여 상품을 비활성으로 유지한다.
+QCY T13 Pro의 ANC·호환성·방수, QCY HT16의 ANC, T17 APP과 HT20의 형태, HT19의 ANC·방수, Apple AirPods Pro 3와 AirPods 5 무선 충전 케이스 모델의 ANC·방수, Marshall MOTIF II A.N.C.의 ANC 및 젠하이저 MOMENTUM True Wireless 5의 ANC·이어버드 IP54는 모델·항목·값이 일치하면 확인 시각을 자동 갱신할 수 있다. HT16, T17 APP과 HT20은 국내 공식 판매 페이지의 제품명과 상품 번호를 함께 확인한다. HT19는 제조사 페이지에서 MeloBuds N60과 HT19의 연결 및 ANC 지원을 확인하고, 방수는 사양표의 IPX5도 대조한다. 소니 Float Run의 단일 상품 DOM 가격 검증은 구현했지만 실제 Firecrawl 응답에서 검증에 실패하여 상품을 비활성으로 유지한다.
 
-사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro, HT16, T17 APP, HT19, Apple AirPods Pro 3 및 AirPods 5, Marshall MOTIF II A.N.C.와 젠하이저 MOMENTUM True Wireless 5의 공식 페이지를 각각 7일 간격으로 확인한다. 기본값은 false다. 모델명과 사양 영역의 항목·값·기존 출처 및 인용이 일치한 항목만 갱신한다. QCY ANC는 같은 모델의 제품명과 공식 페이지 설명을 대조한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 확인 가능한 사양이 있을 때만 요청 전에 시도를 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. 자동 확인 범위 밖의 사양은 기존 수동 검토 대상이다.
+사양 확인 시각은 manifest와 별도의 DB 필드에 저장한다. 동일 revision의 manifest 재등록은 확인 시각을 보존하고, revision이 바뀌면 이전 확인 시각을 제거한다. `DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true`로 활성화하면 QCY T13 Pro, HT16, HT20, T17 APP, HT19, Apple AirPods Pro 3 및 AirPods 5, Marshall MOTIF II A.N.C.와 젠하이저 MOMENTUM True Wireless 5의 공식 페이지를 각각 7일 간격으로 확인한다. 기본값은 false다. 모델명과 사양 영역의 항목·값·기존 출처 및 인용이 일치한 항목만 갱신한다. QCY ANC는 같은 모델의 제품명과 공식 페이지 설명을 대조한다. 통신 실패·변경·불일치는 시각을 갱신하지 않는다. 확인 가능한 사양이 있을 때만 요청 전에 시도를 DB에 기록해 재시작이나 동시 실행에도 간격을 유지한다. 자동 확인 범위 밖의 사양은 기존 수동 검토 대상이다.
 
 GitHub Actions의 출처 점검은 운영 DB에 접근하지 않으므로 자동 갱신된 DB 시각을 알지 못하고 manifest의 원래 시각 기준으로 기한 경고를 표시할 수 있다. 해당 경고를 DB 확인 결과와 대조한다. 개발 환경에서는 실제 QCY와 Apple 페이지 조회 후 각각 두 항목의 확인 시각과 다음 시도 시각이 PostgreSQL에 저장되는 것을 확인했다. 별도 개발 시험 DB에서는 실제 페이지 조회로 QCY T13 Pro의 ANC·호환성·방수, HT19의 ANC·방수와 Apple의 ANC·방수 확인 시각 및 다음 시도 시각이 저장됐다.
 
-기본 추천은 활성 이어폰 8개(QCY 4개, Apple 한국 스토어 2개, Marshall 1개, 젠하이저 1개)를 사용한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
+기본 추천은 활성 이어폰 9개(QCY 5개, Apple 한국 스토어 2개, Marshall 1개, 젠하이저 1개)를 사용한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
 
 ## 첫 실행과 가격 갱신
 
@@ -28,17 +28,17 @@ DECISION_ASSISTANT_WEB_ENABLED=true
 FIRECRAWL_SECRET_VERSION=1
 ```
 
-활성 제품 20개를 목표로 기본 월 시도 상한을 700회로 설정한다. 20개 제품의 31일 일간 시도에는 약 620회가 필요하다. 현재 활성 제품은 8개이며 확보하지 못한 제품은 미검증 상태로 추가하지 않는다. 이 상한은 Firecrawl 계정 전체의 크레딧이나 금액 상한이 아니므로 사용자 수집·다른 프로그램의 사용량과 계정 잔여량도 확인한다.
+활성 제품 20개를 목표로 기본 월 시도 상한을 700회로 설정한다. 20개 제품의 31일 일간 시도에는 약 620회가 필요하다. 현재 활성 제품은 9개이며 확보하지 못한 제품은 미검증 상태로 추가하지 않는다. 이 상한은 Firecrawl 계정 전체의 크레딧이나 금액 상한이 아니므로 사용자 수집·다른 프로그램의 사용량과 계정 잔여량도 확인한다.
 
 2026-10-30 기준 [Firecrawl 공개 요금표](https://www.firecrawl.dev/pricing)는 Free 플랜의 월 1,000크레딧과 기본 Scrape 페이지당 1크레딧을 안내한다. 현재 가격 요청은 Markdown과 rawHtml을 사용하며 JSON 추출이나 Firecrawl Agent를 호출하지 않는다. 기본 단가가 적용된다고 가정하면 24시간 간격의 제품 6개는 월 약 180~186크레딧, 7개는 약 210~217크레딧, 8개는 약 240~248크레딧이다. 이는 시도 횟수를 기준으로 한 추산이다. 결과가 없는 요청은 과금되지 않을 수 있지만 403·404 응답 페이지는 과금될 수 있고, 다른 기능도 계정 크레딧을 공유한다. 실제 계정의 플랜·잔여량·다른 사용량과 추가 과금 여부는 확인되지 않았다.
 
-worker는 기본 60초마다 최대 한 제품을 claim하고 제품별 시도 간격은 24시간이다. 8개 제품은 약 8분에 걸쳐 시도한다. `catalog_monthly_usage`는 UTC 달을 사용한다. 실패·중단도 예약 호출을 소비하고 같은 제품을 즉시 재시도하지 않는다. 단순 재시작으로 호출 한도가 초기화되지 않는다. 스케줄 지연이나 실패로 가격이 24시간을 넘으면 잠시 UNKNOWN으로 떨어질 수 있다.
+worker는 기본 60초마다 최대 한 제품을 claim하고 제품별 시도 간격은 24시간이다. 9개 제품은 약 9분에 걸쳐 시도한다. `catalog_monthly_usage`는 UTC 달을 사용한다. 실패·중단도 예약 호출을 소비하고 같은 제품을 즉시 재시도하지 않는다. 단순 재시작으로 호출 한도가 초기화되지 않는다. 스케줄 지연이나 실패로 가격이 24시간을 넘으면 잠시 UNKNOWN으로 떨어질 수 있다.
 
 기동 후 `catalog_observations`에서 성공/실패를 확인하고 실제 화면의 모델·구매 링크·확인 가격을 대조한다. HTTP 200만으로 판매가 검증 성공으로 취급하지 않는다. strict parser가 구조를 지원하지 못하면 가격을 수동 조작해서 통과시키지 않고 원인을 수정하거나 등록 제품을 비활성화한다.
 
 ## 제품·사양 관리
 
-매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT16, T17 APP, HT19, AirPods Pro 3, AirPods 5, Marshall MOTIF II A.N.C.와 젠하이저 MOMENTUM True Wireless 5의 공식 페이지 여덟 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
+매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT16, HT20, T17 APP, HT19, AirPods Pro 3, AirPods 5, Marshall MOTIF II A.N.C.와 젠하이저 MOMENTUM True Wireless 5의 공식 페이지 아홉 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
 
 작업 요약에서 `QUOTE_PRESENT`는 단순 문구 존재, `QUOTE_MISSING`은 미발견, `UNAVAILABLE`은 접근 실패, `UNSUPPORTED_SOURCE`는 허용된 고정 주소가 아닌 사양이다. 제목은 등록된 예상 제목과 비교하며 `MATCH`, `MISMATCH`, `UNAVAILABLE`로 표시한다. 문구가 다른 상품·추천 영역에 나타날 수도 있고 제목만으로 모델을 확정할 수 없으므로 **제목과 문구 일치는 동일 모델이나 사양의 정확성을 검증하지 않는다**. 점검 기한이 7일 이내이거나 제목 불일치·문구 미발견·접근 실패가 있으면 작업을 실패로 표시한다. 광고 문구 등 제목의 무해한 변경도 경고가 될 수 있으므로 실제 모델을 확인한 뒤 예상 제목을 수정한다. 수집 실패의 HTTP 상태와 크기 초과는 간단한 코드만 남긴다. GitHub 알림 수신 여부는 계정 설정에 달려 있으며 예약 자체가 누락된 경우 이 workflow가 알림을 보장하지 않는다.
 
