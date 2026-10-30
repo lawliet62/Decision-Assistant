@@ -4,6 +4,16 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class QcySpecificationVerifierTest {
+    @Test void ct06RequiresExactProductAndOpenForm() {
+        var name = "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/994/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_994\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesCt06Form(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesCt06Form(page.replace("오픈형", "커널형"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesCt06Form(page.replace("994", "995"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesCt06Form(page + "<h1>다른 상품</h1>")).isFalse();
+    }
     @Test void ht08AncRequiresExactArticleAndPositiveModelStatement() {
         var title = "QCY, 적응형 노이즈 캔슬링 블루투스 이어폰 ‘HT08 멜로버즈 프로 플러스’ 출시";
         var page = "<title>" + title + " 도매특판 - QCY스토어</title><form id='BoardDelForm'><input id='no' name='no' value='16170'>"

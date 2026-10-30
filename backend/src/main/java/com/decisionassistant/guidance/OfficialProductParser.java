@@ -76,6 +76,8 @@ final class OfficialProductParser {
         var name = product.path("name").asText("").strip();
         if (name.isBlank() || name.length() > 200) return Result.rejected(Rejection.PRODUCT_NAME_INVALID);
         var variants = type(product, "ProductGroup") ? iterable(product.path("hasVariant")) : List.of(product);
+        if (store.id().equals("qcy-kr") && samePage(requestedUrl, Ct06VariantVerifier.URL)
+                && !Ct06VariantVerifier.matches(doc, product)) return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
         if (type(product, "ProductGroup")) {
             var varies = product.path("variesBy");
             var dimensions = varies.isArray() ? iterable(varies) : List.of(varies);

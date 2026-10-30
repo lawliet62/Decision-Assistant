@@ -7,6 +7,10 @@ import java.util.*;
 final class QcySpecificationVerifier {
     private QcySpecificationVerifier() {}
 
+    static boolean matchesCt06Form(String html) {
+        return matchesStoreProduct(html, "994", "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프");
+    }
+
     static boolean matchesHt08Anc(String html) {
         if (html == null || html.length() > 2_000_000) return false;
         var doc = Jsoup.parse(html);

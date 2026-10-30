@@ -31,5 +31,8 @@ public class QcySpecificationSource {
     public String fetchHt08Article() throws Exception {
         return fetch(URI.create("https://qcystore.co.kr/article/%EB%A7%A4%EA%B1%B0%EC%A7%84/8/16170/"));
     }
+    public String fetchCt06() throws Exception {
+        return fetch(URI.create("https://qcystore.co.kr/product/detail.html?product_no=994"));
+    }
     private String fetch(URI url) throws Exception { return SpecificationPageFetcher.fetch(url); }
 }

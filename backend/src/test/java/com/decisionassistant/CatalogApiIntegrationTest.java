@@ -273,6 +273,23 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         verify(marshallSpecificationSource, times(1)).fetch();
     }
+    @Test void ct06ReviewPersistsAndReservesOncePerWeek() throws Exception {
+        var id = "qcy-ct06"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=994";
+        var name = "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "qcy:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("형태", "오픈형", url, "오픈형", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchCt06()).thenReturn("<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/994/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_994\"}</script>");
+        var worker = new Ct06SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
+        verify(specificationSource, times(1)).fetchCt06();
+    }
     @Test void ht08ReviewPersistsAndReservesOncePerWeek() throws Exception {
         var id = "qcy-ht08-pro-plus"; var old = Instant.now().minus(Duration.ofDays(91));
         var source = "https://qcystore.co.kr/article/%EB%A7%A4%EA%B1%B0%EC%A7%84/8/16170/";
