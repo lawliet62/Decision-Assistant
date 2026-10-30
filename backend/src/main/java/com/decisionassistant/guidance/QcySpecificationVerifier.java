@@ -7,6 +7,21 @@ import java.util.*;
 final class QcySpecificationVerifier {
     private QcySpecificationVerifier() {}
 
+    static boolean matchesHt08Anc(String html) {
+        if (html == null || html.length() > 2_000_000) return false;
+        var doc = Jsoup.parse(html);
+        var title = "QCY, 적응형 노이즈 캔슬링 블루투스 이어폰 ‘HT08 멜로버즈 프로 플러스’ 출시";
+        var articles = doc.select("#gd.xans-board-read");
+        if (!doc.title().equals(title + " 도매특판 - QCY스토어") || articles.size() != 1) return false;
+        var article = articles.first();
+        var headings = article.select(".titleArea h2");
+        var bodies = article.select(".detail .fr-view-article");
+        var identifiers = doc.select("form#BoardDelForm input#no[name=no][value=16170]");
+        return headings.size() == 1 && headings.first().text().equals(title) && identifiers.size() == 1
+                && bodies.size() == 1 && bodies.first().text().replaceAll("\\s+", "")
+                .contains("QCYHT08멜로버즈프로플러스는적응형액티브노이즈캔슬링기능으로");
+    }
+
     static boolean matchesHt16Anc(String html) {
         return matchesStoreProduct(html, "990", "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙");
     }

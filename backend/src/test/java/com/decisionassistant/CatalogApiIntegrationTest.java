@@ -273,6 +273,25 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         verify(marshallSpecificationSource, times(1)).fetch();
     }
+    @Test void ht08ReviewPersistsAndReservesOncePerWeek() throws Exception {
+        var id = "qcy-ht08-pro-plus"; var old = Instant.now().minus(Duration.ofDays(91));
+        var source = "https://qcystore.co.kr/article/%EB%A7%A4%EA%B1%B0%EC%A7%84/8/16170/";
+        var name = "QCY HT08 멜로버즈 프로 플러스 블루투스 이어폰 노이즈캔슬링 / 블랙";
+        var title = "QCY, 적응형 노이즈 캔슬링 블루투스 이어폰 ‘HT08 멜로버즈 프로 플러스’ 출시";
+        var p = new CatalogProduct(id);
+        p.register(1, name, "https://qcystore.co.kr/product/detail.html?product_no=977", "qcy:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, "적응형 액티브 노이즈 캔슬링 기능", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchHt08Article()).thenReturn("<title>" + title + " 도매특판 - QCY스토어</title>"
+                + "<form id='BoardDelForm'><input id='no' name='no' value='16170'><div id='gd' class='xans-board-read'>"
+                + "<div class='titleArea'><h2>" + title + "</h2></div><div class='detail'><div class='fr-view-article'>"
+                + "QCY HT08 멜로버즈 프로 플러스는 적응형 액티브 노이즈 캔슬링 기능으로 작동한다.</div></div></div></form>");
+        var worker = new Ht08SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
+        verify(specificationSource, times(1)).fetchHt08Article();
+    }
     @Test void minorIvReviewPersistsAndReservesOncePerWeek() throws Exception {
         var id = "marshall-minor-iv-black"; var old = Instant.now().minus(Duration.ofDays(91));
         var url = "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653";

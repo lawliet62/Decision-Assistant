@@ -377,5 +377,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "qcy-ht08-pro-plus",
+    "revision": 1,
+    "name": "QCY HT08 멜로버즈 프로 플러스 블루투스 이어폰 노이즈캔슬링 / 블랙",
+    "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=977",
+    "expectedIdentity": "qcy-kr:color-model:qcyht08멜로버즈프로플러스블루투스이어폰노이즈캔슬링",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://qcystore.co.kr/article/%EB%A7%A4%EA%B1%B0%EC%A7%84/8/16170/",
+          "quote": "적응형 액티브 노이즈 캔슬링 기능",
+          "fetchedAt": "2026-10-30T18:27:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

@@ -4,6 +4,19 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class QcySpecificationVerifierTest {
+    @Test void ht08AncRequiresExactArticleAndPositiveModelStatement() {
+        var title = "QCY, 적응형 노이즈 캔슬링 블루투스 이어폰 ‘HT08 멜로버즈 프로 플러스’ 출시";
+        var page = "<title>" + title + " 도매특판 - QCY스토어</title><form id='BoardDelForm'><input id='no' name='no' value='16170'>"
+                + "<div id='gd' class='xans-board-read'><div class='titleArea'><h2>" + title + "</h2></div>"
+                + "<div class='detail'><div class='fr-view-article'><p>QCY HT08 멜로버즈 프로 플</p>"
+                + "<p>러스는 적응형 액티브 노이즈 캔슬링 기능으로 편안한 청취를 제공한다.</p></div></div></div></form>";
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("16170", "16171"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("HT08", "HT10"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("기능으로", "기능이 없으며"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("fr-view-article", "unrelated"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("</h2>", "</h2><h2>다른 기사</h2>"))).isFalse();
+    }
     private static final String PAGE = """
             <div class="specification-content"><div class="spec-details">
               <p>Product Name: QCY T13 Pro</p>
