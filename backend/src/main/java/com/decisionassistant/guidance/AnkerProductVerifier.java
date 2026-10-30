@@ -64,7 +64,7 @@ final class AnkerProductVerifier {
                 if (!OfficialProductParser.samePage(product.url(), uri.toString()) || !("item_code=" + code).equals(uri.getRawQuery()) || uri.getFragment() != null)
                     return Optional.empty();
                 var expires = LocalDateTime.parse(offer.path("priceValidUntil").asText(""), DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm"));
-                if (!now.isBefore(expires.atZone(ZoneId.of("Asia/Seoul")).toInstant())) return Optional.empty();
+                if (expires.atZone(ZoneId.of("Asia/Seoul")).toInstant().isBefore(now.plus(Duration.ofHours(24)))) return Optional.empty();
                 var raw = offer.path("price").asText("");
                 if (!raw.matches("[1-9][0-9]{0,7}")) return Optional.empty();
                 prices.add(new BigDecimal(raw));

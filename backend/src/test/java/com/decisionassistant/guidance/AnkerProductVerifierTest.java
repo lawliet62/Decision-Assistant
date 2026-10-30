@@ -54,7 +54,7 @@ class AnkerProductVerifierTest {
                 html.replace("색상선택", "사은품"), html.replace("39,900원", "34,900원"), html.replace("product_sale_price = 39900", "product_sale_price = 34000"),
                 html.replace("할인가</th>", "회원 할인가</th>"), html.replace("39,900원</span>", "39,900원<span>회원 전용</span></span>"), html.replace("구매하기", "품절"),
                 html.replace("value='블랙'", "value='블랙' disabled"), html.replace("<a><span id='actionBuy'", "<a style='display:none'><span id='actionBuy'"),
-                html.replace("2030-12-31 00:00", "2020-01-01 00:00"), html.replace("0.00", "1000.00")))
+                html.replace("2030-12-31 00:00", "2020-01-01 00:00"), html.replace("2030-12-31 00:00", "2026-10-30 23:00"), html.replace("0.00", "1000.00")))
             assertThat(AnkerProductVerifier.price(invalid, NOW)).isEmpty();
         assertThat(OfficialStorePolicy.store(AnkerProductVerifier.URL.replace("43", "44"))).isEmpty();
     }
