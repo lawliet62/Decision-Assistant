@@ -430,5 +430,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "anker-p31i-d1202",
+    "revision": 1,
+    "name": "앤커 사운드코어 P31i(R60i NC) 노이즈캔슬링 무선 블루투스 이어폰 D1202",
+    "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=43",
+    "expectedIdentity": "anker-kr:43",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.ankerjapan.com/products/d1202",
+          "quote": "アクティブノイズキャンセリング搭載",
+          "fetchedAt": "2026-10-30T19:13:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

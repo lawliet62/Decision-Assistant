@@ -17,7 +17,7 @@ public final class MinimumRequirementMatcher {
     private static final Pattern PIXELS = Pattern.compile("([0-9]{3,5})\\s*[xX×]\\s*([0-9]{3,5})(?:\\s*(?i:px|pixels))?");
     private static final Pattern AMBIGUOUS = Pattern.compile(
             "(?i)(?:최대|확장|구성별|옵션별|또는|미확정|미확인|알\\s*수\\s*없|up\\s+to|expandable|optional|unknown|depending|\\bor\\b|(?:\\d|GB|TB|Hz)\\s*[/~–-]\\s*\\d)");
-    private static final Pattern NEGATIVE = Pattern.compile("(?i)(?:미지원|지원\\s*(?:안|하지\\s*않)|없음|없다|불가|not\\s+supported|unsupported|without)");
+    private static final Pattern NEGATIVE = Pattern.compile("(?i)(?:미지원|지원\\s*(?:안|하지\\s*않)|없음|없다|불가|not\\s+supported|unsupported|without|非搭載|非対応|搭載していない)");
     private static final Pattern ANC_CONTEXT = Pattern.compile("(?i)(?:\\bANC\\b|액티브\\s*노이즈|능동형?\\s*소음|active noise cancel)");
     private static final Pattern PEN_CONTEXT = Pattern.compile("(?i)(?:전용\\s*펜|능동형\\s*펜|액티브\\s*펜|active (?:pen|stylus)|apple pencil|애플\\s*펜슬|s\\s*펜|s pen)");
     private static final Pattern CAPACITIVE_PEN = Pattern.compile("(?i)(?:정전식|capacitive)");
@@ -88,7 +88,8 @@ public final class MinimumRequirementMatcher {
         if (supported == null) return null;
         var quote = Objects.toString(fact.quote(), "");
         if (supported && NEGATIVE.matcher(quote).find()) return null;
-        if ("ANC 지원".equals(fact.name()) && !ANC_CONTEXT.matcher(quote).find()) return null;
+        if ("ANC 지원".equals(fact.name()) && !ANC_CONTEXT.matcher(quote).find()
+                && !"アクティブノイズキャンセリング搭載".equals(quote.strip())) return null;
         if ("펜 지원".equals(fact.name()) && (!PEN_CONTEXT.matcher(quote).find() || CAPACITIVE_PEN.matcher(quote).find())) return null;
         return new Value(null, 0, 0, supported);
     }

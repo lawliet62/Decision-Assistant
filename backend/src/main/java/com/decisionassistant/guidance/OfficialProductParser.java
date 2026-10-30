@@ -47,6 +47,13 @@ final class OfficialProductParser {
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
+        if (store.id().equals("anker-kr")) {
+            if (!catalog || !AnkerP31iProductVerifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var verified = AnkerP31iProductVerifier.price(page.html(), fetchedAt).orElse(null);
+            if (verified == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct(AnkerP31iProductVerifier.NAME, "anker-kr:43", new OfficialOffer(requestedUrl, store.name(), verified,
+                    "KRW", null, fetchedAt, "공식 상품의 색상·할인 판매가와 구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + verified + "원"), null);
+        }
         if (store.id().equals("bose-kr")) {
             if (!catalog || !BoseProductVerifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
             var verified = BoseProductVerifier.price(page.html()).orElse(null);
@@ -224,7 +231,7 @@ final class OfficialProductParser {
     private static String productPath(URI uri) {
         if ("www.lge.co.kr".equalsIgnoreCase(uri.getHost()))
             return uri.getPath().replaceFirst("^/product/", "/").replaceFirst("/$", "");
-        if ("qcystore.co.kr".equalsIgnoreCase(uri.getHost())) {
+        if ("qcystore.co.kr".equalsIgnoreCase(uri.getHost()) || "ankerkorea.co.kr".equalsIgnoreCase(uri.getHost())) {
             if (uri.getPath().equals("/product/detail.html")) return Arrays.stream(Objects.toString(uri.getQuery(), "").split("&"))
                     .filter(item -> item.startsWith("product_no=")).map(item -> item.substring(11)).findFirst().orElse("");
             var parts = uri.getPath().split("/");
