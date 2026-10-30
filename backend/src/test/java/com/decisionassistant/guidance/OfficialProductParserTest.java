@@ -56,6 +56,19 @@ class OfficialProductParserTest {
         assertThat(OfficialStorePolicy.store(url.replace("www.marshall.com", "marshall.com.evil.example"))).isEmpty();
     }
 
+    @Test void minorIvRequiresMatchingModelSkuInStockAndPurchasePrice() {
+        var url = "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653";
+        var data = "<h1>MINOR IV</h1><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"MINOR IV\",\"url\":\"" + url + "\",\"sku\":\"1006653\",\"offers\":{\"@type\":\"Offer\",\"price\":169000,\"priceCurrency\":\"KRW\",\"availability\":\"https://schema.org/InStock\"}}</script>";
+        var purchase = "<p aria-label='정상 가격: ₩ 169,000'>₩ 169,000</p><div><p>₩ 169,000</p><button>₩ 169,000 - 장바구니</button></div>";
+        var valid = OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + purchase, url), Instant.now(), true);
+        assertThat(valid.product().identity()).isEqualTo("marshall-kr:1006653");
+        for (var invalid : List.of(data.replace("InStock", "OutOfStock") + purchase, data.replace("MINOR IV", "MOTIF II A.N.C.") + purchase,
+                data.replace("1006653", "1006450") + purchase, data + purchase.replace("169,000 - 장바구니", "149,000 - 장바구니"),
+                data + purchase.replace("<button>", "<button disabled>"), data + purchase + purchase))
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now(), true).product()).isNull();
+        assertThat(OfficialStorePolicy.store(url.replace("1006653", "1006450"))).isEmpty();
+        assertThat(OfficialStorePolicy.store(url + "&color=cream")).isEmpty();
+    }
     @Test void applePriceRequiresSinglePurchaseLinkMatchingOfferSkuAndAmount() {
         var url = "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3";
         var data = "<title>AirPods Pro 3</title><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"AirPods Pro 3\",\"url\":\"" + url + "\",\"offers\":{\"@type\":\"Offer\",\"sku\":\"MFHP4KH/A\",\"price\":369000,\"priceCurrency\":\"KRW\"}}</script>";

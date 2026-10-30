@@ -273,6 +273,22 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         verify(marshallSpecificationSource, times(1)).fetch();
     }
+    @Test void minorIvReviewPersistsAndReservesOncePerWeek() throws Exception {
+        var id = "marshall-minor-iv-black"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653";
+        var p = new CatalogProduct(id);
+        p.register(1, "MINOR IV", url, "marshall-kr:1006653", List.of(
+                new CatalogProduct.Fact(new ProductFact("방수", "IPX4", url, "이어버드 IPX4", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(marshallSpecificationSource.fetchMinorIv()).thenReturn("<link rel='canonical' href='" + url + "'><h1>MINOR IV</h1>"
+                + "<script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"MINOR IV\",\"sku\":\"1006653\",\"url\":\"" + url + "\"}</script>"
+                + "<div><div>방수</div><div>이어버드 IPX4</div></div>");
+        var worker = new MinorIvSpecificationRefreshWorker(true, catalogProperties, products, jdbc, marshallSpecificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
+        verify(marshallSpecificationSource, times(1)).fetchMinorIv();
+    }
     @Test void sennheiserPriceRefreshPersistsValidatedOfferAndSupportsRecommendations() throws Exception {
         var id = "sennheiser-momentum-tw5";
         var url = "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731";

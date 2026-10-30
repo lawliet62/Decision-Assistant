@@ -57,7 +57,7 @@ final class VisiblePrice {
             }
         }
         if (OfficialStorePolicy.store(url).orElseThrow().id().equals("marshall-kr")
-                && ProductPageRegions.current(doc, url, name) && "1006450".equals(sku)) {
+                && ProductPageRegions.current(doc, url, name) && Set.of("1006450", "1006653").contains(sku)) {
             var expected = "₩ " + String.format(java.util.Locale.US, "%,d", price.longValueExact());
             var regular = doc.select("p[aria-label^='정상 가격']").stream()
                     .filter(p -> p.text().equals(expected) && p.attr("aria-label").equals("정상 가격: " + expected)).toList();

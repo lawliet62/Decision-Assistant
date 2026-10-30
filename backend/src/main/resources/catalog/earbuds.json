@@ -355,5 +355,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "marshall-minor-iv-black",
+    "revision": 1,
+    "name": "MINOR IV",
+    "purchaseUrl": "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653",
+    "expectedIdentity": "marshall-kr:1006653",
+    "facts": [
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IPX4",
+          "sourceUrl": "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653",
+          "quote": "이어버드 IPX4",
+          "fetchedAt": "2026-10-30T18:02:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

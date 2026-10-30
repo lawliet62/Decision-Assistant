@@ -65,8 +65,8 @@ class CatalogPolicyTest {
     @Test void seedFactsAreExplicitAndDoNotPretendUnsupportedAliasesAreVerified() throws Exception {
         try (var in = getClass().getResourceAsStream("/catalog/earbuds.json")) {
             var entries = new tools.jackson.databind.ObjectMapper().readValue(in, CatalogImporter.Entry[].class);
-            assertThat(entries).hasSize(13);
-            assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(11);
+            assertThat(entries).hasSize(14);
+            assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(12);
             assertThat(entries[0].active()).isFalse();
             var marshall = Arrays.stream(entries).filter(e -> e.id().equals("marshall-motif-ii-anc")).findFirst().orElseThrow();
             assertThat(marshall.active()).isTrue();

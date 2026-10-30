@@ -9,6 +9,31 @@ final class MarshallSpecificationVerifier {
     private static final String RENDER_URL = "https://marshall-production-1.mobify-storefront.com/kr/ko/product/motif-ii-anc?pid=1006450";
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private MarshallSpecificationVerifier() {}
+    static boolean matchesMinorIvWater(String html) {
+        if (html == null || html.length() > 2_000_000) return false;
+        var url = "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653";
+        var renderUrl = "https://marshall-production-1.mobify-storefront.com/kr/ko/product/minor-iv?pid=1006653";
+        var doc = Jsoup.parse(html, url);
+        var canonical = doc.select("link[rel=canonical]"); var headings = doc.select("h1");
+        if (canonical.size() != 1 || !url.equals(canonical.first().absUrl("href"))
+                || headings.size() != 1 || !"MINOR IV".equals(headings.first().text())) return false;
+        int products = 0;
+        for (var script : doc.select("script[type=application/ld+json]")) {
+            try {
+                var item = JSON.readTree(script.data());
+                if ("Product".equals(item.path("@type").asText(""))) {
+                    if (!"1006653".equals(item.path("sku").asText("")) || !"MINOR IV".equals(item.path("name").asText(""))
+                            || !(url.equals(item.path("url").asText("")) || renderUrl.equals(item.path("url").asText("")))) return false;
+                    products++;
+                }
+            } catch (RuntimeException ignored) { return false; }
+        }
+        var labels = doc.select("div").stream().filter(e -> "방수".equals(e.ownText())).toList();
+        if (products != 1 || labels.size() != 1) return false;
+        var label = labels.getFirst(); var parent = label.parent();
+        return parent != null && parent.childrenSize() == 2 && parent.child(0) == label
+                && "이어버드 IPX4".equals(parent.child(1).text());
+    }
     static boolean matches(String html) {
         if (html == null || html.length() > 2_000_000) return false;
         var doc = Jsoup.parse(html, URL);

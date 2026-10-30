@@ -19,7 +19,7 @@ public final class OfficialStorePolicy {
             new Store("apple-kr", "Apple 공식 스토어", "www.apple.com", "/kr/shop/(buy-[^/]+|product)/.+", Set.of("store.storeimages.cdn-apple.com", "www.apple.com")),
             new Store("lg-kr", "LG전자", "www.lge.co.kr", "/(?:product/)?(?:monitors|notebook)/[^/]+/?", Set.of("www.lge.co.kr")),
             new Store("sony-kr", "소니 공식 스토어", "store.sony.co.kr", "/product-view/109871591/?", Set.of("store.sony.co.kr")),
-            new Store("marshall-kr", "Marshall 공식 스토어", "www.marshall.com", "/kr/ko/product/motif-ii-anc/?", Set.of()),
+            new Store("marshall-kr", "Marshall 공식 스토어", "www.marshall.com", "/kr/ko/product/(?:motif-ii-anc|minor-iv)/?", Set.of()),
             new Store("sennheiser-kr", "젠하이저 공식 스토어", "kr.sennheiser-hearing.com", "/product/(?:detail\\.html|모멘텀-트루-와이어리스-5/731/?)", Set.of()),
             new Store("qcy-kr", "QCY 공식몰", "qcystore.co.kr", "/product/(?:detail.html|[^/]+/[0-9]+(?:/.*)?)", Set.of("qcystore.co.kr")),
             new Store("qcy-naver", "QCY 공식 스마트스토어", "smartstore.naver.com", "/ylintl/products/[0-9]+/?", Set.of("shop-phinf.pstatic.net")));
@@ -32,7 +32,8 @@ public final class OfficialStorePolicy {
                     || !uri.normalize().getPath().equals(uri.getPath())) return Optional.empty();
             return STORES.stream().filter(store -> store.host().equalsIgnoreCase(uri.getHost()) && uri.getPath().matches(store.productPath()))
                     .filter(store -> !store.id().equals("sony-kr") || uri.getRawQuery() == null)
-                    .filter(store -> !store.id().equals("marshall-kr") || "pid=1006450".equals(uri.getRawQuery()))
+                    .filter(store -> !store.id().equals("marshall-kr") || (uri.getPath().matches("/kr/ko/product/motif-ii-anc/?")
+                            ? "pid=1006450".equals(uri.getRawQuery()) : "pid=1006653".equals(uri.getRawQuery())))
                     .filter(store -> !store.id().equals("sennheiser-kr") || (uri.getPath().equals("/product/detail.html")
                             ? "product_no=731".equals(uri.getRawQuery())
                             : uri.getRawQuery() == null || uri.getRawQuery().matches("item_code=P0000BCD000[B-F]")))

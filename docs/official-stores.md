@@ -10,7 +10,7 @@
 | QCY 한국 공식몰 | `qcystore.co.kr/product/`의 상품 번호가 있는 경로. [QCY KOREA 공식 유통 안내](https://www.qcykorea.com/default/customer/customer17.php?com_board_basic=read_form&com_board_id=17&com_board_idx=1&com_board_page=&com_board_search_code=&com_board_search_value1=&com_board_search_value2=&sub=01)에서 연결한 판매처 |
 | QCY 공식 스마트스토어 | 위 공식 유통 안내로 확인한 `smartstore.naver.com/ylintl/products/` 경로만 허용. 다른 판매자나 네이버 전체 도메인은 허용하지 않음 |
 | 소니 한국 공식 스토어 | `store.sony.co.kr/product-view/109871591` 한 상품에 한정. [공식 이어폰 목록](https://store.sony.co.kr/products/audio/wireless_earphones)에서 연결된 Float Run. 실제 Firecrawl의 구매 영역 검증이 실패하여 카탈로그에서는 비활성 상태 |
-| Marshall 한국 공식 스토어 | [공식 이어폰 목록](https://www.marshall.com/kr/ko/headphones/earbuds)에서 연결한 `www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450` 한 상품에 한정. 개발 시험에서 가격·ANC를 확인했으며 활성 등록 |
+| Marshall 한국 공식 스토어 | [공식 이어폰 목록](https://www.marshall.com/kr/ko/headphones/earbuds)에서 연결한 MOTIF II A.N.C. 블랙(`pid=1006450`)과 MINOR IV 블랙(`pid=1006653`)에 한정. 실제 응답과 검증 범위는 [평가](evaluations/catalog-2026-10-29/README.md)에 기록 |
 | 젠하이저 한국 공식 스토어 | [공식 스토어](https://kr.sennheiser-hearing.com/)의 MOMENTUM True Wireless 5 상품 731과 해당 색상 구성에 한정. 가격 검증은 카탈로그 전용이며 해당 상품을 활성 등록 |
 
 등록 근거 확인일: 2026-09-24. 판매처 추가·변경 시 공식 브랜드 페이지의 연결 근거를 이 문서에 남기고, 다른 호스트·판매자·경로·리다이렉트를 배제하는 테스트를 함께 갱신한다. 검색은 카테고리별 공식 상품 경로의 OR 질의 한 번으로 제한하며, 찾지 못한 브랜드를 임의 사이트로 대체하지 않는다.
@@ -33,7 +33,7 @@ v2는 JSON-LD 금액을 같은 상품 구매 영역의 라벨·금액과 대조�
 
 소니 Float Run은 JSON-LD가 없는 예외로, 단일 구매 영역과 고정된 상품명·구매 버튼·단일 판매가를 확인하고 색상이나 추가 선택 항목이 나타나면 거절한다. 조건부 가격·불명확한 모델도 제외한다. 검증되지 않은 파서는 카탈로그 갱신에서만 실행하며 기존 실시간 탐색에서는 공식 가격으로 승격하지 않는다. 단위 fixture만 통과했으며 실제 Firecrawl 응답에서 구매 영역을 단일하게 식별하지 못해 판매가 검증은 아직 성공하지 않았다.
 
-Marshall MOTIF II A.N.C.는 고정된 SKU·상품명·재고와 구조화 가격을 확인하고 같은 금액의 정상 가격 및 장바구니 영역 표시를 대조한다. 다른 SKU·가격·비활성 버튼은 거절한다. 이미지는 별도 CDN 권한 검토 전까지 사용하지 않는다.
+Marshall MOTIF II A.N.C.와 MINOR IV 블랙은 고정된 SKU·상품명·재고와 구조화 가격을 확인하고 같은 금액의 정상 가격 및 장바구니 영역 표시를 대조한다. 다른 SKU·가격·비활성 버튼은 거절한다. 이미지는 별도 CDN 권한 검토 전까지 사용하지 않는다.
 
 젠하이저 상품 731은 다섯 색상의 SKU·공식 상품 URL·InStock·동일 가격과 구매 영역의 선택 항목·표시 가격·구매 버튼을 대조한다. 조건부 가격과 불일치, 숨겨진 버튼은 거절한다. Firecrawl이 구매 링크의 JavaScript 동작을 제거하므로 링크의 동작 자체를 검증했다는 뜻은 아니다. 이 예외는 카탈로그 가격 경로에서만 사용하며 실제 Firecrawl 파서 검증은 단일 시점이다. ANC·이어버드 IP54의 주간 사양 자동 확인을 지원한다.
 
