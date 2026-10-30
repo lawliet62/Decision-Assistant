@@ -1,5 +1,11 @@
 # 국내 판매처 확장과 실제 가격 갱신 검증
 
+## 추가 상품 후보의 가격 검증 경계
+
+2026-10-31 검색에서 [QCY HT20 국내 상품 페이지](https://qcystore.co.kr/product/detail.html?product_no=1028)는 검정·흰색 외에 보라색 옵션도 표시했다. 현재 QCY 색상 검증은 검정과 흰색만 허용하므로 기존 검증기를 그대로 적용할 수 없다. [젠하이저 ACCENTUM True Wireless](https://kr.sennheiser-hearing.com/product/accentum-true-wireless/513/) 검색 결과에는 판매가·할인판매가·최대할인가가 함께 나타났다. 각 금액의 적용 조건과 실제 구매 가능 상태를 연결하기 전에는 일반 판매가를 확정할 수 없다.
+
+두 결과는 검색에 표시된 단일 시점의 후보 조사이며 Firecrawl 응답, 옵션별 재고·가격 또는 실제 구매를 검증한 결과가 아니다. 기존 젠하이저 가격 검증기는 상품 731 전용이며 상품 513을 지원하지 않는다. 두 상품은 활성화하지 않았고 추가 Firecrawl·OpenAI API 호출은 하지 않았다.
+
 ## 실행 범위
 
 2026-10-29 KST, 기존 Dev Secret Manager 인증으로 backend의 실제 Firecrawl adapter와 가격 worker를 실행했다. 로컬 PostgreSQL 17, 제품별 24시간 간격, 이번 smoke 월 예약 상한 6회를 사용했고 AI·검색·메일은 비활성화했다. [관측 원본](price-smoke.json)은 공개 상품 관측만 포함한다. 원문 HTML과 자격 증명은 보관하지 않았다.
