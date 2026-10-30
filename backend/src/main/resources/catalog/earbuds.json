@@ -499,11 +499,23 @@
   },
   {
     "id": "anker-liberty5-pro-d1203",
-    "revision": 1,
+    "revision": 2,
     "name": "앤커 사운드코어 리버티 5 프로 무선 블루투스 이어폰 D1203",
     "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=154",
     "expectedIdentity": "anker-kr:154",
     "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.ankerjapan.com/products/d1203",
+          "quote": "ウルトラノイズキャンセリング 4.0を搭載",
+          "fetchedAt": "2026-10-30T20:35:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
       {
         "evidence": {
           "name": "방수",

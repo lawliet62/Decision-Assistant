@@ -357,13 +357,34 @@ class CatalogApiIntegrationTest {
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
     }
+    @Test void libertyProRefreshKeepsUnverifiedWaterSeparateFromVerifiedAnc() throws Exception {
+        var id = "anker-liberty5-pro-d1203"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=154";
+        var source = "https://www.ankerjapan.com/products/d1203"; var old = Instant.now().minus(Duration.ofDays(91));
+        var p = new CatalogProduct(id);
+        p.register(1, "앤커 사운드코어 리버티 5 프로 무선 블루투스 이어폰 D1203", url, "anker-kr:154",
+                List.of(new CatalogProduct.Fact(new ProductFact("방수", "IP55", source, "IP55", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                        new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, "ウルトラノイズキャンセリング 4.0を搭載", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(ankerLibertyProSpecificationSource.fetch()).thenReturn("<title>Soundcore Liberty 5 Pro | ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア</title>"
+                + "<link rel='canonical' href='" + source + "'><h1>Soundcore Liberty 5 Pro</h1>"
+                + "<div class='pfs-text'><h3>Anker史上最高(※1)のノイズキャンセリング</h3>"
+                + "<p>究極の静けさを実現する、ウルトラノイズキャンセリング 4.0を搭載。</p></div>");
+        var spec = new AnkerLibertyProSpecificationRefreshWorker(true, catalogProperties, products, jdbc, ankerLibertyProSpecificationSource, transactionManager);
+        spec.refresh();
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts).filteredOn(f -> f.name().equals("ANC 지원")).singleElement().satisfies(f -> assertThat(f.fetchedAt()).isAfter(old));
+        assertThat(facts).filteredOn(f -> f.name().equals("방수")).singleElement().satisfies(f ->
+                assertThat(f.fetchedAt()).isBetween(old.minusSeconds(1), old.plusSeconds(1)));
+    }
     @Test void libertyProRefreshStoresDiscountAndWaterResistance() throws Exception {
         var id = "anker-liberty5-pro-d1203"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=154";
         var source = "https://www.ankerjapan.com/products/d1203"; var old = Instant.now().minus(Duration.ofDays(91));
         var name = "앤커 사운드코어 리버티 5 프로 무선 블루투스 이어폰 D1203";
         var p = new CatalogProduct(id);
         p.register(1, name, url, "anker-kr:154", List.of(new CatalogProduct.Fact(
-                new ProductFact("방수", "IP55", source, "IP55", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+                new ProductFact("방수", "IP55", source, "IP55", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, "ウルトラノイズキャンセリング 4.0を搭載", old, "UNREVIEWED"),
+                        CatalogProduct.ReviewCycle.HARDWARE)), true);
         products.saveAndFlush(p);
         var colors = new String[]{"미드나잇 블랙", "펄 화이트", "스카이 블루", "실버 핑크"};
         var variants = new ArrayList<Map<String, Object>>(); var stocks = new LinkedHashMap<String, Object>();
@@ -393,12 +414,22 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("214900");
         when(ankerLibertyProSpecificationSource.fetch()).thenReturn("<title>Soundcore Liberty 5 Pro | ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア</title>"
                 + "<link rel='canonical' href='" + source + "'><h1>Soundcore Liberty 5 Pro</h1>"
-                + "<div class='pfs-text'><h3>IP55 防塵・防水規格</h3><p>IP55の防塵・防水規格に対応</p></div>");
+                + "<div class='pfs-text'><h3>IP55 防塵・防水規格</h3><p>IP55の防塵・防水規格に対応</p></div>"
+                + "<div class='pfs-text'><h3>Anker史上最高(※1)のノイズキャンセリング</h3>"
+                + "<p>究極の静けさを実現する、ウルトラノイズキャンセリング 4.0を搭載。</p></div>");
         var spec = new AnkerLibertyProSpecificationRefreshWorker(true, catalogProperties, products, jdbc, ankerLibertyProSpecificationSource, transactionManager);
         spec.refresh(); spec.refresh();
-        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now())).hasSize(2)
+                .allSatisfy(fact -> assertThat(fact.fetchedAt()).isAfter(old));
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
         verify(ankerLibertyProSpecificationSource, times(1)).fetch();
+        var body = BODY.replace("\"maxBudget\":50000", "\"maxBudget\":250000").replace("\"compatibility\":\"Android\",", "");
+        var result = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        var decision = json.readTree(result).path("id").asText();
+        mvc.perform(get("/api/v1/decisions/" + decision).with(owner)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
     }
     @Test void libertyRefreshStoresDiscountAndAnc() throws Exception {
         var id = "anker-liberty5-a3957"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=40";

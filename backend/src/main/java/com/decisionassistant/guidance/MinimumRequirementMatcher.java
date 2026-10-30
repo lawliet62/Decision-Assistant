@@ -90,7 +90,8 @@ public final class MinimumRequirementMatcher {
         if (supported && NEGATIVE.matcher(quote).find()) return null;
         if ("ANC 지원".equals(fact.name()) && !ANC_CONTEXT.matcher(quote).find()
                 && !"アクティブノイズキャンセリング搭載".equals(quote.strip())
-                && !AnkerP41iVerifier.QUOTE.equals(quote.strip())) return null;
+                && !AnkerP41iVerifier.QUOTE.equals(quote.strip())
+                && !AnkerLibertyProSpecificationVerifier.ANC_QUOTE.equals(quote.strip())) return null;
         if ("펜 지원".equals(fact.name()) && (!PEN_CONTEXT.matcher(quote).find() || CAPACITIVE_PEN.matcher(quote).find())) return null;
         return new Value(null, 0, 0, supported);
     }

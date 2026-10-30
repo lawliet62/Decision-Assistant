@@ -12,12 +12,14 @@ public class AnkerLibertyProSpecificationRefreshWorker {
             CatalogProperties config, CatalogProductRepository products, JdbcTemplate jdbc,
             AnkerLibertyProSpecificationSource source, PlatformTransactionManager manager) {
         runner = new SpecificationRefreshRunner(enabled, config, products, jdbc, manager, "anker-liberty5-pro-d1203",
-                source::fetch, AnkerLibertyProSpecificationRefreshWorker::supports, (html, e) -> AnkerLibertyProSpecificationVerifier.matches(html));
+                source::fetch, AnkerLibertyProSpecificationRefreshWorker::supports, (html, e) -> "ANC 지원".equals(e.name())
+                        ? AnkerLibertyProSpecificationVerifier.matchesAnc(html) : AnkerLibertyProSpecificationVerifier.matches(html));
     }
     @Scheduled(fixedDelayString = "${decision-assistant.catalog.spec-poll-interval:3600000}")
     public void refresh() { runner.refresh(); }
     private static boolean supports(DiscoveryContracts.ProductFact e) {
-        return "방수".equals(e.name()) && "IP55".equals(e.value()) && AnkerLibertyProSpecificationVerifier.QUOTE.equals(e.quote())
-                && AnkerLibertyProSpecificationVerifier.URL.equals(e.sourceUrl());
+        return AnkerLibertyProSpecificationVerifier.URL.equals(e.sourceUrl())
+                && ("방수".equals(e.name()) && "IP55".equals(e.value()) && AnkerLibertyProSpecificationVerifier.QUOTE.equals(e.quote())
+                || "ANC 지원".equals(e.name()) && "지원".equals(e.value()) && AnkerLibertyProSpecificationVerifier.ANC_QUOTE.equals(e.quote()));
     }
 }

@@ -65,6 +65,16 @@ class AnkerProductVerifierTest {
         assertThat(AnkerLibertyProSpecificationVerifier.matches(html.replace("IP55", "IP54"))).isFalse();
         assertThat(AnkerLibertyProSpecificationVerifier.matches(html + "<h1>別のモデル</h1>")).isFalse();
     }
+    @Test void libertyProAncRequiresExactManufacturerModelAndSupport() {
+        var html = "<title>Soundcore Liberty 5 Pro | ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア</title>"
+                + "<link rel='canonical' href='" + AnkerLibertyProSpecificationVerifier.URL + "'><h1>Soundcore Liberty 5 Pro</h1>"
+                + "<div class='pfs-text'><h3>Anker史上最高(※1)のノイズキャンセリング</h3>"
+                + "<p>究極の静けさを実現する、ウルトラノイズキャンセリング 4.0を搭載。</p></div>";
+        assertThat(AnkerLibertyProSpecificationVerifier.matchesAnc(html)).isTrue();
+        assertThat(AnkerLibertyProSpecificationVerifier.matchesAnc(html.replace("d1203", "d1202"))).isFalse();
+        assertThat(AnkerLibertyProSpecificationVerifier.matchesAnc(html.replace("搭載", "非搭載"))).isFalse();
+        assertThat(AnkerLibertyProSpecificationVerifier.matches(html)).isFalse();
+    }
     @Test void libertyRequiresItsOwnModelAndTwoOptions() {
         var html = page(2);
         assertThat(AnkerProductVerifier.libertyPrice(html, NOW)).hasValueSatisfying(p -> assertThat(p).isEqualByComparingTo("39900"));
