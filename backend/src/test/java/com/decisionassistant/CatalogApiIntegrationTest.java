@@ -338,6 +338,23 @@ class CatalogApiIntegrationTest {
         assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
         verify(sennheiserSpecificationSource, times(1)).fetch();
     }
+    @Test void t29SpecificationRefreshSavesVerifiedFormOnce() throws Exception {
+        var id = "qcy-t29-app"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=709";
+        var name = "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("형태", "오픈형", url, "오픈형", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchT29()).thenReturn("<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/709/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_709\"}</script>");
+        var worker = new T29SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
+        verify(specificationSource, times(1)).fetchT29();
+    }
     @Test void ht20SpecificationRefreshSavesVerifiedFormOnce() throws Exception {
         var id = "qcy-ht20"; var old = Instant.now().minus(Duration.ofDays(91));
         var url = "https://qcystore.co.kr/product/detail.html?product_no=1028";

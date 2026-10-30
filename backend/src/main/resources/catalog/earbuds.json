@@ -311,5 +311,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "qcy-t29-app",
+    "revision": 1,
+    "name": "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버",
+    "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=709",
+    "expectedIdentity": "qcy-kr:color-model:qcyt29app블루투스이어폰오픈형13mm드라이버",
+    "facts": [
+      {
+        "evidence": {
+          "name": "형태",
+          "value": "오픈형",
+          "sourceUrl": "https://qcystore.co.kr/product/detail.html?product_no=709",
+          "quote": "오픈형",
+          "fetchedAt": "2026-10-30T16:22:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

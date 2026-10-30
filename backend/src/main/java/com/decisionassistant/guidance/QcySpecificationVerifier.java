@@ -16,6 +16,9 @@ final class QcySpecificationVerifier {
     static boolean matchesHt20Form(String html) {
         return matchesStoreProduct(html, "1028", "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍");
     }
+    static boolean matchesT29Form(String html) {
+        return matchesStoreProduct(html, "709", "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버");
+    }
     private static boolean matchesStoreProduct(String html, String id, String name) {
         if (html == null || html.length() > 2_000_000) return false;
         var url = "https://qcystore.co.kr/product/detail.html?product_no=" + id;

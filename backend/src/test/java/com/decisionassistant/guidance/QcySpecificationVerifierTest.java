@@ -67,6 +67,17 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("cafe24_ylintlshop_1_563", "cafe24_ylintlshop_1_564"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("/563/", "/564/"))).isFalse();
     }
+    @Test void t29FormRequiresExactProductAndExplicitTitle() {
+        var name = "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/709/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_709\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesT29Form(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesT29Form(page.replace("오픈형", "커널형"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesT29Form(page.replace("T29", "T28"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesT29Form(page.replace("cafe24_ylintlshop_1_709", "cafe24_ylintlshop_1_710"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesT29Form(page.replace("/709/", "/710/"))).isFalse();
+    }
     @Test void ht20FormRequiresExactProductAndExplicitTitle() {
         var name = "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍";
         var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
