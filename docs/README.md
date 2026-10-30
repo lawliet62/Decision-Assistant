@@ -2,6 +2,7 @@
 
 - [등록 제품 카탈로그 운영](catalog-operations.md): 가격 24시간·사양 30/90일, 호출 한도, 출처 검토와 주기 평가
 - [카탈로그 MVP 결정](decisions/0016-curated-catalog.md): 후보 없는 진입 유지, 이어폰 범위 축소, 캐시 도입 유보
+- [카탈로그 실제 갱신·국내 판매처 확장 평가](evaluations/catalog-2026-10-29/README.md): 실제 Firecrawl→DB→추천 API와 판매 종료·상품명 변경 진단
 - [카탈로그 초기 평가](evaluations/catalog-2026-10-06/README.md): 공식 근거 범위, DB 성능과 미완료 운영 관측
 
 - [Product scope](product.md): 문제, MVP boundary, 성공 신호

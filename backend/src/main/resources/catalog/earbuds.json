@@ -1,7 +1,7 @@
 [
   {
     "id": "qcy-t13-anc",
-    "revision": 1,
+    "revision": 2,
     "name": "QCY T13 ANC APP 액티브노이즈캔슬링 블루투스 이어폰",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-t13-anc-app-%EC%95%A1%ED%8B%B0%EB%B8%8C%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-%ED%99%94%EC%9D%B4%ED%8A%B8/633/",
     "expectedIdentity": "qcy-kr:color-model:qcyt13ancapp액티브노이즈캔슬링블루투스이어폰",
@@ -12,7 +12,7 @@
           "value": "지원",
           "sourceUrl": "https://www.qcy.com/products/qcy-t13-anc",
           "quote": "Active Noise Cancellation (ANC)",
-          "fetchedAt": "2026-10-06T05:27:00Z",
+          "fetchedAt": "2026-10-28T16:45:45.616Z",
           "verificationStatus": "UNREVIEWED",
           "normalizationVersion": null
         },
@@ -24,36 +24,74 @@
           "value": "iOS/Android",
           "sourceUrl": "https://www.qcy.com/products/qcy-t13-anc",
           "quote": "Compatible system: iOS/Android",
-          "fetchedAt": "2026-10-06T05:27:00Z",
+          "fetchedAt": "2026-10-28T16:45:45.617Z",
           "verificationStatus": "UNREVIEWED",
           "normalizationVersion": null
         },
         "cycle": "SOFTWARE"
       }
     ],
-    "active": true
+    "active": false
   },
   {
     "id": "qcy-ht16",
-    "revision": 1,
+    "revision": 2,
     "name": "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%9E%99/990/",
     "expectedIdentity": "qcy-kr:color-model:qcyht16멜로버즈무선블루투스이어폰anc노이즈캔슬링",
-    "facts": [],
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://qcystore.co.kr/product/detail.html?product_no=990",
+          "quote": "ANC 노이즈캔슬링",
+          "fetchedAt": "2026-10-29T17:05:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
     "active": true
   },
   {
     "id": "qcy-ht19",
-    "revision": 1,
-    "name": "QCY HT19 멜로버즈 블루투스 6.0 무선 이어폰 게이밍 ANC 노이즈캔슬링 고음질",
+    "revision": 4,
+    "name": "QCY HT19 멜로버즈 듀얼 블루투스 무선 이어폰 ANC 노이즈캔슬링 고음질 LDAC",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-ht19-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%9D%B4%EC%96%B4%ED%8F%B0-%EA%B2%8C%EC%9D%B4%EB%B0%8D-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EA%B3%A0%EC%9D%8C%EC%A7%88/1012/",
-    "expectedIdentity": "qcy-kr:color-model:qcyht19멜로버즈블루투스60무선이어폰게이밍anc노이즈캔슬링고음질",
-    "facts": [],
+    "expectedIdentity": "qcy-kr:color-model:qcyht19멜로버즈듀얼블루투스무선이어폰anc노이즈캔슬링고음질ldac",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.qcy.com/products/qcy-melobuds-n60",
+          "quote": "Bluetooth 6.0, 56dB ANC, Hi-Res, 45-Hour Playtime, HT19",
+          "fetchedAt": "2026-10-29T15:45:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IPX5",
+          "sourceUrl": "https://www.qcy.com/products/qcy-melobuds-n60",
+          "quote": "Water Resistance Range: IPX5",
+          "fetchedAt": "2026-10-29T15:30:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
     "active": true
   },
   {
     "id": "qcy-t13-pro",
-    "revision": 1,
+    "revision": 2,
     "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-t13pro-anc-%EB%B8%94%EB%A5%B4%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%BB%A4%EB%84%90%ED%98%95-%EC%9D%B4%EC%96%B4%ED%8F%B0/1033/category/134/display/1/",
     "expectedIdentity": "qcy-kr:color-model:qcyt13proanc블르투스60무선커널형이어폰",
@@ -64,7 +102,7 @@
           "value": "지원",
           "sourceUrl": "https://www.qcy.com/products/qcy-t13-pro",
           "quote": "50dB Adaptive ANC",
-          "fetchedAt": "2026-10-06T05:27:00Z",
+          "fetchedAt": "2026-10-28T16:45:45.617Z",
           "verificationStatus": "UNREVIEWED",
           "normalizationVersion": null
         },
@@ -76,7 +114,7 @@
           "value": "iOS / Android",
           "sourceUrl": "https://www.qcy.com/products/qcy-t13-pro",
           "quote": "Compatible Systems: iOS / Android",
-          "fetchedAt": "2026-10-06T05:27:00Z",
+          "fetchedAt": "2026-10-28T16:45:45.617Z",
           "verificationStatus": "UNREVIEWED",
           "normalizationVersion": null
         },
@@ -88,7 +126,7 @@
           "value": "IPX4",
           "sourceUrl": "https://www.qcy.com/products/qcy-t13-pro",
           "quote": "Water Resistance Range: IPX4",
-          "fetchedAt": "2026-10-06T05:27:00Z",
+          "fetchedAt": "2026-10-28T16:45:45.617Z",
           "verificationStatus": "UNREVIEWED",
           "normalizationVersion": null
         },
@@ -99,11 +137,157 @@
   },
   {
     "id": "qcy-t17-app",
-    "revision": 1,
+    "revision": 2,
     "name": "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-t17app-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%BB%A4%EB%84%90%ED%98%95-%EB%AC%B4%EC%84%A0%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%A0%80%EC%A7%80%EC%97%B0-%ED%81%90%EC%94%A8%EC%99%80%EC%9D%B4-%EC%B4%88%EA%B2%BD%EB%9F%89-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A453%EB%B2%84%EC%A0%84-%EB%B8%94%EB%9E%99/563/",
     "expectedIdentity": "qcy-kr:color-model:qcyt17app블루투스이어폰커널형무선이어폰저지연큐씨와이초경량블루투스53버전",
+    "facts": [
+      {
+        "evidence": {
+          "name": "형태",
+          "value": "커널형",
+          "sourceUrl": "https://qcystore.co.kr/product/detail.html?product_no=563",
+          "quote": "커널형",
+          "fetchedAt": "2026-10-29T17:17:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "apple-airpods-pro-3",
+    "revision": 1,
+    "name": "AirPods Pro 3",
+    "purchaseUrl": "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3",
+    "expectedIdentity": "apple-kr:mfhp4kh/a",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.apple.com/kr/airpods-pro/specs/",
+          "quote": "액티브 노이즈 캔슬링",
+          "fetchedAt": "2026-10-28T16:40:46.408Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IP57",
+          "sourceUrl": "https://www.apple.com/kr/airpods-pro/specs/",
+          "quote": "먼지, 땀, 습기에 강한 방진 및 생활 방수 디자인(IP57)",
+          "fetchedAt": "2026-10-28T16:40:46.409Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "apple-airpods-5-wireless",
+    "revision": 1,
+    "name": "AirPods 5 무선 충전 케이스 모델",
+    "purchaseUrl": "https://www.apple.com/kr/shop/buy-airpods/airpods-5/%EB%AC%B4%EC%84%A0-%EC%B6%A9%EC%A0%84-%EC%BC%80%EC%9D%B4%EC%8A%A4-%ED%8F%AC%ED%95%A8",
+    "expectedIdentity": "apple-kr:mkft4kh/a",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.apple.com/kr/airpods-5/specs/",
+          "quote": "액티브 노이즈 캔슬링",
+          "fetchedAt": "2026-10-29T16:15:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IP57",
+          "sourceUrl": "https://www.apple.com/kr/airpods-5/specs/",
+          "quote": "먼지, 땀, 습기에 강한 방진 및 생활 방수 디자인(IP57)",
+          "fetchedAt": "2026-10-29T16:15:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "sennheiser-momentum-tw5",
+    "revision": 1,
+    "name": "모멘텀 트루 와이어리스 5",
+    "purchaseUrl": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+    "expectedIdentity": "sennheiser-kr:cafe24_bnispace_1_731",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+          "quote": "하이브리드 적응형 ANC",
+          "fetchedAt": "2026-10-29T20:02:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IP54",
+          "sourceUrl": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+          "quote": "IP54 방진 및 생활 방수 (이어버드만 해당)",
+          "fetchedAt": "2026-10-29T20:02:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "sony-float-run",
+    "revision": 2,
+    "name": "플로트 런 Float Run",
+    "purchaseUrl": "https://store.sony.co.kr/product-view/109871591",
+    "expectedIdentity": "sony-kr:109871591",
     "facts": [],
+    "active": false
+  },
+  {
+    "id": "marshall-motif-ii-anc",
+    "revision": 2,
+    "name": "MOTIF II A.N.C.",
+    "purchaseUrl": "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450",
+    "expectedIdentity": "marshall-kr:1006450",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450",
+          "quote": "액티브 노이즈 캔슬링",
+          "fetchedAt": "2026-10-29T16:29:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
     "active": true
   }
 ]

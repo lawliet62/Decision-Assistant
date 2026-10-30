@@ -20,6 +20,8 @@ public class CatalogProduct {
     @Column(name = "purchase_url", nullable = false, length = 2048) private String purchaseUrl;
     @Column(name = "expected_identity", nullable = false, length = 500) private String expectedIdentity;
     @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false, columnDefinition = "jsonb") private List<Fact> facts;
+    @JdbcTypeCode(SqlTypes.JSON) @Column(name = "fact_reviews", nullable = false, columnDefinition = "jsonb")
+    private Map<String, Instant> factReviews = new HashMap<>();
     private boolean active;
     @JdbcTypeCode(SqlTypes.JSON) @Column(columnDefinition = "jsonb") private OfficialOffer offer;
     @Column(name = "price_quote") private String priceQuote;
@@ -40,6 +42,7 @@ public class CatalogProduct {
         if (!Objects.equals(purchaseUrl, url) || !Objects.equals(expectedIdentity, identity)) {
             offer = null; priceQuote = null; priceStatus = "UNVERIFIED"; nextAttemptAt = Instant.EPOCH;
         }
+        factReviews = new HashMap<>();
         this.revision = revision; this.name = name; purchaseUrl = url; expectedIdentity = identity;
         this.facts = List.copyOf(facts); this.active = active;
     }
@@ -55,8 +58,21 @@ public class CatalogProduct {
         // 통신 실패는 마지막 관측을 보존하되, 상품/가격 검증 실패는 즉시 신규 추천에서 제외한다.
         if (!"COLLECTION_FAILED".equals(outcome)) priceStatus = outcome;
     }
+    void reviewedFact(int expectedRevision, String name, Instant reviewedAt) {
+        if (expectedRevision != revision || reviewedAt == null || facts.stream().filter(f -> name.equals(f.evidence().name())).count() != 1)
+            throw new IllegalArgumentException("사양 revision과 항목을 확인하세요.");
+        var original = facts.stream().filter(f -> name.equals(f.evidence().name())).findFirst().orElseThrow().evidence().fetchedAt();
+        if (reviewedAt.isBefore(original)) throw new IllegalArgumentException("사양 확인 시각이 이전입니다.");
+        var previous = factReviews.get(name);
+        if (previous == null || reviewedAt.isAfter(previous)) factReviews.put(name, reviewedAt);
+    }
     public List<ProductFact> usableFacts(Instant now) {
-        return facts.stream().filter(f -> f.cycle() == ReviewCycle.HARDWARE || now.isBefore(f.reviewDueAt()))
+        return facts.stream().map(f -> {
+            var e = f.evidence();
+            var reviewed = factReviews.get(e.name());
+            var at = reviewed != null && !reviewed.isAfter(now) && reviewed.isAfter(e.fetchedAt()) ? reviewed : e.fetchedAt();
+            return new Fact(new ProductFact(e.name(), e.value(), e.sourceUrl(), e.quote(), at, e.verificationStatus(), e.normalizationVersion()), f.cycle());
+        }).filter(f -> f.cycle() == ReviewCycle.HARDWARE || now.isBefore(f.reviewDueAt()))
                 .map(Fact::evidence).toList();
     }
     public OfficialOffer usableOffer() { return "VERIFIED".equals(priceStatus) ? offer : null; }

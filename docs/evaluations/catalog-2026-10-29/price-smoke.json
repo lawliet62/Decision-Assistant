@@ -1,0 +1,54 @@
+{
+  "environment": "local Dev backend / real Firecrawl / local PostgreSQL 17",
+  "monthlyCallLimit": 6,
+  "observations": [
+    {
+      "product_id": "qcy-ht16",
+      "attempted_at": "2026-10-28T16:45:12.098921+00:00",
+      "completed_at": "2026-10-28T16:45:21.598733+00:00",
+      "outcome": "VERIFIED",
+      "price": 31800,
+      "currency": "KRW"
+    },
+    {
+      "product_id": "apple-airpods-pro-3",
+      "attempted_at": "2026-10-28T16:45:26.638594+00:00",
+      "completed_at": "2026-10-28T16:45:29.483796+00:00",
+      "outcome": "VERIFIED",
+      "price": 369000,
+      "currency": "KRW"
+    },
+    {
+      "product_id": "qcy-ht19",
+      "attempted_at": "2026-10-28T16:45:34.506268+00:00",
+      "completed_at": "2026-10-28T16:45:42.142314+00:00",
+      "outcome": "MODEL_MISMATCH",
+      "price": null,
+      "currency": null
+    },
+    {
+      "product_id": "qcy-t13-anc",
+      "attempted_at": "2026-10-28T16:45:47.15308+00:00",
+      "completed_at": "2026-10-28T16:45:49.956787+00:00",
+      "outcome": "PRODUCT_MISSING",
+      "price": null,
+      "currency": null
+    },
+    {
+      "product_id": "qcy-t13-pro",
+      "attempted_at": "2026-10-28T16:45:54.9795+00:00",
+      "completed_at": "2026-10-28T16:46:02.177098+00:00",
+      "outcome": "VERIFIED",
+      "price": 24300,
+      "currency": "KRW"
+    },
+    {
+      "product_id": "qcy-t17-app",
+      "attempted_at": "2026-10-28T16:46:07.192553+00:00",
+      "completed_at": "2026-10-28T16:46:14.461305+00:00",
+      "outcome": "VERIFIED",
+      "price": 29900,
+      "currency": "KRW"
+    }
+  ]
+}

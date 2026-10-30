@@ -46,6 +46,12 @@ class CatalogApiIntegrationTest {
     @Autowired CatalogProductRepository products;
     @Autowired CatalogRefreshWorker worker;
     @Autowired JdbcTemplate jdbc;
+    @Autowired CatalogProperties catalogProperties;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
+    @MockitoBean QcySpecificationSource specificationSource;
+    @MockitoBean AppleSpecificationSource appleSpecificationSource;
+    @MockitoBean MarshallSpecificationSource marshallSpecificationSource;
+    @MockitoBean SennheiserSpecificationSource sennheiserSpecificationSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -59,7 +65,7 @@ class CatalogApiIntegrationTest {
             "searchConsent":false,"collectionConsent":false,"aiConsent":false,"sensitiveDataAcknowledged":false}}
             """;
     @BeforeEach void setup() {
-        jdbc.update("delete from catalog_observations"); jdbc.update("delete from catalog_products"); jdbc.update("delete from catalog_monthly_usage");
+        jdbc.update("delete from catalog_observations"); jdbc.update("delete from catalog_spec_attempts"); jdbc.update("delete from catalog_products"); jdbc.update("delete from catalog_monthly_usage");
         owner = owner();
     }
     private RequestPostProcessor owner() {
@@ -109,6 +115,287 @@ class CatalogApiIntegrationTest {
         mvc.perform(get("/api/v1/decisions/" + id).with(owner))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("UNKNOWN"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].reason").value(org.hamcrest.Matchers.containsString("예산 충족 여부를 판정하지 않았습니다")));
+    }
+    @Test void storedFactReviewIsLoadedWithoutChangingManifestFacts() throws Exception {
+        var p = product(1, Instant.now());
+        var original = p.facts().get(1).evidence().fetchedAt();
+        var reviewed = original.plusSeconds(10);
+        jdbc.update("update catalog_products set fact_reviews = cast(? as jsonb) where id = ?",
+                json.writeValueAsString(Map.of("호환성", reviewed.toString())), p.id());
+        var loaded = products.findById(p.id()).orElseThrow();
+        assertThat(loaded.facts().get(1).evidence().fetchedAt()).isEqualTo(original);
+        assertThat(loaded.usableFacts(reviewed.plusSeconds(1)).get(1).fetchedAt()).isEqualTo(reviewed);
+    }
+    @Test void scheduledSpecificationReviewPersistsOnlyMatchingFactsAndRespectsAttemptInterval() throws Exception {
+        var id = "qcy-t13-pro"; var now = Instant.now().minus(Duration.ofDays(31));
+        var sourceUrl = "https://www.qcy.com/products/qcy-t13-pro";
+        var p = new CatalogProduct(id);
+        p.register(1, "QCY T13 Pro", url(9), "qcy:test", List.of(), true);
+        products.saveAndFlush(p);
+        var specWorker = new QcySpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        specWorker.refresh();
+        verify(specificationSource, never()).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
+        p = products.findById(id).orElseThrow();
+        p.register(2, "QCY T13 Pro", url(9), "qcy:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("방수", "IPX5", sourceUrl, "Water Resistance Range: IPX5", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        specWorker.refresh();
+        verify(specificationSource, never()).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
+        p = products.findById(id).orElseThrow();
+        p.register(3, "QCY T13 Pro", url(9), "qcy:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("호환성", "iOS / Android", sourceUrl, "Compatible Systems: iOS / Android", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.SOFTWARE),
+                new CatalogProduct.Fact(new ProductFact("방수", "IPX4", sourceUrl, "Water Resistance Range: IPX4", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", sourceUrl, "50dB Adaptive ANC", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetch()).thenReturn("<title>QCY T13 Pro – QCY Official</title><meta name='description' content='50dB Adaptive ANC Up to 47H Playtime'><div class='specification-content'><div class='spec-details'><p>Product Name: QCY T13 Pro</p><p>Compatible Systems: iOS / Android<br>Water Resistance Range: IPX5</p></div></div>");
+        specWorker.refresh(); specWorker.refresh();
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts).extracting(ProductFact::name).containsExactly("호환성", "방수", "ANC 지원");
+        assertThat(facts.getFirst().fetchedAt()).isAfter(now);
+        assertThat(facts.get(1).fetchedAt()).isEqualTo(now);
+        assertThat(facts.get(2).fetchedAt()).isAfter(now);
+        verify(specificationSource, times(1)).fetch();
+    }
+    @Test void ht16ReviewPersistsOnlyExactOfficialModel() throws Exception {
+        var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=990";
+        var name = "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("ANC 지원", "지원", url, "ANC 노이즈캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchHt16()).thenReturn("<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/990/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_990\"}</script>");
+        var worker = new Ht16SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        verify(specificationSource, times(1)).fetchHt16();
+    }
+    @Test void t17ReviewPersistsOnlyExactOfficialModel() throws Exception {
+        var id = "qcy-t17-app"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=563";
+        var name = "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("형태", "커널형", url, "커널형", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchT17App()).thenReturn("<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/563/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_563\"}</script>");
+        var worker = new T17SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        verify(specificationSource, times(1)).fetchT17App();
+    }
+    @Test void ht19ReviewRequiresExactSourceAndPersistsOnlyMatchingWaterResistance() throws Exception {
+        var id = "qcy-ht19"; var old = Instant.now().minus(Duration.ofDays(91));
+        var source = "https://www.qcy.com/products/qcy-melobuds-n60";
+        var p = new CatalogProduct(id);
+        p.register(1, "QCY HT19", url(8), "qcy:test", List.of(), true);
+        products.saveAndFlush(p);
+        var worker = new Ht19SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh();
+        verify(specificationSource, never()).fetchN60();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
+        p.register(2, "QCY HT19", url(8), "qcy:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, "Bluetooth 6.0, 56dB ANC, Hi-Res, 45-Hour Playtime, HT19", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                new CatalogProduct.Fact(new ProductFact("방수", "IPX5", source, "Water Resistance Range: IPX5", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchN60()).thenReturn("<title>QCY MeloBuds N60: Affordable Wireless Earbuds with Rich Sound – QCY Official</title>"
+                + "<p class='product__text subtitle'>Bluetooth 6.0, 56dB ANC, Hi-Res, 45-Hour Playtime, HT19</p>"
+                + "<div class='specification-content'><div class='spec-details'><p>Product Name: QCY MeloBuds N60<br>Water Resistance Range: IPX4</p></div></div>");
+        worker.refresh(); worker.refresh();
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts.getFirst().fetchedAt()).isAfter(old);
+        assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
+        verify(specificationSource, times(1)).fetchN60();
+    }
+    @Test void appleReviewUpdatesOnlyMatchingSpecification() throws Exception {
+        var id = "apple-airpods-pro-3"; var now = Instant.now().minus(Duration.ofDays(91));
+        var source = "https://www.apple.com/kr/airpods-pro/specs/";
+        var p = new CatalogProduct(id);
+        p.register(1, "AirPods Pro 3", "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3", "apple:test", List.of(), true);
+        products.saveAndFlush(p);
+        var worker = new AppleSpecificationRefreshWorker(true, catalogProperties, products, jdbc, appleSpecificationSource, transactionManager);
+        worker.refresh();
+        verify(appleSpecificationSource, never()).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
+        p = products.findById(id).orElseThrow();
+        p.register(2, "AirPods Pro 3", "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3", "apple:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", "https://www.apple.com/kr/other/", "액티브 노이즈 캔슬링", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        worker.refresh();
+        verify(appleSpecificationSource, never()).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isZero();
+        p = products.findById(id).orElseThrow();
+        p.register(3, "AirPods Pro 3", "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3", "apple:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, "액티브 노이즈 캔슬링", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                new CatalogProduct.Fact(new ProductFact("방수", "IP57", source, "먼지, 땀, 습기에 강한 방진 및 생활 방수 디자인(IP57)", now, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(appleSpecificationSource.fetch()).thenReturn("<title>AirPods Pro 3 - 제품 사양 - Apple (KR)</title><div class='techspecs-section section-audio'><ul class='techspecs-list'><li>액티브 노이즈 캔슬링</li></ul></div><div class='techspecs-section section-water'><ul class='techspecs-list'><li>IP54</li></ul></div>");
+        worker.refresh(); worker.refresh();
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts.getFirst().fetchedAt()).isAfter(now);
+        assertThat(facts.get(1).fetchedAt()).isEqualTo(now);
+        verify(appleSpecificationSource, times(1)).fetch();
+    }
+    @Test void airpods5ReviewPersistsOnlyMatchingSpecification() throws Exception {
+        var id = "apple-airpods-5-wireless"; var old = Instant.now().minus(Duration.ofDays(91));
+        var source = "https://www.apple.com/kr/airpods-5/specs/";
+        var p = new CatalogProduct(id);
+        p.register(1, "AirPods 5", "https://www.apple.com/kr/shop/buy-airpods/airpods-5/무선-충전-케이스-포함", "apple:test", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, "액티브 노이즈 캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                new CatalogProduct.Fact(new ProductFact("방수", "IP57", source, "먼지, 땀, 습기에 강한 방진 및 생활 방수 디자인(IP57)", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(appleSpecificationSource.fetchAirpods5()).thenReturn("<title>AirPods 5 - 제품 사양 - Apple (KR)</title><div class='techspecs-section section-audio'><ul class='techspecs-list'><li>액티브 노이즈 캔슬링</li></ul></div><div class='techspecs-section section-water'><ul class='techspecs-list'><li>IP54</li></ul></div>");
+        var worker = new Apple5SpecificationRefreshWorker(true, catalogProperties, products, jdbc, appleSpecificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts.getFirst().fetchedAt()).isAfter(old);
+        assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
+        verify(appleSpecificationSource, times(1)).fetchAirpods5();
+    }
+    @Test void marshallReviewRequiresMatchingModelAndPersistsOncePerWeek() throws Exception {
+        var id = "marshall-motif-ii-anc"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450";
+        var p = new CatalogProduct(id);
+        p.register(1, "MOTIF II A.N.C.", url, "marshall-kr:1006450", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", url, "액티브 노이즈 캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(marshallSpecificationSource.fetch()).thenReturn("<link rel='canonical' href='" + url + "'><h1>MOTIF II A.N.C.</h1>"
+                + "<script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"MOTIF II A.N.C.\",\"sku\":\"1006450\",\"url\":\"" + url + "\"}</script>"
+                + "<div><p>액티브 노이즈 캔슬링</p><div><p>예</p></div></div>");
+        var worker = new MarshallSpecificationRefreshWorker(true, catalogProperties, products, jdbc, marshallSpecificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        verify(marshallSpecificationSource, times(1)).fetch();
+    }
+    @Test void sennheiserPriceRefreshPersistsValidatedOfferAndSupportsRecommendations() throws Exception {
+        var id = "sennheiser-momentum-tw5";
+        var url = "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731";
+        var canonical = "https://kr.sennheiser-hearing.com/product/모멘텀-트루-와이어리스-5/731/";
+        var p = new CatalogProduct(id);
+        p.register(1, "모멘텀 트루 와이어리스 5", url, "sennheiser-kr:cafe24_bnispace_1_731", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", url, "하이브리드 적응형 ANC", Instant.now(), "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        var colors = new String[]{"블랙 그래파이트", "크림", "데님", "라벤더", "코퍼"};
+        var variants = new ArrayList<Map<String, Object>>(); var options = new StringBuilder("<option value='*'>선택</option>");
+        for (int i = 0; i < colors.length; i++) {
+            var color = colors[i]; var code = "P0000BCD000" + (char)('B' + i);
+            variants.add(Map.of("@type", "Product", "name", "모멘텀 트루 와이어리스 5 " + color, "color", color,
+                    "sku", "cafe24_bnispace_1_731_" + code, "offers", Map.of("@type", "Offer", "price", 429000,
+                    "priceCurrency", "KRW", "availability", "https://schema.org/InStock", "url", canonical + "?item_code=" + code)));
+            options.append("<option value='").append(color).append("'>").append(color).append("</option>");
+        }
+        var data = json.writeValueAsString(Map.of("@type", "ProductGroup", "name", "모멘텀 트루 와이어리스 5",
+                "productGroupID", "cafe24_bnispace_1_731", "variesBy", List.of("color"), "hasVariant", variants));
+        var html = "<link rel='canonical' href='" + canonical + "'><script type='application/ld+json'>" + data + "</script>"
+                + "<div class='xans-product-detail'><span class='senn-final-price'>₩429,000</span><select product_type='product_option' option_product_no='731' option_title='컬러'>"
+                + options + "</select><div class='productAction'><a class='btnSubmit gFull' href='#none'><span id='actionBuy'>바로 구매하기</span></a></div></div>";
+        when(web.scrapeProduct(url)).thenReturn(new WebEvidenceProvider.Page("", "", html, url));
+        worker.refreshNext();
+        assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("429000");
+        assertThat(jdbc.queryForObject("select outcome from catalog_observations where product_id=?", String.class, id)).isEqualTo("VERIFIED");
+        assertThat(jdbc.queryForObject("select calls from catalog_monthly_usage", Integer.class)).isEqualTo(1);
+        var body = BODY.replace("\"maxBudget\":50000", "\"maxBudget\":500000").replace("\"compatibility\":\"Android\",", "");
+        var result = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        var decision = json.readTree(result).path("id").asText();
+        mvc.perform(get("/api/v1/decisions/" + decision).with(owner)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.discovery.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].name").value("모멘텀 트루 와이어리스 5"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer.price").value(429000))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].priceStatus").value("VERIFIED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
+        var lowBudget = body.replace("\"maxBudget\":500000", "\"maxBudget\":400000");
+        var lowResult = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(lowBudget))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        var lowDecision = json.readTree(lowResult).path("id").asText();
+        mvc.perform(get("/api/v1/decisions/" + lowDecision).with(owner)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].priceStatus").value("VERIFIED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("BELOW"));
+    }
+    @Test void sennheiserReviewsMatchingFactAndKeepsChangedFactUnconfirmed() throws Exception {
+        var id = "sennheiser-momentum-tw5"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731";
+        var p = new CatalogProduct(id);
+        p.register(1, "모멘텀 트루 와이어리스 5", url, "sennheiser-kr:cafe24_bnispace_1_731", List.of(
+                new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", url, "하이브리드 적응형 ANC", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                new CatalogProduct.Fact(new ProductFact("방수", "IP54", url, "IP54 방진 및 생활 방수 (이어버드만 해당)", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(sennheiserSpecificationSource.fetch()).thenReturn("<link rel='canonical' href='https://kr.sennheiser-hearing.com/product/모멘텀-트루-와이어리스-5/731/'>"
+                + "<h1>모멘텀 트루 와이어리스 5</h1><script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"모멘텀 트루 와이어리스 5\",\"productGroupID\":\"cafe24_bnispace_1_731\"}</script>"
+                + "<div class='table-wrapper'><div class='table-row'><div class='label'>액티브 노이즈 캔슬링</div><div class='description'>하이브리드 적응형 ANC</div></div>"
+                + "<div class='table-row'><div class='label'>방진·방수 등급</div><div class='description'>IP55</div></div></div>");
+        var spec = new SennheiserSpecificationRefreshWorker(true, catalogProperties, products, jdbc, sennheiserSpecificationSource, transactionManager);
+        spec.refresh(); spec.refresh();
+        var facts = products.findById(id).orElseThrow().usableFacts(Instant.now());
+        assertThat(facts.getFirst().fetchedAt()).isAfter(old);
+        assertThat(facts.get(1).fetchedAt()).isEqualTo(old);
+        verify(sennheiserSpecificationSource, times(1)).fetch();
+    }
+    @Test void concurrentSpecificationWorkersShareOneAttempt() throws Exception {
+        var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=990";
+        var p = new CatalogProduct(id);
+        p.register(1, "HT16", url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("ANC 지원", "지원", url, "ANC 노이즈캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        when(specificationSource.fetchHt16()).thenAnswer(call -> {
+            entered.countDown();
+            if (!release.await(10, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("timeout");
+            return "";
+        });
+        var worker = new Ht16SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        try (var executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var first = executor.submit(worker::refresh);
+            try {
+                assertThat(entered.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                worker.refresh();
+            } finally { release.countDown(); }
+            first.get(10, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        verify(specificationSource, times(1)).fetchHt16();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isEqualTo(old);
+    }
+    @Test void specificationResponseForPreviousRevisionCannotRefreshNewRevision() throws Exception {
+        var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=990";
+        var fact = new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", url, "ANC 노이즈캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE);
+        var p = new CatalogProduct(id); p.register(1, "HT16", url, "qcy:test", List.of(fact), true); products.saveAndFlush(p);
+        when(specificationSource.fetchHt16()).thenAnswer(call -> {
+            var changed = products.findById(id).orElseThrow();
+            changed.register(2, "HT16", url, "qcy:test", List.of(fact), true); products.saveAndFlush(changed);
+            var name = "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙";
+            return "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                    + "<link rel='canonical' href='https://qcystore.co.kr/product/model/990/'>"
+                    + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_990\"}</script>";
+        });
+        new Ht16SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager).refresh();
+        var updated = products.findById(id).orElseThrow();
+        assertThat(updated.revision()).isEqualTo(2);
+        assertThat(updated.usableFacts(Instant.now()).getFirst().fetchedAt()).isEqualTo(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
+    }
+    @Test void failedSpecificationRequestKeepsPreviousReviewAndWeeklyLimit() throws Exception {
+        var id = "qcy-ht16"; var old = Instant.now().minus(Duration.ofDays(91));
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=990";
+        var p = new CatalogProduct(id); p.register(1, "HT16", url, "qcy:test", List.of(new CatalogProduct.Fact(
+                new ProductFact("ANC 지원", "지원", url, "ANC 노이즈캔슬링", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        when(specificationSource.fetchHt16()).thenThrow(new IllegalStateException("source unavailable"));
+        var worker = new Ht16SpecificationRefreshWorker(true, catalogProperties, products, jdbc, specificationSource, transactionManager);
+        worker.refresh(); worker.refresh();
+        verify(specificationSource, times(1)).fetchHt16();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isEqualTo(old);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
     }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(2))); product(2, null); product(3, null);

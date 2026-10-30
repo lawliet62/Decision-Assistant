@@ -9,6 +9,9 @@
 | LG전자 | `www.lge.co.kr`의 모니터·노트북 개별 상품 경로. [공식 제품 페이지](https://www.lge.co.kr/product/monitors/27gs85q) |
 | QCY 한국 공식몰 | `qcystore.co.kr/product/`의 상품 번호가 있는 경로. [QCY KOREA 공식 유통 안내](https://www.qcykorea.com/default/customer/customer17.php?com_board_basic=read_form&com_board_id=17&com_board_idx=1&com_board_page=&com_board_search_code=&com_board_search_value1=&com_board_search_value2=&sub=01)에서 연결한 판매처 |
 | QCY 공식 스마트스토어 | 위 공식 유통 안내로 확인한 `smartstore.naver.com/ylintl/products/` 경로만 허용. 다른 판매자나 네이버 전체 도메인은 허용하지 않음 |
+| 소니 한국 공식 스토어 | `store.sony.co.kr/product-view/109871591` 한 상품에 한정. [공식 이어폰 목록](https://store.sony.co.kr/products/audio/wireless_earphones)에서 연결된 Float Run. 실제 Firecrawl의 구매 영역 검증이 실패하여 카탈로그에서는 비활성 상태 |
+| Marshall 한국 공식 스토어 | [공식 이어폰 목록](https://www.marshall.com/kr/ko/headphones/earbuds)에서 연결한 `www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450` 한 상품에 한정. 개발 시험에서 가격·ANC를 확인했으며 활성 등록 |
+| 젠하이저 한국 공식 스토어 | [공식 스토어](https://kr.sennheiser-hearing.com/)의 MOMENTUM True Wireless 5 상품 731과 해당 색상 구성에 한정. 가격 검증은 카탈로그 전용이며 해당 상품을 활성 등록 |
 
 등록 근거 확인일: 2026-09-24. 판매처 추가·변경 시 공식 브랜드 페이지의 연결 근거를 이 문서에 남기고, 다른 호스트·판매자·경로·리다이렉트를 배제하는 테스트를 함께 갱신한다. 검색은 카테고리별 공식 상품 경로의 OR 질의 한 번으로 제한하며, 찾지 못한 브랜드를 임의 사이트로 대체하지 않는다.
 
@@ -28,6 +31,12 @@ v2는 JSON-LD 금액을 같은 상품 구매 영역의 라벨·금액과 대조�
 
 구조화 상품 속성·사양 표의 항목/값을 제품 식별자에 연결해 AI와 서버가 같은 근거를 사용한다. 선택한 필수 사양·호환성부터 6,000자 근거 예산에 배치한다. 단위 분리와 기본 용량 뒤의 확장 슬롯은 한정한 서버 규칙으로 정규화하고 원문을 보존한다. 이미지의 OCR이나 추가 fetch는 하지 않는다.
 
+소니 Float Run은 JSON-LD가 없는 예외로, 단일 구매 영역과 고정된 상품명·구매 버튼·단일 판매가를 확인하고 색상이나 추가 선택 항목이 나타나면 거절한다. 조건부 가격·불명확한 모델도 제외한다. 검증되지 않은 파서는 카탈로그 갱신에서만 실행하며 기존 실시간 탐색에서는 공식 가격으로 승격하지 않는다. 단위 fixture만 통과했으며 실제 Firecrawl 응답에서 구매 영역을 단일하게 식별하지 못해 판매가 검증은 아직 성공하지 않았다.
+
+Marshall MOTIF II A.N.C.는 고정된 SKU·상품명·재고와 구조화 가격을 확인하고 같은 금액의 정상 가격 및 장바구니 영역 표시를 대조한다. 다른 SKU·가격·비활성 버튼은 거절한다. 이미지는 별도 CDN 권한 검토 전까지 사용하지 않는다.
+
+젠하이저 상품 731은 다섯 색상의 SKU·공식 상품 URL·InStock·동일 가격과 구매 영역의 선택 항목·표시 가격·구매 버튼을 대조한다. 조건부 가격과 불일치, 숨겨진 버튼은 거절한다. Firecrawl이 구매 링크의 JavaScript 동작을 제거하므로 링크의 동작 자체를 검증했다는 뜻은 아니다. 이 예외는 카탈로그 가격 경로에서만 사용하며 실제 Firecrawl 파서 검증은 단일 시점이다. ANC·이어버드 IP54의 주간 사양 자동 확인을 지원한다.
+
 이미지는 해당 Product의 이미지 필드만 사용하며 판매처별 확인한 이미지 호스트로 제한한다. 공식 이미지 CDN 호스트가 새로 필요하면 해당 상품 페이지의 근거와 테스트를 추가한다. 누락·차단·로딩 실패 시 대체 영역을 표시한다. 브라우저가 직접 요청하고 `referrerPolicy="no-referrer"`를 사용한다. IP 전송은 입력 화면에 안내한다. 이미지의 안전성·저작권이나 제품의 품질·정품·재고를 인증한다는 의미가 아니다.
 
 확인한 이미지 호스트는 삼성 상품 페이지의 `images.samsung.com`, Apple 구매 페이지의 `store.storeimages.cdn-apple.com`, QCY 상품 페이지의 `qcystore.co.kr`, [LG 상품 페이지](https://www.lge.co.kr/product/monitors/27gs50f)의 `www.lge.co.kr`이다. 같은 제품군 이름이라도 사양 인용은 판매가를 확인한 그 상품 페이지에 한정하여 다른 구성의 사양과 결합하지 않는다.
@@ -39,3 +48,5 @@ v2는 JSON-LD 금액을 같은 상품 구매 영역의 라벨·금액과 대조�
 기본 추천은 최소 사양을 모두 확인했고 예산 안에 있는 제품을 가격·이름 순으로 표시한다. 미확인·미달은 접힌 별도 목록에 둔다. 후보를 비교에 넣는 것은 여전히 사용자의 선택이며 수집 사양은 UNREVIEWED로 남는다. 제공되는 가격은 조회 시점의 상품 판매가이며 배송비·추가 할인은 판매처에서 확인한다.
 
 v2의 기본 추천에는 선택한 호환성도 충족해야 한다. 이어폰의 기본 플랫폼 연결·사용과 앱·기기별 추가 기능을 구분하며 후자는 사양과 제약으로 별도 표시한다. 설명은 검증 결과에서 서버가 구성한다. v1 후보·설명은 새 기준으로 재작성하지 않고 과거 기준임을 표시한다. [ADR 0014](decisions/0014-evidence-based-discovery-validation.md)에 변경 이유와 한계를 기록한다.
+
+2026-10-29 카탈로그 확장에서는 [AirPods Pro 3 구매 페이지](https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3)의 Offer SKU `MFHP4KH/A`, 단일 구매 선택 링크와 표시 금액을 확인했다. AirPods 5 무선 충전 케이스 모델은 두 구매 선택지 중 유일하게 선택된 항목의 URL·SKU·가격을 단일 Offer와 대조한다. Apple의 금액은 `₩`가 숫자 앞에 오므로 전용 구매 영역에서만 처리한다. 기존 AirPods 4 구매 주소가 AirPods 5로 이동하는 사례를 확인했으며 다른 세대로의 이동은 계속 거절한다. 삼성 버즈3 FE의 확인한 직접 응답은 제품 JSON-LD가 없는 공통 페이지여서 신규 카탈로그로 등록하지 않았다. 이는 모든 삼성 제품이나 Firecrawl 응답이 수집 불가능하다는 결론은 아니다.

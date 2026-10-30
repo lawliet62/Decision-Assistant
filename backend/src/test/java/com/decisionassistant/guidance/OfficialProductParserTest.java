@@ -18,6 +18,70 @@ class OfficialProductParserTest {
     }
     private String product(String offer) { return "{\"@type\":\"Product\",\"name\":\"Buds\",\"sku\":\"buds-1\",\"image\":\"/web/product/buds.jpg\"," + offer + "}"; }
 
+    @Test void sonySingleProductRequiresUnambiguousPurchaseArea() {
+        var url = "https://store.sony.co.kr/product-view/109871591";
+        var html = "<title>플로트 런 Float Run : 소니</title><div class='product_view_about'>"
+                + "<p class='product_tit'>플로트 런 Float Run</p><div class='product_price has_sale'>"
+                + "<div class='original'><span class='price'>169,000</span>원</div><div class='sale'><strong class='price'>159,000</strong>원</div></div>"
+                + "<div class='prd_select_box'></div><div class='result_btn_box'><a class='direct' href='/order/sheet'>바로 구매</a></div></div>";
+        var result = OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now(), true);
+        assertThat(result.product().offer().price()).isEqualByComparingTo("159000");
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now()).product()).isNull();
+        for (var invalid : List.of(html.replace("159,000", "회원 159,000"), html.replace("prd_select_box", "color_select"),
+                html.replace("/order/sheet", "/other"), html.replace("바로 구매", "일시품절"), html.replace("Float Run</p>", "다른 모델</p>"),
+                html.replace("159,000</strong>", "159,000</strong><b class='price'>140,000</b>")))
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now(), true).product()).isNull();
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url + "2"), Instant.now(), true).product()).isNull();
+        assertThat(OfficialStorePolicy.store(url + "?option=other")).isEmpty();
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", "<title>소니</title>", url), Instant.now(), true).rejection())
+                .isEqualTo(OfficialProductParser.Rejection.PRODUCT_MISSING);
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html + html, url), Instant.now(), true).rejection())
+                .isEqualTo(OfficialProductParser.Rejection.PRODUCT_AMBIGUOUS);
+    }
+
+    @Test void marshallRequiresExactProductInStockAndMatchingPurchasePrice() {
+        var url = "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450";
+        var data = "<h1>MOTIF II A.N.C.</h1><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"MOTIF II A.N.C.\",\"url\":\"" + url + "\",\"sku\":\"1006450\",\"offers\":{\"@type\":\"Offer\",\"price\":269000,\"priceCurrency\":\"KRW\",\"availability\":\"https://schema.org/InStock\"}}</script>";
+        var purchase = "<p aria-label='정상 가격: ₩ 269,000'>₩ 269,000</p><div><p>₩ 269,000</p><button>₩ 269,000 - 장바구니</button></div>";
+        var valid = OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + purchase, url), Instant.now());
+        assertThat(valid.product().identity()).isEqualTo("marshall-kr:1006450");
+        var unrelated = "<aside><p aria-label='정상 가격: ₩ 169,000'>₩ 169,000</p></aside>";
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + purchase + unrelated, url), Instant.now()).product()).isNotNull();
+        for (var invalid : List.of(data.replace("InStock", "OutOfStock") + purchase, data.replace("1006450\",\"offers", "1006451\",\"offers") + purchase,
+                data + purchase.replace("₩ 269,000 - 장바구니", "₩ 250,000 - 장바구니"), data + purchase.replace("<button>", "<button disabled>"),
+                data + purchase + purchase))
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now()).product()).isNull();
+        assertThat(OfficialStorePolicy.store(url.replace("1006450", "1006451"))).isEmpty();
+        assertThat(OfficialStorePolicy.store(url + "&other=1")).isEmpty();
+        assertThat(OfficialStorePolicy.store(url.replace("www.marshall.com", "marshall.com.evil.example"))).isEmpty();
+    }
+
+    @Test void applePriceRequiresSinglePurchaseLinkMatchingOfferSkuAndAmount() {
+        var url = "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3";
+        var data = "<title>AirPods Pro 3</title><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"AirPods Pro 3\",\"url\":\"" + url + "\",\"offers\":{\"@type\":\"Offer\",\"sku\":\"MFHP4KH/A\",\"price\":369000,\"priceCurrency\":\"KRW\"}}</script>";
+        var purchase = "<div class='product-selection-area'><a data-slot-name='productSelection' href='" + url + "?product=mfhp4kh/a&amp;step=select'><span class='current_price'>₩369,000</span></a></div>";
+        var result = OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + purchase, url), Instant.now());
+        assertThat(result.rejection()).isNull();
+        assertThat(result.product().identity()).isEqualTo("apple-kr:mfhp4kh/a");
+        for (var invalid : List.of(purchase.replace("mfhp4kh/a", "other"), purchase.replace("369,000", "199,000"), purchase + purchase, purchase.replace("₩369,000", "회원 ₩369,000"), purchase.replace("airpods-pro-3?", "airpods-5?"))) {
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + invalid, url), Instant.now()).product()).isNull();
+        }
+    }
+
+    @Test void appleAirpods5SelectedConfigurationMustMatchSkuAndPrice() {
+        var url = "https://www.apple.com/kr/shop/buy-airpods/airpods-5/무선-충전-케이스-포함";
+        var data = "<title>AirPods 5 무선 충전 케이스 모델</title><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"AirPods 5 무선 충전 케이스 모델\",\"url\":\"" + url + "\",\"offers\":{\"@type\":\"Offer\",\"sku\":\"MKFT4KH/A\",\"price\":229000,\"priceCurrency\":\"KRW\"}}</script>";
+        var selected = "<div class='item selection'><a data-slot-name='productSelection' href='" + url + "?product=mkft4kh/a'><span class='current_price'>₩229,000</span></a></div>";
+        var other = "<div class='item'><a data-slot-name='productSelection' href='/kr/shop/buy-airpods/airpods-5/무선-충전-케이스-미포함?product=mkft4kh/a'><span class='current_price'>₩199,000</span></a></div>";
+        var html = data + "<div class='product-selection-area'>" + other + selected + "</div>";
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now()).product().identity()).isEqualTo("apple-kr:mkft4kh/a");
+        for (var invalid : List.of(html.replace("mkft4kh/a'><span class='current_price'>₩229,000", "other'><span class='current_price'>₩229,000"),
+                html.replace("₩229,000", "₩199,000"), html.replace("item selection", "item"),
+                html.replace(other, other.replace("class='item'", "class='item selection'")),
+                html.replace("무선-충전-케이스-포함?product=mkft4kh", "무선-충전-케이스-미포함?product=mkft4kh")))
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now()).product()).isNull();
+    }
+
     @Test void validatesPriceImageAndOfficialIdentityFromCollectedHtml() {
         var product = parse(product(OFFER));
         assertThat(product.name()).isEqualTo("Buds");

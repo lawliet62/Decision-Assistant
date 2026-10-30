@@ -32,6 +32,19 @@ class CatalogPolicyTest {
         assertThat(p.usableFacts(checked.plus(Duration.ofDays(100)))).hasSize(1);
         assertThat(p.facts().getFirst().reviewDueAt()).isEqualTo(checked.plus(Duration.ofDays(90)));
     }
+    @Test void verifiedReviewExtendsOnlyItsFactAndIsDiscardedWhenRegistrationChanges() {
+        var p = product();
+        var review = checked.plus(Duration.ofDays(29));
+        p.reviewedFact(1, "호환성", review);
+        assertThat(p.usableFacts(checked.plus(Duration.ofDays(31)))).extracting(ProductFact::name)
+                .containsExactly("ANC 지원", "호환성");
+        assertThat(p.usableFacts(checked.plus(Duration.ofDays(31))).get(1).fetchedAt()).isEqualTo(review);
+        assertThatThrownBy(() -> p.reviewedFact(2, "호환성", review)).isInstanceOf(IllegalArgumentException.class);
+        p.register(1, p.name(), url, "qcy:test", p.facts(), true);
+        assertThat(p.usableFacts(checked.plus(Duration.ofDays(31)))).hasSize(2);
+        p.register(2, p.name(), url, "qcy:test", p.facts(), true);
+        assertThat(p.usableFacts(checked.plus(Duration.ofDays(31)))).hasSize(1);
+    }
     @Test void catalogRevisionCannotSilentlyHideChangedRegistration() {
         var p = product();
         assertThatThrownBy(() -> p.register(1, "Changed", url, "qcy:test", p.facts(), true)).isInstanceOf(IllegalArgumentException.class);
@@ -52,7 +65,12 @@ class CatalogPolicyTest {
     @Test void seedFactsAreExplicitAndDoNotPretendUnsupportedAliasesAreVerified() throws Exception {
         try (var in = getClass().getResourceAsStream("/catalog/earbuds.json")) {
             var entries = new tools.jackson.databind.ObjectMapper().readValue(in, CatalogImporter.Entry[].class);
-            assertThat(entries).hasSize(5);
+            assertThat(entries).hasSize(10);
+            assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(8);
+            assertThat(entries[0].active()).isFalse();
+            var marshall = Arrays.stream(entries).filter(e -> e.id().equals("marshall-motif-ii-anc")).findFirst().orElseThrow();
+            assertThat(marshall.active()).isTrue();
+            assertThat(marshall.revision()).isEqualTo(2);
             for (var entry : entries) CatalogImporter.validate(entry, Instant.parse("2030-01-01T00:00:00Z"));
             var template = new com.decisionassistant.template.IntakeTemplates().required(com.decisionassistant.decision.DecisionTypes.TemplateKey.EARBUDS);
             for (int index : List.of(0, 3)) {
@@ -60,7 +78,13 @@ class CatalogPolicyTest {
                 assertThat(MinimumRequirementMatcher.check(template.minimumRequirements(), Map.of("anc", "required"), facts).getFirst().status()).isEqualTo(RequirementStatus.MEETS);
                 assertThat(CompatibilityMatcher.check(template.key(), "Android", facts, null, true).status()).isEqualTo(RequirementStatus.MEETS);
             }
-            assertThat(entries[1].facts()).isEmpty(); assertThat(entries[2].facts()).isEmpty(); assertThat(entries[4].facts()).isEmpty();
+            assertThat(entries[1].facts()).extracting(f -> f.evidence().value()).containsExactly("지원");
+            assertThat(entries[4].facts()).extracting(f -> f.evidence().value()).containsExactly("커널형");
+            assertThat(MinimumRequirementMatcher.check(template.minimumRequirements(), Map.of("anc", "required"),
+                    entries[1].facts().stream().map(CatalogProduct.Fact::evidence).toList()).getFirst().status()).isEqualTo(RequirementStatus.MEETS);
+            assertThat(entries[2].facts()).extracting(f -> f.evidence().value()).containsExactly("지원", "IPX5");
+            assertThat(MinimumRequirementMatcher.check(template.minimumRequirements(), Map.of("anc", "required"),
+                    entries[2].facts().stream().map(CatalogProduct.Fact::evidence).toList()).getFirst().status()).isEqualTo(RequirementStatus.MEETS);
         }
     }
 }

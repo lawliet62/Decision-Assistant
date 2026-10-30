@@ -29,6 +29,50 @@ final class VisiblePrice {
             };
             if (!selector.isEmpty()) for (var row : doc.select(selector)) if (row.text().length() <= 600) rows.add(row.text());
         }
+        // Apple 구매 링크의 SKU와 현재 상품의 표시 가격을 함께 대조한다.
+        if (OfficialStorePolicy.store(url).orElseThrow().id().equals("apple-kr") && ProductPageRegions.current(doc, url, name)) {
+            var links = doc.select(".product-selection-area a[data-slot-name=productSelection]");
+            // AirPods 5의 충전 케이스 구성은 선택된 항목만 해당 SKU·URL과 대조한다.
+            if (links.size() > 1 && java.net.URI.create(url).getPath().equals("/kr/shop/buy-airpods/airpods-5/무선-충전-케이스-포함")) {
+                var areas = doc.select(".product-selection-area");
+                var selections = doc.select(".product-selection-area .item.selection");
+                if (areas.size() == 1 && selections.size() == 1)
+                    links = selections.first().select("a[data-slot-name=productSelection]");
+            }
+            if (links.size() == 1) {
+                var link = links.getFirst();
+                var target = java.net.URI.create(link.absUrl("href"));
+                var selected = Arrays.stream(Objects.toString(target.getQuery(), "").split("&"))
+                        .filter(item -> item.startsWith("product=")).map(item -> item.substring(8)).toList();
+                var prices = link.select(".current_price");
+                if (OfficialProductParser.samePage(url, target.toString()) && selected.size() == 1
+                        && !sku.isBlank() && selected.getFirst().equalsIgnoreCase(sku) && prices.size() == 1
+                        && !CONDITIONAL.matcher(link.text()).find()) {
+                    var text = prices.getFirst().text();
+                    if (text.matches("₩[0-9]{1,3}(?:,[0-9]{3})*")) {
+                        var amount = new BigDecimal(text.substring(1).replace(",", ""));
+                        if (amount.compareTo(price) == 0) return new Result("구매 선택 판매가 " + text, null);
+                    }
+                }
+            }
+        }
+        if (OfficialStorePolicy.store(url).orElseThrow().id().equals("marshall-kr")
+                && ProductPageRegions.current(doc, url, name) && "1006450".equals(sku)) {
+            var expected = "₩ " + String.format(java.util.Locale.US, "%,d", price.longValueExact());
+            var regular = doc.select("p[aria-label^='정상 가격']").stream()
+                    .filter(p -> p.text().equals(expected) && p.attr("aria-label").equals("정상 가격: " + expected)).toList();
+            var purchase = doc.select("p").stream().filter(p -> p.parent() != null
+                    && p.parent().children().stream().filter(e -> e.tagName().equals("button")).count() == 1
+                    && p.parent().children().stream().anyMatch(e -> e.tagName().equals("button") && e.text().contains("장바구니"))).toList();
+            if (regular.size() == 1 && purchase.size() == 1) {
+                var p = purchase.getFirst(); var button = p.parent().children().stream().filter(e -> e.tagName().equals("button")).findFirst().orElseThrow();
+                if (p.text().equals(expected) && regular.getFirst().text().equals(expected)
+                        && regular.getFirst().attr("aria-label").equals("정상 가격: " + expected)
+                        && button.text().equals(expected + " - 장바구니") && !button.hasAttr("disabled")
+                        && !"true".equalsIgnoreCase(button.attr("aria-disabled")))
+                    return new Result("구매 영역 판매가 " + expected, null);
+            }
+        }
         String confirmed = null;
         for (var text : rows) {
             var amounts = new HashSet<BigDecimal>();
