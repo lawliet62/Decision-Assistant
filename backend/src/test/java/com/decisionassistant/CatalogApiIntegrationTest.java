@@ -308,6 +308,32 @@ class CatalogApiIntegrationTest {
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
         verify(marshallSpecificationSource, times(1)).fetchMinorIv();
     }
+    @Test void bosePriceRefreshDoesNotInventAncEvidence() throws Exception {
+        var id = "bose-qc-earbuds-ice-blue"; var url = "https://www.bose.co.kr/357/?idx=307";
+        var name = "[New Launch] BOSE 보스 QC 이어버드(New)(아이스 블루)";
+        var option = "O20260113696597912a514";
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "bose-kr:307", List.of(), true);
+        products.saveAndFlush(p);
+        var html = "<link rel='canonical' href='" + url + "'><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"" + name
+                + "\",\"brand\":{\"name\":\"BOSE\"},\"offers\":{\"@type\":\"Offer\",\"price\":229000,\"priceCurrency\":\"KRW\","
+                + "\"url\":\"https://bose.co.kr/shop_view/?idx=307\",\"availability\":\"http://schema.org/InStock\"}}</script>"
+                + "<div id='prod_goods_form'><h1 class='view_tit'>" + name + "</h1><div class='pay_detail'><span class='real_price'>229,000원</span></div>"
+                + "<div id='prod_options'><label data-opttype='color' data-optcode='" + option + "' data-title='아이스 블루 (229,000원)'>"
+                + "<input type='radio' value='" + option + "'></label></div><div class='buy_btns pc'><a class='_btn_buy' data-bs-prod-code='s2026011323a13db67b522'>구매하기</a></div></div>";
+        when(web.scrapeProduct(url)).thenReturn(new WebEvidenceProvider.Page("", "", html, url));
+        worker.refreshNext();
+        assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("229000");
+        assertThat(jdbc.queryForObject("select outcome from catalog_observations where product_id=?", String.class, id)).isEqualTo("VERIFIED");
+        var body = BODY.replace("\"maxBudget\":50000", "\"maxBudget\":500000").replace("\"compatibility\":\"Android\",", "");
+        var result = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        var decision = json.readTree(result).path("id").asText();
+        mvc.perform(get("/api/v1/decisions/" + decision).with(owner)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].priceStatus").value("VERIFIED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("UNKNOWN"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("UNKNOWN"));
+    }
     @Test void sennheiserPriceRefreshPersistsValidatedOfferAndSupportsRecommendations() throws Exception {
         var id = "sennheiser-momentum-tw5";
         var url = "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731";

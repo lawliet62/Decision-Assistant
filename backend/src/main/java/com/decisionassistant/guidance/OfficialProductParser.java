@@ -47,6 +47,13 @@ final class OfficialProductParser {
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
+        if (store.id().equals("bose-kr")) {
+            if (!catalog || !BoseProductVerifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var verified = BoseProductVerifier.price(page.html()).orElse(null);
+            if (verified == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct(BoseProductVerifier.NAME, "bose-kr:307", new OfficialOffer(requestedUrl, store.name(), verified,
+                    "KRW", null, fetchedAt, "공식 상품의 단일 색상·구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + verified + "원"), null);
+        }
         if (store.id().equals("sennheiser-kr")) {
             if (!catalog || !"https://kr.sennheiser-hearing.com/product/detail.html?product_no=731".equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
             var verified = SennheiserProductVerifier.price(page.html()).orElse(null);

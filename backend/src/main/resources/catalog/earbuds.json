@@ -399,5 +399,14 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "bose-qc-earbuds-ice-blue",
+    "revision": 1,
+    "name": "[New Launch] BOSE 보스 QC 이어버드(New)(아이스 블루)",
+    "purchaseUrl": "https://www.bose.co.kr/357/?idx=307",
+    "expectedIdentity": "bose-kr:307",
+    "facts": [],
+    "active": true
   }
 ]
