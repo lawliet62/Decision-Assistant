@@ -52,7 +52,8 @@ public class CatalogImporter implements ApplicationRunner {
             var uri = URI.create(f.sourceUrl());
             if (!"https".equals(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null || uri.getPort() != -1
                     || !(Set.of("www.qcy.com", "qcystore.co.kr", "www.samsung.com", "www.apple.com", "support.apple.com", "www.lge.co.kr").contains(uri.getHost())
-                         || AnkerP31iSpecificationVerifier.URL.equals(f.sourceUrl()) && "anker-kr".equals(OfficialStorePolicy.store(e.purchaseUrl()).map(OfficialStorePolicy.Store::id).orElse(""))
+                         || AnkerP31iSpecificationVerifier.URL.equals(f.sourceUrl()) && AnkerProductVerifier.URL.equals(e.purchaseUrl())
+                         || AnkerProductVerifier.AERO_URL.equals(f.sourceUrl()) && AnkerProductVerifier.AERO_URL.equals(e.purchaseUrl())
                          || Set.of("marshall-kr", "sennheiser-kr").contains(OfficialStorePolicy.store(f.sourceUrl()).map(OfficialStorePolicy.Store::id).orElse(""))))
                 throw new IllegalArgumentException("등록된 공식 출처만 사양 근거로 허용합니다.");
         }

@@ -53,6 +53,7 @@ class CatalogApiIntegrationTest {
     @MockitoBean MarshallSpecificationSource marshallSpecificationSource;
     @MockitoBean SennheiserSpecificationSource sennheiserSpecificationSource;
     @MockitoBean AnkerP31iSpecificationSource ankerSpecificationSource;
+    @MockitoBean AnkerAeroclipSpecificationSource ankerAeroclipSpecificationSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -325,6 +326,47 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
         verify(marshallSpecificationSource, times(1)).fetchMinorIv();
+    }
+    @Test void aeroclipRefreshStoresDiscountAndOpenForm() throws Exception {
+        var id = "anker-aeroclip-a3388"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=45";
+        var name = "앤커 사운드코어 에어로클립 오픈형 블루투스이어폰 A3388"; var old = Instant.now().minus(Duration.ofDays(91));
+        var p = new CatalogProduct(id);
+        p.register(1, name, url, "anker-kr:45", List.of(new CatalogProduct.Fact(
+                new ProductFact("형태", "오픈형", url, "오픈형", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(p);
+        var colors = new String[]{"블랙", "화이트", "핑크", "블루"};
+        var variants = new ArrayList<Map<String, Object>>(); var stocks = new LinkedHashMap<String, Object>();
+        var options = new StringBuilder("<option value='*'>선택</option>");
+        for (int i = 0; i < colors.length; i++) {
+            var color = colors[i]; var code = "P00000BT000" + (char)('B' + i);
+            variants.add(Map.of("@type", "Product", "name", name + " " + color, "sku", "cafe24_ankerkr_1_45_" + code,
+                    "additionalProperty", List.of(Map.of("@type", "PropertyValue", "name", "색상선택", "value", color)),
+                    "offers", Map.of("@type", "Offer", "url", "https://ankerkorea.co.kr/product/anker/45/?item_code=" + code,
+                            "price", 159990, "priceCurrency", "KRW", "availability", "https://schema.org/InStock",
+                            "priceValidUntil", LocalDate.now(ZoneId.of("Asia/Seoul")).plusYears(2) + " 00:00")));
+            stocks.put(code, Map.of("option_value", color, "is_selling", "T", "is_display", "T", "is_auto_soldout", "F", "is_reserve_stat", "N",
+                    "option_price", 159990, "stock_price", "0.00", "origin_option_added_price", "0.00"));
+            options.append("<option value='").append(color).append("'>").append(color).append("</option>");
+        }
+        var group = json.writeValueAsString(Map.of("@type", "ProductGroup", "name", name, "productGroupID", "cafe24_ankerkr_1_45",
+                "variesBy", List.of("색상선택"), "hasVariant", variants));
+        var stock = json.writeValueAsString(stocks).replace("\\", "\\\\").replace("\"", "\\\"");
+        var html = "<link rel='canonical' href='https://ankerkorea.co.kr/product/anker/45/'><script type='application/ld+json'>" + group
+                + "</script><script>var option_stock_data = '" + stock + "';var product_sale_price = 129900;</script>"
+                + "<div class='xans-product-detail'><table><tr><th>판매가</th><td><strong id='span_product_price_text'>159,990원</strong></td></tr>"
+                + "<tr><th>할인가</th><td><span id='span_optimum_discount_price'>129,900원</span></td></tr></table>"
+                + "<select product_type='product_option' option_product_no='45' option_title='색상선택'>" + options + "</select>"
+                + "<div class='productAction'><a><span id='actionBuy'>구매하기</span></a></div></div>";
+        when(web.scrapeProduct(url)).thenReturn(new WebEvidenceProvider.Page("", "", html, url));
+        worker.refreshNext();
+        assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("129900");
+        when(ankerAeroclipSpecificationSource.fetch()).thenReturn("<title>에어로클립 오픈형 러닝 블루투스이어폰 A3388</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://ankerkorea.co.kr/product/anker/45/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ankerkr_1_45\"}</script>");
+        var spec = new AnkerAeroclipSpecificationRefreshWorker(true, catalogProperties, products, jdbc, ankerAeroclipSpecificationSource, transactionManager);
+        spec.refresh(); spec.refresh();
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        verify(ankerAeroclipSpecificationSource, times(1)).fetch();
     }
     @Test void ankerRefreshStoresDiscountAndMatchingAncEvidence() throws Exception {
         var id = "anker-p31i-d1202"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=43";

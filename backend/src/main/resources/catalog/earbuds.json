@@ -452,5 +452,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "anker-aeroclip-a3388",
+    "revision": 1,
+    "name": "앤커 사운드코어 에어로클립 오픈형 블루투스이어폰 A3388",
+    "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=45",
+    "expectedIdentity": "anker-kr:45",
+    "facts": [
+      {
+        "evidence": {
+          "name": "형태",
+          "value": "오픈형",
+          "sourceUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=45",
+          "quote": "오픈형",
+          "fetchedAt": "2026-10-30T19:29:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]
