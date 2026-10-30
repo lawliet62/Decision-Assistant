@@ -23,12 +23,12 @@ GitHub Actions의 출처 점검은 운영 DB에 접근하지 않으므로 자동
 ```dotenv
 DECISION_ASSISTANT_CATALOG_ENABLED=true
 DECISION_ASSISTANT_CATALOG_REFRESH_ENABLED=true
-DECISION_ASSISTANT_CATALOG_MONTHLY_LIMIT=250
+DECISION_ASSISTANT_CATALOG_MONTHLY_LIMIT=700
 DECISION_ASSISTANT_WEB_ENABLED=true
 FIRECRAWL_SECRET_VERSION=1
 ```
 
-8개 × 14일은 약 112회이므로 초기 관측에도 기존 예시 100회가 아닌 승인된 월 상한 250회를 사용한다. 8개 제품의 30~31일 일간 시도에는 약 240~248회가 필요해 여유가 작다. 기본 설정값 250은 가격·provider 과금 단위를 보장하는 금액 상한은 아니다. 기존 사용자 수집·다른 프로그램의 Firecrawl 사용과는 별도이므로 계정 비용도 확인한다.
+활성 제품 20개를 목표로 기본 월 시도 상한을 700회로 설정한다. 20개 제품의 31일 일간 시도에는 약 620회가 필요하다. 현재 활성 제품은 8개이며 확보하지 못한 제품은 미검증 상태로 추가하지 않는다. 이 상한은 Firecrawl 계정 전체의 크레딧이나 금액 상한이 아니므로 사용자 수집·다른 프로그램의 사용량과 계정 잔여량도 확인한다.
 
 2026-10-30 기준 [Firecrawl 공개 요금표](https://www.firecrawl.dev/pricing)는 Free 플랜의 월 1,000크레딧과 기본 Scrape 페이지당 1크레딧을 안내한다. 현재 가격 요청은 Markdown과 rawHtml을 사용하며 JSON 추출이나 Firecrawl Agent를 호출하지 않는다. 기본 단가가 적용된다고 가정하면 24시간 간격의 제품 6개는 월 약 180~186크레딧, 7개는 약 210~217크레딧, 8개는 약 240~248크레딧이다. 이는 시도 횟수를 기준으로 한 추산이다. 결과가 없는 요청은 과금되지 않을 수 있지만 403·404 응답 페이지는 과금될 수 있고, 다른 기능도 계정 크레딧을 공유한다. 실제 계정의 플랜·잔여량·다른 사용량과 추가 과금 여부는 확인되지 않았다.
 
@@ -77,7 +77,7 @@ node scripts/catalog/report.mjs observations.json products.json
 ## 성능과 장애 대응
 
 - 가격 worker는 관측의 성공 또는 실패를 `catalog_refresh` 로그에 제품 ID와 결과 코드로 남긴다. 마지막으로 사용할 수 있는 가격 대비 2배 이상 또는 절반 이하인 새 가격은 `catalog_price_change` 경고를 추가하지만 자동으로 거절하지 않는다. 할인 등 정상 변동도 포함될 수 있어 경고는 원인 확인 신호다. DB 관측 기록이 최종 결과의 기준이며 로그는 별도 알림 시스템이 아니다.
-- `CATALOG_MONTHLY_LIMIT=250`은 현재 승인된 월 시도 상한이다. 8개 제품의 한 달 일간 시도에는 약 240~248회가 필요하므로 계속 운영할 때 상한과 provider 계정 비용을 함께 검토한다. 실패도 한도를 소비한다.
+- `DECISION_ASSISTANT_CATALOG_MONTHLY_LIMIT=700`은 승인된 월 시도 상한이다. 20개 제품의 31일 일간 시도에는 약 620회가 필요하다. 실패도 한도를 소비하며 Firecrawl 계정의 다른 사용량은 별도로 확인한다.
 
 - `CatalogApiIntegrationTest.measureDatabaseBaselineAtFiveAndThirtyProductsWithoutCache`는 제품 5/30개, 동시 요청 1/5개에서 비교 생성 API를 측정하고 `backend/build/reports/catalog-benchmark.json`을 만든다. 운영 트래픽·브라우저 지연을 포함하지 않는다.
 - `catalog.db.read`, `catalog.discovery` Micrometer timer로 DB 조회와 전체 후보 생성을 구분한다. 외부에 metrics endpoint를 새로 노출하지 않는다. 운영 지연이 관찰되면 DB 시간과 요청 전체 시간부터 확인하고 캐시 효과를 별도 비교한다.
