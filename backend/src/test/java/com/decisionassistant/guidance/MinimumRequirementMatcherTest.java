@@ -16,6 +16,31 @@ import static com.decisionassistant.decision.DecisionTypes.TemplateKey.*;
 import static org.assertj.core.api.Assertions.*;
 
 class MinimumRequirementMatcherTest {
+    @Test void recognizesOnlyTheExplicitJapaneseAncSupportQuote() {
+        var quote = "アクティブノイズキャンセリング搭載";
+        var fact = new ProductFact("ANC 지원", "지원", "https://www.ankerjapan.com/products/d1202", quote, Instant.now(), "UNREVIEWED");
+        assertThat(check(EARBUDS, "anc", "required", fact).status()).isEqualTo(RequirementStatus.MEETS);
+        var negative = new ProductFact("ANC 지원", "지원", fact.sourceUrl(), "アクティブノイズキャンセリング非搭載", Instant.now(), "UNREVIEWED");
+        assertThat(check(EARBUDS, "anc", "required", negative).status()).isEqualTo(RequirementStatus.UNKNOWN);
+        var mixed = new ProductFact("ANC 지원", "지원", fact.sourceUrl(), quote + " 非対応", Instant.now(), "UNREVIEWED");
+        assertThat(check(EARBUDS, "anc", "required", mixed).status()).isEqualTo(RequirementStatus.UNKNOWN);
+        var negated = new ProductFact("ANC 지원", "지원", fact.sourceUrl(), quote + "しない", Instant.now(), "UNREVIEWED");
+        assertThat(check(EARBUDS, "anc", "required", negated).status()).isEqualTo(RequirementStatus.UNKNOWN);
+    }
+    @Test void recognizesOnlyTheExactAdaptiveAncQuote() {
+        var quote = AnkerP41iVerifier.QUOTE;
+        var fact = new ProductFact("ANC 지원", "지원", AnkerP41iVerifier.SPEC_URL, quote, Instant.now(), "UNREVIEWED");
+        assertThat(check(EARBUDS, "anc", "required", fact).status()).isEqualTo(RequirementStatus.MEETS);
+        var negated = new ProductFact("ANC 지원", "지원", fact.sourceUrl(), quote + "しない", Instant.now(), "UNREVIEWED");
+        assertThat(check(EARBUDS, "anc", "required", negated).status()).isEqualTo(RequirementStatus.UNKNOWN);
+    }
+    @Test void recognizesOnlyTheExactLibertyProAncQuote() {
+        var quote = AnkerLibertyProSpecificationVerifier.ANC_QUOTE;
+        var fact = new ProductFact("ANC 지원", "지원", AnkerLibertyProSpecificationVerifier.URL, quote, Instant.now(), "UNREVIEWED");
+        assertThat(check(EARBUDS, "anc", "required", fact).status()).isEqualTo(RequirementStatus.MEETS);
+        var negated = new ProductFact("ANC 지원", "지원", fact.sourceUrl(), quote + "しない", Instant.now(), "UNREVIEWED");
+        assertThat(check(EARBUDS, "anc", "required", negated).status()).isEqualTo(RequirementStatus.UNKNOWN);
+    }
     @ParameterizedTest
     @CsvSource({"적응형 ANC 탑재,MEETS", "액티브 노이즈 캔슬링 지원,MEETS", "ANC 미지원,BELOW", "통화 소음 억제,UNKNOWN", "ANC 지원 여부 미확인,UNKNOWN"})
     void recognizesExplicitFeaturePhrasesWithoutInventingSupport(String value, RequirementStatus expected) {

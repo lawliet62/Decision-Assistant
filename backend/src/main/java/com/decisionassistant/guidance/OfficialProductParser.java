@@ -47,6 +47,31 @@ final class OfficialProductParser {
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
+        if (store.id().equals("anker-kr")) {
+            if (!catalog || !(AnkerProductVerifier.URL.equals(requestedUrl) || AnkerProductVerifier.AERO_URL.equals(requestedUrl)
+                    || AnkerProductVerifier.LIBERTY_URL.equals(requestedUrl) || AnkerProductVerifier.PRO_URL.equals(requestedUrl)
+                    || AnkerP41iVerifier.URL.equals(requestedUrl))) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var aero = AnkerProductVerifier.AERO_URL.equals(requestedUrl);
+            var liberty = AnkerProductVerifier.LIBERTY_URL.equals(requestedUrl);
+            var pro = AnkerProductVerifier.PRO_URL.equals(requestedUrl);
+            var p41i = AnkerP41iVerifier.URL.equals(requestedUrl);
+            var verified = (aero ? AnkerProductVerifier.aeroclipPrice(page.html(), fetchedAt)
+                    : liberty ? AnkerProductVerifier.libertyPrice(page.html(), fetchedAt)
+                    : pro ? AnkerProductVerifier.libertyProPrice(page.html(), fetchedAt)
+                    : p41i ? AnkerP41iVerifier.price(page.html(), fetchedAt) : AnkerProductVerifier.price(page.html(), fetchedAt)).orElse(null);
+            if (verified == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct(aero ? AnkerProductVerifier.AERO_NAME : liberty ? AnkerProductVerifier.LIBERTY_NAME : pro ? AnkerProductVerifier.PRO_NAME : p41i ? AnkerP41iVerifier.NAME : AnkerProductVerifier.NAME,
+                    aero ? "anker-kr:45" : liberty ? "anker-kr:40" : pro ? "anker-kr:154" : p41i ? "anker-kr:91" : "anker-kr:43", new OfficialOffer(requestedUrl, store.name(), verified,
+                    "KRW", null, fetchedAt, p41i ? "공식 단일 상품의 재고·할인 판매가와 구매 영역을 대조한 판매가"
+                            : "공식 상품의 색상·할인 판매가와 구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + verified + "원"), null);
+        }
+        if (store.id().equals("bose-kr")) {
+            if (!catalog || !BoseProductVerifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var verified = BoseProductVerifier.price(page.html()).orElse(null);
+            if (verified == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct(BoseProductVerifier.NAME, "bose-kr:307", new OfficialOffer(requestedUrl, store.name(), verified,
+                    "KRW", null, fetchedAt, "공식 상품의 단일 색상·구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + verified + "원"), null);
+        }
         if (store.id().equals("sennheiser-kr")) {
             if (!catalog || !"https://kr.sennheiser-hearing.com/product/detail.html?product_no=731".equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
             var verified = SennheiserProductVerifier.price(page.html()).orElse(null);
@@ -69,11 +94,13 @@ final class OfficialProductParser {
         var name = product.path("name").asText("").strip();
         if (name.isBlank() || name.length() > 200) return Result.rejected(Rejection.PRODUCT_NAME_INVALID);
         var variants = type(product, "ProductGroup") ? iterable(product.path("hasVariant")) : List.of(product);
+        if (store.id().equals("qcy-kr") && samePage(requestedUrl, Ct06VariantVerifier.URL)
+                && !Ct06VariantVerifier.matches(doc, product)) return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
         if (type(product, "ProductGroup")) {
             var varies = product.path("variesBy");
             var dimensions = varies.isArray() ? iterable(varies) : List.of(varies);
             if ((dimensions.isEmpty() || dimensions.stream().anyMatch(item -> !Set.of("color", "https://schema.org/color", "http://schema.org/color").contains(item.asText(""))))
-                    && !qcyColorSelection(store, product, variants, dimensions)) return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
+                    && !qcyColorSelection(store, product, variants, dimensions, requestedUrl)) return Result.rejected(Rejection.VARIANT_UNSUPPORTED);
         }
         var rows = new ArrayList<JsonNode>();
         for (var variant : variants) {
@@ -105,8 +132,10 @@ final class OfficialProductParser {
         if (prices.size() != 1) return Result.rejected(Rejection.PRICE_AMBIGUOUS);
         var price = prices.first();
         var sku = product.path("sku").asText(product.path("productGroupID").asText("")).strip();
-        if (store.id().equals("marshall-kr") && (!"1006450".equals(sku)
-                || !"MOTIF II A.N.C.".equals(name) || rows.size() != 1
+        if (store.id().equals("marshall-kr") && (!(samePage("https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450", requestedUrl)
+                && "1006450".equals(sku) && "MOTIF II A.N.C.".equals(name)
+                || samePage("https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653", requestedUrl)
+                && "1006653".equals(sku) && "MINOR IV".equals(name)) || rows.size() != 1
                 || !rows.getFirst().path("availability").asText("").equals("https://schema.org/InStock")))
             return Result.rejected(Rejection.IDENTITY_INVALID);
         if (store.id().equals("apple-kr")) {
@@ -162,16 +191,32 @@ final class OfficialProductParser {
         return new Result(new OfficialProduct(name, "sony-kr:109871591", new OfficialOffer(url, store.name(), price,
                 "KRW", null, at, "공식 상품 구매 영역의 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + raw + "원"), null);
     }
-    private static boolean qcyColorSelection(OfficialStorePolicy.Store store, JsonNode product, List<JsonNode> variants, List<JsonNode> dimensions) {
-        if (!store.id().equals("qcy-kr") || dimensions.size() != 1 || !dimensions.getFirst().asText("").equals("선택") || variants.isEmpty()) return false;
+    private static boolean qcyColorSelection(OfficialStorePolicy.Store store, JsonNode product, List<JsonNode> variants, List<JsonNode> dimensions, String requestedUrl) {
+        if (!store.id().equals("qcy-kr") || dimensions.size() != 1 || variants.isEmpty()) return false;
+        var dimension = dimensions.getFirst().asText("");
+        var ht20 = dimension.equals("옵션") && samePage(requestedUrl, "https://qcystore.co.kr/product/detail.html?product_no=1028")
+                && product.path("productGroupID").asText("").equals("cafe24_ylintlshop_1_1028")
+                && product.path("name").asText("").equals("QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍");
+        if (!dimension.equals("선택") && !ht20) return false;
+        var colors = ht20 ? Set.of("블랙", "화이트", "퍼플") : Set.of("블랙", "화이트");
+        if (ht20) {
+            var seen = new HashSet<String>();
+            for (var variant : variants) {
+                var properties = variant.path("additionalProperty");
+                if (!properties.isArray() || properties.size() != 1
+                        || !seen.add(properties.get(0).path("value").asText(""))
+                        || !variant.path("offers").path("availability").asText("").equals("https://schema.org/InStock")) return false;
+            }
+            if (!seen.equals(colors)) return false;
+        }
         var name = product.path("name").asText("").strip();
         return variants.stream().allMatch(variant -> {
             var properties = variant.path("additionalProperty");
             if (!type(variant, "Product") || !properties.isArray() || properties.size() != 1) return false;
             var property = properties.path(0);
             var color = property.path("value").asText("");
-            return type(property, "PropertyValue") && property.path("name").asText("").equals("선택")
-                    && Set.of("블랙", "화이트").contains(color)
+            return type(property, "PropertyValue") && property.path("name").asText("").equals(dimension)
+                    && colors.contains(color)
                     && variant.path("name").asText("").strip().equals(name + " " + color);
         });
     }
@@ -197,7 +242,7 @@ final class OfficialProductParser {
     private static String productPath(URI uri) {
         if ("www.lge.co.kr".equalsIgnoreCase(uri.getHost()))
             return uri.getPath().replaceFirst("^/product/", "/").replaceFirst("/$", "");
-        if ("qcystore.co.kr".equalsIgnoreCase(uri.getHost())) {
+        if ("qcystore.co.kr".equalsIgnoreCase(uri.getHost()) || "ankerkorea.co.kr".equalsIgnoreCase(uri.getHost())) {
             if (uri.getPath().equals("/product/detail.html")) return Arrays.stream(Objects.toString(uri.getQuery(), "").split("&"))
                     .filter(item -> item.startsWith("product_no=")).map(item -> item.substring(11)).findFirst().orElse("");
             var parts = uri.getPath().split("/");

@@ -4,6 +4,29 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class QcySpecificationVerifierTest {
+    @Test void ct06RequiresExactProductAndOpenForm() {
+        var name = "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/994/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_994\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesCt06Form(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesCt06Form(page.replace("오픈형", "커널형"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesCt06Form(page.replace("994", "995"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesCt06Form(page + "<h1>다른 상품</h1>")).isFalse();
+    }
+    @Test void ht08AncRequiresExactArticleAndPositiveModelStatement() {
+        var title = "QCY, 적응형 노이즈 캔슬링 블루투스 이어폰 ‘HT08 멜로버즈 프로 플러스’ 출시";
+        var page = "<title>" + title + " 도매특판 - QCY스토어</title><form id='BoardDelForm'><input id='no' name='no' value='16170'>"
+                + "<div id='gd' class='xans-board-read'><div class='titleArea'><h2>" + title + "</h2></div>"
+                + "<div class='detail'><div class='fr-view-article'><p>QCY HT08 멜로버즈 프로 플</p>"
+                + "<p>러스는 적응형 액티브 노이즈 캔슬링 기능으로 편안한 청취를 제공한다.</p></div></div></div></form>";
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("16170", "16171"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("HT08", "HT10"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("기능으로", "기능이 없으며"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("fr-view-article", "unrelated"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt08Anc(page.replace("</h2>", "</h2><h2>다른 기사</h2>"))).isFalse();
+    }
     private static final String PAGE = """
             <div class="specification-content"><div class="spec-details">
               <p>Product Name: QCY T13 Pro</p>
@@ -66,5 +89,38 @@ class QcySpecificationVerifierTest {
         assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("T17APP", "T17S"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("cafe24_ylintlshop_1_563", "cafe24_ylintlshop_1_564"))).isFalse();
         assertThat(QcySpecificationVerifier.matchesT17AppForm(page.replace("/563/", "/564/"))).isFalse();
+    }
+    @Test void ht10AncRequiresExactProductAndExplicitTitle() {
+        var name = "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/924/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_924\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page.replace("ANC", "ENC"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page.replace("HT10", "HT20"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page.replace("cafe24_ylintlshop_1_924", "cafe24_ylintlshop_1_925"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt10Anc(page.replace("/924/", "/925/"))).isFalse();
+    }
+    @Test void t29FormRequiresExactProductAndExplicitTitle() {
+        var name = "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/709/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_709\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesT29Form(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesT29Form(page.replace("오픈형", "커널형"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesT29Form(page.replace("T29", "T28"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesT29Form(page.replace("cafe24_ylintlshop_1_709", "cafe24_ylintlshop_1_710"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesT29Form(page.replace("/709/", "/710/"))).isFalse();
+    }
+    @Test void ht20FormRequiresExactProductAndExplicitTitle() {
+        var name = "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍";
+        var page = "<title>" + name + " - QCY스토어</title><h1>" + name + "</h1>"
+                + "<link rel='canonical' href='https://qcystore.co.kr/product/model/1028/'>"
+                + "<script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_1028\"}</script>";
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page)).isTrue();
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page.replace("커널형", "오픈형"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page.replace("HT20", "HT19"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page.replace("cafe24_ylintlshop_1_1028", "cafe24_ylintlshop_1_1029"))).isFalse();
+        assertThat(QcySpecificationVerifier.matchesHt20Form(page.replace("/1028/", "/1029/"))).isFalse();
     }
 }

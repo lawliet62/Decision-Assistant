@@ -289,5 +289,268 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "qcy-ht20",
+    "revision": 1,
+    "name": "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍",
+    "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=1028",
+    "expectedIdentity": "qcy-kr:color-model:qcyht20멜로버즈블루투스무선이어폰노이즈캔슬링ai마이크c타입커널형게이밍",
+    "facts": [
+      {
+        "evidence": {
+          "name": "형태",
+          "value": "커널형",
+          "sourceUrl": "https://qcystore.co.kr/product/detail.html?product_no=1028",
+          "quote": "커널형",
+          "fetchedAt": "2026-10-30T16:00:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "qcy-t29-app",
+    "revision": 1,
+    "name": "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버",
+    "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=709",
+    "expectedIdentity": "qcy-kr:color-model:qcyt29app블루투스이어폰오픈형13mm드라이버",
+    "facts": [
+      {
+        "evidence": {
+          "name": "형태",
+          "value": "오픈형",
+          "sourceUrl": "https://qcystore.co.kr/product/detail.html?product_no=709",
+          "quote": "오픈형",
+          "fetchedAt": "2026-10-30T16:22:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "qcy-ht10-hires",
+    "revision": 1,
+    "name": "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙",
+    "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=924",
+    "expectedIdentity": "qcy-kr:color-model:qcyht10hiresancapp노이즈캔슬링블루투스이어폰ldac",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://qcystore.co.kr/product/detail.html?product_no=924",
+          "quote": "ANC APP 노이즈캔슬링",
+          "fetchedAt": "2026-10-30T17:26:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "marshall-minor-iv-black",
+    "revision": 1,
+    "name": "MINOR IV",
+    "purchaseUrl": "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653",
+    "expectedIdentity": "marshall-kr:1006653",
+    "facts": [
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IPX4",
+          "sourceUrl": "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653",
+          "quote": "이어버드 IPX4",
+          "fetchedAt": "2026-10-30T18:02:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "qcy-ht08-pro-plus",
+    "revision": 1,
+    "name": "QCY HT08 멜로버즈 프로 플러스 블루투스 이어폰 노이즈캔슬링 / 블랙",
+    "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=977",
+    "expectedIdentity": "qcy-kr:color-model:qcyht08멜로버즈프로플러스블루투스이어폰노이즈캔슬링",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://qcystore.co.kr/article/%EB%A7%A4%EA%B1%B0%EC%A7%84/8/16170/",
+          "quote": "적응형 액티브 노이즈 캔슬링 기능",
+          "fetchedAt": "2026-10-30T18:27:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "bose-qc-earbuds-ice-blue",
+    "revision": 1,
+    "name": "[New Launch] BOSE 보스 QC 이어버드(New)(아이스 블루)",
+    "purchaseUrl": "https://www.bose.co.kr/357/?idx=307",
+    "expectedIdentity": "bose-kr:307",
+    "facts": [],
+    "active": true
+  },
+  {
+    "id": "qcy-ct06",
+    "revision": 1,
+    "name": "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프",
+    "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=994",
+    "expectedIdentity": "qcy-kr:color-model:qcyct06오픈형귀찌무선블루투스이어폰러닝자전거운동용이어커프",
+    "facts": [
+      {
+        "evidence": {
+          "name": "형태",
+          "value": "오픈형",
+          "sourceUrl": "https://qcystore.co.kr/product/detail.html?product_no=994",
+          "quote": "오픈형",
+          "fetchedAt": "2026-10-30T19:00:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "anker-p31i-d1202",
+    "revision": 1,
+    "name": "앤커 사운드코어 P31i(R60i NC) 노이즈캔슬링 무선 블루투스 이어폰 D1202",
+    "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=43",
+    "expectedIdentity": "anker-kr:43",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.ankerjapan.com/products/d1202",
+          "quote": "アクティブノイズキャンセリング搭載",
+          "fetchedAt": "2026-10-30T19:13:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "anker-aeroclip-a3388",
+    "revision": 1,
+    "name": "앤커 사운드코어 에어로클립 오픈형 블루투스이어폰 A3388",
+    "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=45",
+    "expectedIdentity": "anker-kr:45",
+    "facts": [
+      {
+        "evidence": {
+          "name": "형태",
+          "value": "오픈형",
+          "sourceUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=45",
+          "quote": "오픈형",
+          "fetchedAt": "2026-10-30T19:29:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "anker-liberty5-a3957",
+    "revision": 1,
+    "name": "앤커 사운드코어 리버티5 노이즈캔슬링 블루투스 이어폰 A3957",
+    "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=40",
+    "expectedIdentity": "anker-kr:40",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds",
+          "quote": "Real-Time Adaptive ANC 3.0",
+          "fetchedAt": "2026-10-30T19:40:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "anker-liberty5-pro-d1203",
+    "revision": 2,
+    "name": "앤커 사운드코어 리버티 5 프로 무선 블루투스 이어폰 D1203",
+    "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=154",
+    "expectedIdentity": "anker-kr:154",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.ankerjapan.com/products/d1203",
+          "quote": "ウルトラノイズキャンセリング 4.0を搭載",
+          "fetchedAt": "2026-10-30T20:35:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "방수",
+          "value": "IP55",
+          "sourceUrl": "https://www.ankerjapan.com/products/d1203",
+          "quote": "IP55",
+          "fetchedAt": "2026-10-30T19:50:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "anker-p41i-a3937",
+    "revision": 1,
+    "name": "앤커 사운드코어 P41i 노이즈캔슬링 블루투스이어폰 A3937",
+    "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=91",
+    "expectedIdentity": "anker-kr:91",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.ankerjapan.com/products/a3937",
+          "quote": "周囲の騒音レベルに応じてノイズキャンセリングの強さを自動で調節",
+          "fetchedAt": "2026-10-30T20:17:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

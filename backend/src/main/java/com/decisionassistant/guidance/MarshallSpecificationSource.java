@@ -9,5 +9,8 @@ public class MarshallSpecificationSource {
     public String fetch() throws Exception {
         return fetch("https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450");
     }
+    public String fetchMinorIv() throws Exception {
+        return fetch("https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653");
+    }
     private String fetch(String url) throws Exception { return SpecificationPageFetcher.fetch(URI.create(url)); }
 }

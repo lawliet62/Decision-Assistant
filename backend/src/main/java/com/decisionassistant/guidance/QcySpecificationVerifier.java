@@ -7,11 +7,39 @@ import java.util.*;
 final class QcySpecificationVerifier {
     private QcySpecificationVerifier() {}
 
+    static boolean matchesCt06Form(String html) {
+        return matchesStoreProduct(html, "994", "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프");
+    }
+
+    static boolean matchesHt08Anc(String html) {
+        if (html == null || html.length() > 2_000_000) return false;
+        var doc = Jsoup.parse(html);
+        var title = "QCY, 적응형 노이즈 캔슬링 블루투스 이어폰 ‘HT08 멜로버즈 프로 플러스’ 출시";
+        var articles = doc.select("#gd.xans-board-read");
+        if (!doc.title().equals(title + " 도매특판 - QCY스토어") || articles.size() != 1) return false;
+        var article = articles.first();
+        var headings = article.select(".titleArea h2");
+        var bodies = article.select(".detail .fr-view-article");
+        var identifiers = doc.select("form#BoardDelForm input#no[name=no][value=16170]");
+        return headings.size() == 1 && headings.first().text().equals(title) && identifiers.size() == 1
+                && bodies.size() == 1 && bodies.first().text().replaceAll("\\s+", "")
+                .contains("QCYHT08멜로버즈프로플러스는적응형액티브노이즈캔슬링기능으로");
+    }
+
     static boolean matchesHt16Anc(String html) {
         return matchesStoreProduct(html, "990", "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링 블랙");
     }
     static boolean matchesT17AppForm(String html) {
         return matchesStoreProduct(html, "563", "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전 블랙");
+    }
+    static boolean matchesHt20Form(String html) {
+        return matchesStoreProduct(html, "1028", "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍");
+    }
+    static boolean matchesHt10Anc(String html) {
+        return matchesStoreProduct(html, "924", "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙");
+    }
+    static boolean matchesT29Form(String html) {
+        return matchesStoreProduct(html, "709", "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버");
     }
     private static boolean matchesStoreProduct(String html, String id, String name) {
         if (html == null || html.length() > 2_000_000) return false;

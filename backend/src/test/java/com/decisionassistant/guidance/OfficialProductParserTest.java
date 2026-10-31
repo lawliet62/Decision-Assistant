@@ -56,6 +56,19 @@ class OfficialProductParserTest {
         assertThat(OfficialStorePolicy.store(url.replace("www.marshall.com", "marshall.com.evil.example"))).isEmpty();
     }
 
+    @Test void minorIvRequiresMatchingModelSkuInStockAndPurchasePrice() {
+        var url = "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653";
+        var data = "<h1>MINOR IV</h1><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"MINOR IV\",\"url\":\"" + url + "\",\"sku\":\"1006653\",\"offers\":{\"@type\":\"Offer\",\"price\":169000,\"priceCurrency\":\"KRW\",\"availability\":\"https://schema.org/InStock\"}}</script>";
+        var purchase = "<p aria-label='정상 가격: ₩ 169,000'>₩ 169,000</p><div><p>₩ 169,000</p><button>₩ 169,000 - 장바구니</button></div>";
+        var valid = OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", data + purchase, url), Instant.now(), true);
+        assertThat(valid.product().identity()).isEqualTo("marshall-kr:1006653");
+        for (var invalid : List.of(data.replace("InStock", "OutOfStock") + purchase, data.replace("MINOR IV", "MOTIF II A.N.C.") + purchase,
+                data.replace("1006653", "1006450") + purchase, data + purchase.replace("169,000 - 장바구니", "149,000 - 장바구니"),
+                data + purchase.replace("<button>", "<button disabled>"), data + purchase + purchase))
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now(), true).product()).isNull();
+        assertThat(OfficialStorePolicy.store(url.replace("1006653", "1006450"))).isEmpty();
+        assertThat(OfficialStorePolicy.store(url + "&color=cream")).isEmpty();
+    }
     @Test void applePriceRequiresSinglePurchaseLinkMatchingOfferSkuAndAmount() {
         var url = "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3";
         var data = "<title>AirPods Pro 3</title><script type='application/ld+json'>{\"@type\":\"Product\",\"name\":\"AirPods Pro 3\",\"url\":\"" + url + "\",\"offers\":{\"@type\":\"Offer\",\"sku\":\"MFHP4KH/A\",\"price\":369000,\"priceCurrency\":\"KRW\"}}</script>";
@@ -131,6 +144,20 @@ class OfficialProductParserTest {
         assertThat(parse(variants.replace("color", "size"))).isNull();
         assertThat(parse(variants.replaceFirst("21900", "12900"))).isNull();
         assertThat(OfficialProductParser.samePage(URL, "https://qcystore.co.kr/product/이어폰/1033/category/1/")).isTrue();
+    }
+    @Test void ht20OnlyAcceptsKnownColorOptionsWithMatchingPrices() {
+        var name = "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍";
+        var variant = "{\"@type\":\"Product\",\"name\":\"" + name + " %s\",\"additionalProperty\":[{\"@type\":\"PropertyValue\",\"name\":\"옵션\",\"value\":\"%s\"}]," + OFFER.replace("\"KRW\"}", "\"KRW\",\"availability\":\"https://schema.org/InStock\"}") + "}";
+        var group = "{\"@type\":\"ProductGroup\",\"name\":\"" + name + "\",\"productGroupID\":\"cafe24_ylintlshop_1_1028\",\"variesBy\":[\"옵션\"],\"hasVariant\":["
+                + String.join(",", variant.formatted("블랙", "블랙"), variant.formatted("화이트", "화이트"), variant.formatted("퍼플", "퍼플")) + "]}";
+        var url = "https://qcystore.co.kr/product/detail.html?product_no=1028";
+        var html = "<script type='application/ld+json'>" + group + "</script>" + PURCHASE.replace("Buds", name);
+        assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now(), true).product()).isNotNull();
+        for (var invalid : List.of(html.replace("퍼플", "대용량"), html.replaceFirst("21900", "19900"),
+                html.replace("cafe24_ylintlshop_1_1028", "cafe24_ylintlshop_1_999"), html.replace("옵션", "용량"),
+                html.replaceFirst("InStock", "OutOfStock"), html.replace("퍼플", "블랙")))
+            assertThat(OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", invalid, url), Instant.now(), true).product()).isNull();
+        assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", html, URL), Instant.now(), true).product()).isNull();
     }
     @Test void categoriesHaveSearchScopesAndSourceKindsDoNotCertifyLegacyPages() {
         for (var key : com.decisionassistant.decision.DecisionTypes.TemplateKey.values()) {
