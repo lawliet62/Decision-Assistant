@@ -6,6 +6,7 @@ import type { DecisionResponse } from "@/shared/api/types";
 import type { components } from "@/shared/api/schema";
 import { SourceLink } from "@/features/product-lookup/source-link";
 import { ProductOffer } from "@/features/product-lookup/product-offer";
+import { confirmationTime } from "@/features/product-lookup/confirmation-time";
 
 type Fact = components["schemas"]["ProductFact"];
 type Check = components["schemas"]["RequirementCheck"];
@@ -27,7 +28,8 @@ export function RequirementChecks({ checks, label = "최소 사양 확인" }: { 
 export function FactValue({ fact, compact = false }: { fact?: Fact; compact?: boolean }) {
   if (!fact) return <span className="text-zinc-400">미확인</span>;
   return <div className="space-y-1"><span className="font-medium">{fact.value}</span>{(!compact || fact.verificationStatus !== "UNREVIEWED") && <span className="block text-xs text-amber-800">{fact.verificationStatus === "CONFIRMED" ? "확인됨" : fact.verificationStatus === "DISPUTED" ? "이견 있음" : "사용자 확인 전"}</span>}
-    {fact.sourceUrl && <details className="text-xs text-zinc-500"><summary className="cursor-pointer">출처·조회 시점</summary><SourceLink url={fact.sourceUrl} /><time className="block">{fact.fetchedAt ? new Date(fact.fetchedAt).toLocaleString("ko-KR") : "조회 시점 미확인"}</time><p className="mt-1">{fact.quote}</p></details>}</div>;
+    <p className="text-xs text-zinc-500">{fact.name === "가격" ? "가격" : "사양"} 확인 시각: {confirmationTime(fact.fetchedAt) ?? "미확인"}</p>
+    {fact.sourceUrl && <details className="text-xs text-zinc-500"><summary className="cursor-pointer">출처 보기</summary><SourceLink url={fact.sourceUrl} /><p className="mt-1">{fact.quote}</p></details>}</div>;
 }
 
 export function ProductFacts({ decision }: { decision: DecisionResponse }) {

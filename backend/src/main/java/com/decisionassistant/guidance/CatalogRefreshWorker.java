@@ -24,9 +24,15 @@ public class CatalogRefreshWorker {
         tx.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
     record Work(String id, String url, String identity, int revision, UUID observation) {}
-    @Scheduled(fixedDelayString = "${decision-assistant.catalog.poll-interval:60000}")
+    @Scheduled(fixedDelayString = "${decision-assistant.catalog.poll-interval:3600000}")
+    public void refreshDue() {
+        for (int i = 0; i < 30 && refreshOne(); i++) { /* 기한이 된 제품만 순차 처리한다. */ }
+    }
     public void refreshNext() {
-        if (!config.enabled() || !config.refreshEnabled() || !web.configured() || config.monthlyLimit() <= 0) return;
+        refreshOne();
+    }
+    private boolean refreshOne() {
+        if (!config.enabled() || !config.refreshEnabled() || !web.configured() || config.monthlyLimit() <= 0) return false;
         var now = Instant.now();
         var work = tx.execute(status -> {
             var product = products.claimNext(now).orElse(null);
@@ -44,7 +50,7 @@ public class CatalogRefreshWorker {
                     observation, product.id(), java.sql.Timestamp.from(now));
             return new Work(product.id(), product.purchaseUrl(), product.expectedIdentity(), product.revision(), observation);
         });
-        if (work == null) return;
+        if (work == null) return false;
         OfficialProductParser.Result inspected = null;
         String outcome;
         try {
@@ -73,5 +79,6 @@ public class CatalogRefreshWorker {
             if ("VERIFIED".equals(effective)) log.info("catalog_refresh product_id={} outcome={}", work.id(), effective);
             else log.warn("catalog_refresh product_id={} outcome={}", work.id(), effective);
         });
+        return true;
     }
 }

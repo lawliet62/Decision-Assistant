@@ -87,13 +87,28 @@ class CatalogApiIntegrationTest {
         return products.saveAndFlush(p);
     }
     private String url(int n) { return "https://qcystore.co.kr/product/buds/" + (1000 + n) + "/"; }
+    @Test void migrationPreservesLongerDelayAndRequiresOldPricesToBeReverified() throws Exception {
+        product(1, Instant.now()); product(2, null);
+        var attempted = Instant.parse("2026-10-01T00:00:00Z");
+        jdbc.update("update catalog_products set last_attempt_at=?, next_attempt_at=? where id='product-1'",
+                java.sql.Timestamp.from(attempted), java.sql.Timestamp.from(attempted.plus(Duration.ofHours(24))));
+        jdbc.update("update catalog_products set last_attempt_at=?, next_attempt_at=? where id='product-2'",
+                java.sql.Timestamp.from(attempted), java.sql.Timestamp.from(attempted.plus(Duration.ofHours(72))));
+        var resource = new org.springframework.core.io.ClassPathResource("db/migration/V14__catalog_48h_attempt_interval.sql");
+        try (var connection = Objects.requireNonNull(jdbc.getDataSource()).getConnection()) {
+            org.springframework.jdbc.datasource.init.ScriptUtils.executeSqlScript(connection, resource);
+        }
+        assertThat(jdbc.queryForObject("select price_status from catalog_products where id='product-1'", String.class)).isEqualTo("UNVERIFIED");
+        assertThat(jdbc.queryForObject("select next_attempt_at from catalog_products where id='product-1'", java.sql.Timestamp.class).toInstant()).isEqualTo(attempted.plus(Duration.ofHours(48)));
+        assertThat(jdbc.queryForObject("select next_attempt_at from catalog_products where id='product-2'", java.sql.Timestamp.class).toInstant()).isEqualTo(attempted.plus(Duration.ofHours(72)));
+    }
     private String create() throws Exception {
         var result = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(BODY))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return json.readTree(result).path("id").asText();
     }
     @Test void catalogWorksWithoutExternalConsentAndPreservesOwnershipAndHistoricalFacts() throws Exception {
-        var p = product(1, Instant.now()); product(2, Instant.now().minus(Duration.ofDays(2))); product(3, null);
+        var p = product(1, Instant.now()); product(2, Instant.now().minus(Duration.ofDays(4))); product(3, null);
         var id = create();
         var result = mvc.perform(get("/api/v1/decisions/" + id).with(owner)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.discovery.status").value("SUCCEEDED"))
@@ -115,7 +130,7 @@ class CatalogApiIntegrationTest {
         verifyNoInteractions(search, web, ai);
     }
     @Test void expiredPriceNeverPassesBudgetEvenWhenSpecsMeetRequirements() throws Exception {
-        product(1, Instant.now().minus(Duration.ofHours(25)));
+        product(1, Instant.now().minus(Duration.ofHours(73)));
         var id = create();
         mvc.perform(get("/api/v1/decisions/" + id).with(owner))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("UNKNOWN"))
@@ -774,7 +789,7 @@ class CatalogApiIntegrationTest {
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
     }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
-        product(1, Instant.now().minus(Duration.ofDays(2))); product(2, null); product(3, null);
+        product(1, Instant.now().minus(Duration.ofDays(4))); product(2, null); product(3, null);
         when(web.scrapeProduct(anyString())).thenThrow(new IllegalStateException("private provider error"));
         worker.refreshNext(); worker.refreshNext(); worker.refreshNext(); worker.refreshNext();
         verify(web, times(2)).scrapeProduct(anyString());

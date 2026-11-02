@@ -26,7 +26,7 @@ export function DiscoveryCandidates({ candidates, editable, optionCount, pending
       {item.priceStatus && item.priceStatus !== "VERIFIED" && <p className="text-sm text-amber-800">최근 판매가 확인이 필요합니다. 예산 충족 추천에 포함하지 않았습니다.</p>}
       {item.officialOffer?.policyVersion === "official-kr-v1" && <p className="text-xs text-amber-800">이전 검증 기준의 후보입니다. 기본 호환성은 재검증하지 않았습니다.</p>}
       {!item.officialOffer && <SourceLink url={item.url} kind={item.sourceKind} />}
-      {item.fetchedAt && <p className="text-xs text-zinc-500">조회 {new Date(item.fetchedAt).toLocaleString("ko-KR")} · 수집 정보, 사용자 확인 전</p>}
+      <p className="text-xs text-zinc-500">수집 정보, 사용자 확인 전</p>
       <RequirementChecks checks={item.requirementChecks} />
       {item.compatibilityCheck && <RequirementChecks checks={[item.compatibilityCheck]} label="호환성 확인" />}
       <dl className="space-y-2 text-sm">{item.facts?.filter(fact => !(item.officialOffer && fact.name === "가격") && !item.requirementChecks?.some(check => check.facts?.some(checked => checked.name === fact.name))).map((fact, index) => <div key={index}><dt className="text-zinc-500">{fact.name}</dt><dd><FactValue fact={fact} compact /></dd></div>)}</dl>

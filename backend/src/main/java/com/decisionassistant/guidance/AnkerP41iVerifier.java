@@ -59,7 +59,7 @@ final class AnkerP41iVerifier {
             var offerUrl = URI.create(offer.path("url").asText(""));
             if (offerUrl.getRawQuery() != null || offerUrl.getFragment() != null) return Optional.empty();
             var expiry = LocalDateTime.parse(offer.path("priceValidUntil").asText(""), DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm"));
-            if (expiry.atZone(ZoneId.of("Asia/Seoul")).toInstant().isBefore(now.plus(Duration.ofHours(24)))) return Optional.empty();
+            if (expiry.atZone(ZoneId.of("Asia/Seoul")).toInstant().isBefore(now.plus(Duration.ofHours(72)))) return Optional.empty();
             var raw = offer.path("price").asText("");
             if (!raw.matches("[1-9][0-9]{0,7}")) return Optional.empty();
             regular = new BigDecimal(raw);

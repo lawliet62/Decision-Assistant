@@ -1,4 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { confirmationTime } from "../features/product-lookup/confirmation-time";
+
+test("확인 시각은 한국 시간으로 표시하고 잘못된 값은 미확인으로 처리한다", () => {
+  expect(confirmationTime("2026-11-01T23:30:00Z")).toContain("2026. 11. 02.");
+  expect(confirmationTime("2026-11-01T23:30:00Z")).toContain("08:30");
+  expect(confirmationTime(undefined)).toBeNull();
+  expect(confirmationTime("잘못된 날짜")).toBeNull();
+});
 
 test("카탈로그는 외부 동의 없이 클릭으로 시작하고 만료 가격을 분리한다", async ({ page }) => {
   await page.route("https://qcystore.co.kr/web/product/fixture.jpg", route => route.fulfill({ status: 404, body: "" }));
@@ -26,6 +34,9 @@ test("카탈로그는 외부 동의 없이 클릭으로 시작하고 만료 가�
     searchConsent: false, collectionConsent: false, aiConsent: false,
   } });
   await expect(page.getByRole("heading", { name: "추천 제품", exact: true })).toBeVisible();
+  const alpha = page.getByRole("article", { name: "무선 이어폰 Alpha", exact: true });
+  await expect(alpha.getByText(/가격 확인 시각: .*\(한국 시간\)/)).toBeVisible();
+  await expect(alpha.getByText(/사양 확인 시각: .*\(한국 시간\)/).first()).toBeVisible();
   await page.getByText("최소 조건·호환성의 근거가 부족한 제품 (1)", { exact: true }).click();
   await expect(page.getByRole("article", { name: "무선 이어폰 Gamma", exact: true })).toContainText("최근 판매가 확인이 필요합니다");
   await page.getByRole("article", { name: "무선 이어폰 Alpha", exact: true }).getByRole("button", { name: "비교에 추가" }).click();
