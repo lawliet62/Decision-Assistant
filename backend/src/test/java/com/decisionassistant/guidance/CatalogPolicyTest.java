@@ -73,6 +73,9 @@ class CatalogPolicyTest {
             assertThat(marshall.revision()).isEqualTo(2);
             for (var entry : entries) CatalogImporter.validate(entry, Instant.parse("2030-01-01T00:00:00Z"));
             var template = new com.decisionassistant.template.IntakeTemplates().required(com.decisionassistant.decision.DecisionTypes.TemplateKey.EARBUDS);
+            var bose = Arrays.stream(entries).filter(e -> e.id().equals("bose-qc-earbuds-ice-blue")).findFirst().orElseThrow();
+            assertThat(MinimumRequirementMatcher.check(template.minimumRequirements(), Map.of("anc", "required"),
+                    bose.facts().stream().map(CatalogProduct.Fact::evidence).toList()).getFirst().status()).isEqualTo(RequirementStatus.MEETS);
             var audioTechnica = Arrays.stream(entries).filter(e -> e.id().equals("audio-technica-sq1tw2nc")).findFirst().orElseThrow();
             assertThat(audioTechnica.active()).isTrue();
             assertThat(MinimumRequirementMatcher.check(template.minimumRequirements(), Map.of("anc", "required"),
