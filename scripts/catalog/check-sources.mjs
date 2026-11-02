@@ -26,6 +26,7 @@ const sources = new Map([
   ["marshall-minor-iv-black", ["https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653", "Minor IV Black - 이어버드 | Marshall.com"]],
   ["marshall-motif-ii-anc", ["https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450", "Motif II A.N.C. Black - 노이즈 캔슬링 이어버드 | Marshall.com"]],
   ["sennheiser-momentum-tw5", ["https://kr.sennheiser-hearing.com/product/detail.html?product_no=731", "한국어 쇼핑몰 | 모멘텀 트루 와이어리스 5"]],
+  ["jabra-evolve2-buds-usba", ["https://www.jabra.com/ko-kr/about/news-and-press-releases/2022-jabra-evolve2-buds", "Jabra unveils professional, pocketable true wireless earbuds engineered for hybrid and remote working"]],
 ]);
 const MAX_BYTES = 2_000_000;
 const normalize = value => value.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ")

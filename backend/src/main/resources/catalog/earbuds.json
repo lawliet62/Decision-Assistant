@@ -608,5 +608,26 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "jabra-evolve2-buds-usba",
+    "revision": 1,
+    "name": "Jabra Evolve2 Buds USB-A UC (무선 충전 패드 미포함)",
+    "purchaseUrl": "https://www.jabramall.com/product/detail.html?product_no=2162",
+    "expectedIdentity": "jabra-kr:2162-usba",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.jabra.com/ko-kr/about/news-and-press-releases/2022-jabra-evolve2-buds",
+          "quote": "Adjustable Active Noise Cancellation",
+          "fetchedAt": "2026-11-02T21:07:00Z",
+          "verificationStatus": "UNREVIEWED"
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

@@ -11,10 +11,11 @@
 | QCY 공식 스마트스토어 | 위 공식 유통 안내로 확인한 `smartstore.naver.com/ylintl/products/` 경로만 허용. 다른 판매자나 네이버 전체 도메인은 허용하지 않음 |
 | 소니 한국 공식 스토어 | `store.sony.co.kr/product-view/109871591` 한 상품에 한정. [공식 이어폰 목록](https://store.sony.co.kr/products/audio/wireless_earphones)에서 연결된 Float Run. 실제 Firecrawl의 구매 영역 검증이 실패하여 카탈로그에서는 비활성 상태 |
 | Marshall 한국 공식 스토어 | [공식 이어폰 목록](https://www.marshall.com/kr/ko/headphones/earbuds)에서 연결한 MOTIF II A.N.C. 블랙(`pid=1006450`)과 MINOR IV 블랙(`pid=1006653`)에 한정. 실제 응답과 검증 범위는 [평가](evaluations/catalog-2026-10-29/README.md)에 기록 |
-| BOSE 한국 공식 온라인 스토어 | [QC 이어버드(New) 아이스 블루](https://www.bose.co.kr/357/?idx=307) 한 상품에 한정. 단일 색상·상품 번호·구매 가격을 검증하며 사양은 미확인 |
+| BOSE 한국 공식 온라인 스토어 | [QC 이어버드(New) 아이스 블루](https://www.bose.co.kr/357/?idx=307) 한 상품에 한정. 단일 색상·상품 번호·구매 가격과 제조사 ANC 근거를 검증 |
 | 앤커코리아 공식 스토어 | [P31i(R60i NC) D1202](https://ankerkorea.co.kr/product/detail.html?product_no=43), [P41i A3937](https://ankerkorea.co.kr/product/detail.html?product_no=91), [에어로클립 A3388](https://ankerkorea.co.kr/product/detail.html?product_no=45), [리버티 5 A3957](https://ankerkorea.co.kr/product/detail.html?product_no=40), [리버티 5 프로 D1203](https://ankerkorea.co.kr/product/detail.html?product_no=154)에 한정. 상품 구성과 할인 판매가를 대조하고 사양은 각각 동일 모델 공식 페이지에서 확인 |
 | 젠하이저 한국 공식 스토어 | [공식 스토어](https://kr.sennheiser-hearing.com/)의 MOMENTUM True Wireless 5 상품 731과 해당 색상 구성에 한정. 가격 검증은 카탈로그 전용이며 해당 상품을 활성 등록 |
 | 오디오테크니카 한국 공식 수입원 | [ATH-SQ1TW2NC 상품 955](https://audio-technica.co.kr/product/ath-sq1tw2nc/955/)와 [ATH-AC5TW 상품 921](https://audio-technica.co.kr/product/ath-ac5tw/921/)에 한정. 각 상품의 색상별 모델·재고·동일 판매가와 구매 영역을 검증하며 카탈로그 전용으로 사용 |
+| 자브라 공식 온라인 스토어 | [국내 공식 수입사](https://www.atsint.co.kr/about)가 운영하는 [Evolve2 Buds 상품 2162](https://www.jabramall.com/product/detail.html?product_no=2162)의 USB-A·UC·무선 충전 패드 미포함 구성에 한정. 정가·할인·재고·구매 영역을 대조하며 카탈로그 전용으로 사용 |
 
 등록 근거 확인일: 2026-09-24. 판매처 추가·변경 시 공식 브랜드 페이지의 연결 근거를 이 문서에 남기고, 다른 호스트·판매자·경로·리다이렉트를 배제하는 테스트를 함께 갱신한다. 검색은 카테고리별 공식 상품 경로의 OR 질의 한 번으로 제한하며, 찾지 못한 브랜드를 임의 사이트로 대체하지 않는다.
 
@@ -38,7 +39,9 @@ v2는 JSON-LD 금액을 같은 상품 구매 영역의 라벨·금액과 대조�
 
 Marshall MOTIF II A.N.C.와 MINOR IV 블랙은 고정된 SKU·상품명·재고와 구조화 가격을 확인하고 같은 금액의 정상 가격 및 장바구니 영역 표시를 대조한다. 다른 SKU·가격·비활성 버튼은 거절한다. 이미지는 별도 CDN 권한 검토 전까지 사용하지 않는다.
 
-BOSE 상품 307은 단일 아이스 블루 옵션의 코드와 표시가, 상품 구조화 가격·재고, 구매 영역의 상품 코드를 대조한다. 옵션이나 판매 화면이 달라지면 가격을 보류하며, 이미지와 미확인 사양은 제공하지 않는다.
+BOSE 상품 307은 단일 아이스 블루 옵션의 코드와 표시가, 상품 구조화 가격·재고, 구매 영역의 상품 코드를 대조한다. 옵션이나 판매 화면이 달라지면 가격을 보류하며, 이미지는 제공하지 않는다.
+
+자브라 상품 2162는 USB-A·UC·충전 패드 미포함 구성의 상품 식별자와 옵션 재고, 구조화 기본가와 일반 할인가·할인 유효 기간을 대조한다. 다른 구성의 가격이나 미확인 재고는 적용하지 않으며, 할인 기간이 72시간 미만이면 가격을 보류한다.
 
 QCY CT06 상품 994는 세 색상의 상품 코드·재고와 동일 판매가를 구매 선택지와 대조한다. 다른 색상이나 구성이 추가되거나 한 색상이라도 품절이면 가격을 보류한다.
 

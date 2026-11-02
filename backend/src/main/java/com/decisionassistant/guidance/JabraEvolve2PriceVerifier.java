@@ -117,9 +117,20 @@ final class JabraEvolve2PriceVerifier {
 
     private static boolean productUrl(String value, boolean offer) {
         try { var uri = URI.create(value);
-            return "https".equals(uri.getScheme()) && Set.of("jabramall.com", "www.jabramall.com").contains(uri.getHost())
+            return page(value) && "https".equals(uri.getScheme()) && Set.of("jabramall.com", "www.jabramall.com").contains(uri.getHost())
                     && uri.getUserInfo() == null && uri.getPort() == -1 && SLUG.equals(uri.getPath()) && uri.getFragment() == null
                     && (offer ? ("item_code=" + CODE).equals(uri.getRawQuery()) : uri.getRawQuery() == null);
+        } catch (RuntimeException e) { return false; }
+    }
+    static boolean page(String value) {
+        try {
+            var uri = URI.create(value);
+            if (!"https".equals(uri.getScheme()) || !Set.of("jabramall.com", "www.jabramall.com").contains(uri.getHost())
+                    || uri.getUserInfo() != null || uri.getPort() != -1 || uri.getFragment() != null
+                    || uri.getRawPath().toLowerCase(Locale.ROOT).matches(".*%(?:2f|5c|2e|25).*")
+                    || !uri.normalize().getPath().equals(uri.getPath())) return false;
+            if ("/product/detail.html".equals(uri.getPath())) return "product_no=2162".equals(uri.getRawQuery());
+            return SLUG.equals(uri.getPath()) && (uri.getRawQuery() == null || ("item_code=" + CODE).equals(uri.getRawQuery()));
         } catch (RuntimeException e) { return false; }
     }
     private static boolean visible(Element e) {

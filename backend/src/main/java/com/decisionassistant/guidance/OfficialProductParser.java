@@ -47,6 +47,14 @@ final class OfficialProductParser {
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
+        if (store.id().equals("jabra-kr")) {
+            if (!catalog || !JabraEvolve2PriceVerifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var verified = JabraEvolve2PriceVerifier.price(page.html(), fetchedAt).orElse(null);
+            if (verified == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct("Jabra Evolve2 Buds USB-A UC", "jabra-kr:2162-usba",
+                    new OfficialOffer(requestedUrl, store.name(), verified, "KRW", null, fetchedAt,
+                            "공식 USB-A 구성의 재고·할인 기간·구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + verified + "원"), null);
+        }
         if (store.id().equals("audio-technica-kr")) {
             var ac5 = AudioTechnicaProductVerifier.AC5_URL.equals(requestedUrl);
             if (!catalog || !(ac5 || AudioTechnicaProductVerifier.URL.equals(requestedUrl))) return Result.rejected(Rejection.UNREGISTERED_STORE);
@@ -247,6 +255,7 @@ final class OfficialProductParser {
     static boolean samePage(String left, String right) {
         try {
             var a = URI.create(left); var b = URI.create(right);
+            if (JabraEvolve2PriceVerifier.page(left) && JabraEvolve2PriceVerifier.page(right)) return true;
             return OfficialStorePolicy.store(left).isPresent() && OfficialStorePolicy.store(right).isPresent()
                     && a.getHost().equalsIgnoreCase(b.getHost()) && productPath(a).equals(productPath(b));
         } catch (RuntimeException ignored) { return false; }

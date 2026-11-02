@@ -49,4 +49,19 @@ class JabraEvolve2PriceVerifierTest {
         assertThat(JabraEvolve2PriceVerifier.price(HTML.replace("<span id='actionBuy'>", "<span id='actionBuy' hidden>"), NOW)).isEmpty();
         assertThat(JabraEvolve2PriceVerifier.price(HTML.replace("jabramall.com/product/핫딜", "other.example/product/핫딜"), NOW)).isEmpty();
     }
+
+    @Test void onlyCatalogAcceptsTheExactStoreAndConfiguration() {
+        var url = JabraEvolve2PriceVerifier.URL;
+        var page = new WebEvidenceProvider.Page("Jabra", "", HTML, url);
+        var result = OfficialProductParser.inspect(url, page, NOW, true);
+        assertThat(result.product()).isNotNull();
+        assertThat(result.product().identity()).isEqualTo("jabra-kr:2162-usba");
+        assertThat(result.product().offer().price()).isEqualByComparingTo("359100");
+        assertThat(OfficialProductParser.inspect(url, page, NOW, false).product()).isNull();
+        assertThat(OfficialStorePolicy.store("https://www.jabramall.com/product/detail.html?product_no=2163")).isEmpty();
+        assertThat(OfficialStorePolicy.store("https://www.jabramall.com/product/detail.html?product_no=2162&x=1")).isEmpty();
+        assertThat(OfficialProductParser.samePage(url, "https://jabramall.com/product/핫딜-jabra-evolve2-buds/2162/")).isTrue();
+        assertThat(OfficialProductParser.samePage(url, "https://jabramall.com/product/핫딜-jabra-evolve2-buds/2163/")).isFalse();
+        assertThat(OfficialProductParser.samePage(url, "https://jabramall.com/product%2F핫딜-jabra-evolve2-buds/2162/")).isFalse();
+    }
 }

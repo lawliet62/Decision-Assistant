@@ -20,6 +20,8 @@ public final class OfficialStorePolicy {
             new Store("lg-kr", "LG전자", "www.lge.co.kr", "/(?:product/)?(?:monitors|notebook)/[^/]+/?", Set.of("www.lge.co.kr")),
             new Store("sony-kr", "소니 공식 스토어", "store.sony.co.kr", "/product-view/109871591/?", Set.of("store.sony.co.kr")),
             new Store("bose-kr", "BOSE 공식 온라인 스토어", "www.bose.co.kr", "/357/?", Set.of()),
+            new Store("jabra-kr", "자브라 공식 온라인 스토어", "www.jabramall.com", "/product/(?:detail\\.html|핫딜-jabra-evolve2-buds/2162/)", Set.of()),
+            new Store("jabra-kr", "자브라 공식 온라인 스토어", "jabramall.com", "/product/(?:detail\\.html|핫딜-jabra-evolve2-buds/2162/)", Set.of()),
             new Store("anker-kr", "앤커코리아 공식 스토어", "ankerkorea.co.kr", "/product/(?:detail\\.html|[^/]+/(?:40|43|45|91|154)/?)", Set.of()),
             new Store("marshall-kr", "Marshall 공식 스토어", "www.marshall.com", "/kr/ko/product/(?:motif-ii-anc|minor-iv)/?", Set.of()),
             new Store("sennheiser-kr", "젠하이저 공식 스토어", "kr.sennheiser-hearing.com", "/product/(?:detail\\.html|모멘텀-트루-와이어리스-5/731/?)", Set.of()),
@@ -35,6 +37,7 @@ public final class OfficialStorePolicy {
                     || !uri.normalize().getPath().equals(uri.getPath())) return Optional.empty();
             return STORES.stream().filter(store -> store.host().equalsIgnoreCase(uri.getHost()) && uri.getPath().matches(store.productPath()))
                     .filter(store -> !store.id().equals("sony-kr") || uri.getRawQuery() == null)
+                    .filter(store -> !store.id().equals("jabra-kr") || JabraEvolve2PriceVerifier.page(url))
                     .filter(store -> !store.id().equals("audio-technica-kr") || uri.getRawQuery() == null && uri.getFragment() == null)
                     .filter(store -> !store.id().equals("bose-kr") || "idx=307".equals(uri.getRawQuery()))
                     .filter(store -> !store.id().equals("anker-kr") || (uri.getPath().equals("/product/detail.html")

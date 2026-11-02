@@ -43,6 +43,7 @@ class CatalogSchedulingIntegrationTest {
     @MockitoBean AudioTechnicaSpecificationRefreshWorker audioTechnicaWorker;
     @MockitoBean AudioTechnicaAc5SpecificationRefreshWorker audioTechnicaAc5Worker;
     @MockitoBean BoseQcSpecificationRefreshWorker boseQcWorker;
+    @MockitoBean JabraEvolve2SpecificationRefreshWorker jabraWorker;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean ProductDiscoverer ai;
