@@ -28,7 +28,6 @@ public class CatalogImporter implements ApplicationRunner {
         try (var stream = resources.getResource(config.manifest()).getInputStream()) {
             var entries = new ObjectMapper().readValue(stream, Entry[].class);
             var ids = new HashSet<String>(); var urls = new HashSet<String>(); var identities = new HashSet<String>();
-            if (entries.length > 30) throw new IllegalArgumentException("카탈로그는 최대 30개입니다.");
             for (var entry : entries) {
                 validate(entry, Instant.now());
                 if (!ids.add(entry.id()) || !urls.add(entry.purchaseUrl()) || !identities.add(entry.expectedIdentity())) throw new IllegalArgumentException("중복 카탈로그 항목입니다.");
