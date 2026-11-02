@@ -65,14 +65,18 @@ class CatalogPolicyTest {
     @Test void seedFactsAreExplicitAndDoNotPretendUnsupportedAliasesAreVerified() throws Exception {
         try (var in = getClass().getResourceAsStream("/catalog/earbuds.json")) {
             var entries = new tools.jackson.databind.ObjectMapper().readValue(in, CatalogImporter.Entry[].class);
-            assertThat(entries).hasSize(22);
-            assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(20);
+            assertThat(entries).hasSize(23);
+            assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(21);
             assertThat(entries[0].active()).isFalse();
             var marshall = Arrays.stream(entries).filter(e -> e.id().equals("marshall-motif-ii-anc")).findFirst().orElseThrow();
             assertThat(marshall.active()).isTrue();
             assertThat(marshall.revision()).isEqualTo(2);
             for (var entry : entries) CatalogImporter.validate(entry, Instant.parse("2030-01-01T00:00:00Z"));
             var template = new com.decisionassistant.template.IntakeTemplates().required(com.decisionassistant.decision.DecisionTypes.TemplateKey.EARBUDS);
+            var audioTechnica = Arrays.stream(entries).filter(e -> e.id().equals("audio-technica-sq1tw2nc")).findFirst().orElseThrow();
+            assertThat(audioTechnica.active()).isTrue();
+            assertThat(MinimumRequirementMatcher.check(template.minimumRequirements(), Map.of("anc", "required"),
+                    audioTechnica.facts().stream().map(CatalogProduct.Fact::evidence).toList()).getFirst().status()).isEqualTo(RequirementStatus.MEETS);
             for (int index : List.of(0, 3)) {
                 var facts = entries[index].facts().stream().map(CatalogProduct.Fact::evidence).toList();
                 assertThat(MinimumRequirementMatcher.check(template.minimumRequirements(), Map.of("anc", "required"), facts).getFirst().status()).isEqualTo(RequirementStatus.MEETS);

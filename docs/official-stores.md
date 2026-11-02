@@ -14,6 +14,7 @@
 | BOSE 한국 공식 온라인 스토어 | [QC 이어버드(New) 아이스 블루](https://www.bose.co.kr/357/?idx=307) 한 상품에 한정. 단일 색상·상품 번호·구매 가격을 검증하며 사양은 미확인 |
 | 앤커코리아 공식 스토어 | [P31i(R60i NC) D1202](https://ankerkorea.co.kr/product/detail.html?product_no=43), [P41i A3937](https://ankerkorea.co.kr/product/detail.html?product_no=91), [에어로클립 A3388](https://ankerkorea.co.kr/product/detail.html?product_no=45), [리버티 5 A3957](https://ankerkorea.co.kr/product/detail.html?product_no=40), [리버티 5 프로 D1203](https://ankerkorea.co.kr/product/detail.html?product_no=154)에 한정. 상품 구성과 할인 판매가를 대조하고 사양은 각각 동일 모델 공식 페이지에서 확인 |
 | 젠하이저 한국 공식 스토어 | [공식 스토어](https://kr.sennheiser-hearing.com/)의 MOMENTUM True Wireless 5 상품 731과 해당 색상 구성에 한정. 가격 검증은 카탈로그 전용이며 해당 상품을 활성 등록 |
+| 오디오테크니카 한국 공식 수입원 | [ATH-SQ1TW2NC 상품 955](https://audio-technica.co.kr/product/ath-sq1tw2nc/955/)에 한정. 네 색상의 모델·재고·동일 판매가와 구매 영역을 검증하며 카탈로그 전용으로 사용 |
 
 등록 근거 확인일: 2026-09-24. 판매처 추가·변경 시 공식 브랜드 페이지의 연결 근거를 이 문서에 남기고, 다른 호스트·판매자·경로·리다이렉트를 배제하는 테스트를 함께 갱신한다. 검색은 카테고리별 공식 상품 경로의 OR 질의 한 번으로 제한하며, 찾지 못한 브랜드를 임의 사이트로 대체하지 않는다.
 

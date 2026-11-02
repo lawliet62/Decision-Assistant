@@ -57,6 +57,7 @@ class CatalogApiIntegrationTest {
     @MockitoBean AnkerLibertySpecificationSource ankerLibertySpecificationSource;
     @MockitoBean AnkerLibertyProSpecificationSource ankerLibertyProSpecificationSource;
     @MockitoBean AnkerP41iSpecificationSource ankerP41iSpecificationSource;
+    @MockitoBean AudioTechnicaSpecificationSource audioTechnicaSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -787,6 +788,22 @@ class CatalogApiIntegrationTest {
         verify(specificationSource, times(1)).fetchHt16();
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isEqualTo(old);
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=?", Integer.class, id)).isEqualTo(1);
+    }
+    @Test void audioTechnicaSpecificationReviewPersistsAndRespectsWeeklyInterval() throws Exception {
+        var id = "audio-technica-sq1tw2nc";
+        var source = "https://www.audio-technica.co.jp/corp/news/detail/1350";
+        var quote = "アクティブノイズキャンセリング（ANC）機能を新搭載";
+        var old = Instant.now().minus(Duration.ofDays(10));
+        var product = new CatalogProduct(id);
+        product.register(1, "ATH-SQ1TW2NC", "https://audio-technica.co.kr/product/ath-sq1tw2nc/955/", "audio-technica-kr:cafe24_audiotechnica_1_955",
+                List.of(new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", source, quote, old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(product);
+        when(audioTechnicaSource.fetch()).thenReturn("<title>完全ワイヤレスイヤホン『ATH-SQ1TW2NC』が登場｜オーディオテクニカ</title><span class='style_bold'>" + quote + "</span>");
+        var spec = new AudioTechnicaSpecificationRefreshWorker(true, catalogProperties, products, jdbc, audioTechnicaSource, transactionManager);
+        spec.refresh(); spec.refresh();
+        verify(audioTechnicaSource, times(1)).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select jsonb_exists(fact_reviews, 'ANC 지원') from catalog_products where id=?", Boolean.class, id)).isTrue();
     }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(4))); product(2, null); product(3, null);

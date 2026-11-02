@@ -552,5 +552,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "audio-technica-sq1tw2nc",
+    "revision": 1,
+    "name": "오디오테크니카 ATH-SQ1TW2NC",
+    "purchaseUrl": "https://audio-technica.co.kr/product/ath-sq1tw2nc/955/",
+    "expectedIdentity": "audio-technica-kr:cafe24_audiotechnica_1_955",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.audio-technica.co.jp/corp/news/detail/1350",
+          "quote": "アクティブノイズキャンセリング（ANC）機能を新搭載",
+          "fetchedAt": "2026-11-02T18:04:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

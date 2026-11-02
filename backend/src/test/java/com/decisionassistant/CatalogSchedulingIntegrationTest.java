@@ -40,6 +40,7 @@ class CatalogSchedulingIntegrationTest {
     @MockitoBean AnkerLibertySpecificationSource liberty;
     @MockitoBean AnkerLibertyProSpecificationSource libertyPro;
     @MockitoBean AnkerP41iSpecificationSource p41i;
+    @MockitoBean AudioTechnicaSpecificationRefreshWorker audioTechnicaWorker;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean ProductDiscoverer ai;

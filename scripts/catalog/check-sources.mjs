@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 
 // 운영자가 승인한 고정 사양 페이지만 점검한다. 일치는 사양의 진실성이나 모델 동일성을 증명하지 않는다.
 const sources = new Map([
+  ["audio-technica-sq1tw2nc", ["https://www.audio-technica.co.jp/corp/news/detail/1350", "完全ワイヤレスイヤホン『ATH-SQ1TW2NC』が登場｜オーディオテクニカ"]],
   ["apple-airpods-pro-3", ["https://www.apple.com/kr/airpods-pro/specs/", "AirPods Pro 3 - 제품 사양 - Apple (KR)"]],
   ["apple-airpods-5-wireless", ["https://www.apple.com/kr/airpods-5/specs/", "AirPods 5 - 제품 사양 - Apple (KR)"]],
   ["qcy-t13-anc", ["https://www.qcy.com/products/qcy-t13-anc", "QCY T13 ANC True Wireless Earbuds, 30H Playtime – QCY Official"]],
