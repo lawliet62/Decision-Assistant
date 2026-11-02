@@ -48,10 +48,11 @@ final class OfficialProductParser {
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
         if (store.id().equals("audio-technica-kr")) {
-            if (!catalog || !AudioTechnicaProductVerifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
-            var price = AudioTechnicaProductVerifier.price(page.html()).orElse(null);
+            var ac5 = AudioTechnicaProductVerifier.AC5_URL.equals(requestedUrl);
+            if (!catalog || !(ac5 || AudioTechnicaProductVerifier.URL.equals(requestedUrl))) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var price = (ac5 ? AudioTechnicaProductVerifier.ac5Price(page.html()) : AudioTechnicaProductVerifier.price(page.html())).orElse(null);
             if (price == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
-            return new Result(new OfficialProduct("ATH-SQ1TW2NC", "audio-technica-kr:cafe24_audiotechnica_1_955",
+            return new Result(new OfficialProduct(ac5 ? "ATH-AC5TW" : "ATH-SQ1TW2NC", ac5 ? "audio-technica-kr:cafe24_audiotechnica_1_921" : "audio-technica-kr:cafe24_audiotechnica_1_955",
                     new OfficialOffer(requestedUrl, store.name(), price, "KRW", null, fetchedAt,
                             "공식 상품 색상별 가격·재고와 구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + price + "원"), null);
         }

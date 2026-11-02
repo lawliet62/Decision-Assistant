@@ -58,6 +58,7 @@ class CatalogApiIntegrationTest {
     @MockitoBean AnkerLibertyProSpecificationSource ankerLibertyProSpecificationSource;
     @MockitoBean AnkerP41iSpecificationSource ankerP41iSpecificationSource;
     @MockitoBean AudioTechnicaSpecificationSource audioTechnicaSource;
+    @MockitoBean AudioTechnicaAc5Source audioTechnicaAc5Source;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -805,6 +806,19 @@ class CatalogApiIntegrationTest {
         verify(audioTechnicaSource, times(1)).fetch();
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
         assertThat(jdbc.queryForObject("select jsonb_exists(fact_reviews, 'ANC 지원') from catalog_products where id=?", Boolean.class, id)).isTrue();
+    }
+    @Test void audioTechnicaAc5SpecReviewKeepsModelAndWeeklyInterval() throws Exception {
+        var id = "audio-technica-ac5tw"; var url = "https://audio-technica.co.kr/product/ath-ac5tw/921/";
+        var old = Instant.now().minus(Duration.ofDays(10)); var product = new CatalogProduct(id);
+        product.register(1, "ATH-AC5TW", url, "audio-technica-kr:cafe24_audiotechnica_1_921",
+                List.of(new CatalogProduct.Fact(new ProductFact("형태", "오픈형", url, "무선 오픈이어 이어폰", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(product);
+        when(audioTechnicaAc5Source.fetch()).thenReturn("<link rel='canonical' href='" + url + "'><script type='application/ld+json'>{\"@type\":\"ProductGroup\",\"name\":\"ATH-AC5TW\",\"productGroupID\":\"cafe24_audiotechnica_1_921\"}</script><div class='xans-product-detail'><div class='detail_name'><h2>ATH-AC5TW</h2><p>무선 오픈이어 이어폰</p></div></div>");
+        var spec = new AudioTechnicaAc5SpecificationRefreshWorker(true, catalogProperties, products, jdbc, audioTechnicaAc5Source, transactionManager);
+        spec.refresh(); spec.refresh();
+        verify(audioTechnicaAc5Source, times(1)).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select jsonb_exists(fact_reviews, '형태') from catalog_products where id=?", Boolean.class, id)).isTrue();
     }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(4))); product(2, null); product(3, null);
