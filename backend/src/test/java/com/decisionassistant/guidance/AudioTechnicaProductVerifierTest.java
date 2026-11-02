@@ -30,6 +30,38 @@ class AudioTechnicaProductVerifierTest {
         var url = AudioTechnicaProductVerifier.URL;
         return OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", html, url), Instant.now(), true);
     }
+    private static String ac5Fixture() {
+        var colors = List.of("블랙", "리치 화이트"); var variants = new ArrayList<String>(); var options = new StringBuilder("<option value='*'>선택</option>");
+        for (int i = 0; i < colors.size(); i++) {
+            var color = colors.get(i); var code = "P0000BJL000" + (char) ('A' + i);
+            variants.add("""
+                {"@type":"Product","name":"ATH-AC5TW %s","color":"%s","sku":"cafe24_audiotechnica_1_921_%s",
+                 "offers":{"@type":"Offer","price":159000,"priceCurrency":"KRW","availability":"https://schema.org/InStock",
+                 "url":"https://audio-technica.co.kr/product/ath-ac5tw/921/?item_code=%s"}}
+                """.formatted(color, color, code, code));
+            options.append("<option value='").append(color).append("'>").append(color).append("</option>");
+        }
+        return "<link rel='canonical' href='" + AudioTechnicaProductVerifier.AC5_URL + "'><script type='application/ld+json'>"
+                + "{\"@type\":\"ProductGroup\",\"@id\":\"https://audio-technica.co.kr/product/ath-ac5tw/921/\",\"name\":\"ATH-AC5TW\",\"productGroupID\":\"cafe24_audiotechnica_1_921\",\"variesBy\":[\"color\"],\"hasVariant\":["
+                + String.join(",", variants) + "]}</script><div class='xans-product-detail'><div class='detail_name'><p>무선 오픈이어 이어폰</p><h2>ATH-AC5TW</h2></div>"
+                + "<div class='detail_price'><span class='product_price'>159,000원</span><span class='product_sale_price'></span></div>"
+                + "<select product_type='product_option' option_title='색상'>" + options + "</select>"
+                + "<div><a class='btnSubmit' href='#none'><span id='actionBuy'>바로구매</span></a></div></div>";
+    }
+    @Test void ac5RequiresOwnModelTwoColorsAndMatchingPurchasePrice() {
+        var html = ac5Fixture(); var url = AudioTechnicaProductVerifier.AC5_URL;
+        java.util.function.Function<String, OfficialProductParser.Result> inspect = value ->
+                OfficialProductParser.inspect(url, new WebEvidenceProvider.Page("", "", value, url), Instant.now(), true);
+        assertThat(inspect.apply(html).product().offer().price()).isEqualByComparingTo("159000");
+        assertThat(AudioTechnicaAc5SpecificationRefreshWorker.matches(html)).isTrue();
+        for (var bad : List.of(html.replaceFirst("159000", "129000"), html.replace("159,000원", "129,000원"),
+                html.replaceFirst("InStock", "OutOfStock"), html.replaceFirst("P0000BJL000A", "P0000BJL000Z"),
+                html.replace("value='리치 화이트'", "value='리치 화이트' disabled"), html.replace("class='btnSubmit'", "class='btnSubmit displaynone'"),
+                html.replace("href='#none'", "href='https://untrusted.example/'"), html.replace("product_sale_price'></span>", "product_sale_price'>120,000원</span>")))
+            assertThat(inspect.apply(bad).product()).isNull();
+        assertThat(AudioTechnicaAc5SpecificationRefreshWorker.matches(html.replace("무선 오픈이어 이어폰", "일반 이어폰"))).isFalse();
+        assertThat(inspect.apply(fixture()).product()).isNull();
+    }
     @Test void onlyAcceptsSameModelStockOptionsAndUnconditionalDisplayedPrice() {
         var html = fixture();
         assertThat(inspect(html).product().offer().price()).isEqualByComparingTo("139000");

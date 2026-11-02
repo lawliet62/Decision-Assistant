@@ -574,5 +574,27 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "audio-technica-ac5tw",
+    "revision": 1,
+    "name": "오디오테크니카 ATH-AC5TW",
+    "purchaseUrl": "https://audio-technica.co.kr/product/ath-ac5tw/921/",
+    "expectedIdentity": "audio-technica-kr:cafe24_audiotechnica_1_921",
+    "facts": [
+      {
+        "evidence": {
+          "name": "형태",
+          "value": "오픈형",
+          "sourceUrl": "https://audio-technica.co.kr/product/ath-ac5tw/921/",
+          "quote": "무선 오픈이어 이어폰",
+          "fetchedAt": "2026-11-02T19:38:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
+    "active": true
   }
 ]

@@ -30,9 +30,11 @@ QCY CT06의 오픈형은 국내 공식 상품명·상품 번호와 구조화 상
 
 별도 PostgreSQL 시험에서 실제 제조사 페이지를 조회해 P41i의 ANC와 리버티 5 프로의 ANC·IP55 확인 시각 및 각 제품의 다음 주간 시도를 저장했다. 이는 일회성 시험이며 장기 예약 실행의 안정성을 입증하지 않는다.
 
-기본 추천은 활성 이어폰 21개(QCY 9개, Apple 한국 스토어 2개, Marshall 2개, 젠하이저 1개, BOSE 1개, 앤커코리아 5개, 오디오테크니카 1개)를 사용한다. BOSE QC 이어버드 아이스 블루는 가격만 등록하고 ANC 등 사양은 아직 미확인이므로 해당 필수 조건에서 UNKNOWN이다. 사양 근거가 없어 사양 출처 점검·갱신 대상에도 포함되지 않는다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
+기본 추천은 활성 이어폰 22개(QCY 9개, Apple 한국 스토어 2개, Marshall 2개, 젠하이저 1개, BOSE 1개, 앤커코리아 5개, 오디오테크니카 2개)를 사용한다. BOSE QC 이어버드 아이스 블루는 가격만 등록하고 ANC 등 사양은 아직 미확인이므로 해당 필수 조건에서 UNKNOWN이다. 사양 근거가 없어 사양 출처 점검·갱신 대상에도 포함되지 않는다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
 
 오디오테크니카 ATH-SQ1TW2NC의 ANC 지원은 [국내 공식 수입원의 출시 안내](https://audio-technica.co.kr/board/news/read.html?board_no=8&no=11458)와 [제조사 출시 안내](https://www.audio-technica.co.jp/corp/news/detail/1350)에서 확인했다. 제조사 안내의 모델 제목과 명시적인 ANC 문구가 일치하면 사양 확인 시각을 주간 갱신하고, GitHub Actions 출처 점검에도 포함한다.
+
+오디오테크니카 ATH-AC5TW는 국내 공식 판매 페이지의 모델과 오픈이어 설명이 일치하면 형태 확인 시각을 주간 갱신하고, GitHub Actions 출처 점검에도 포함한다. ANC는 미확인이다.
 
 ## 첫 실행과 가격 갱신
 
@@ -60,7 +62,7 @@ worker는 기본 1시간마다 기한이 된 제품을 최대 30개 순차 처�
 
 ## 제품·사양 관리
 
-매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT16, HT10 Hi-Res, HT08, HT20, CT06, T17 APP, T29 APP, HT19, AirPods Pro 3, AirPods 5, Marshall MOTIF II A.N.C.와 MINOR IV, 젠하이저 MOMENTUM True Wireless 5, 앤커 P31i·P41i·에어로클립·리버티 5·리버티 5 프로와 오디오테크니카 ATH-SQ1TW2NC의 공식 페이지 스무 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
+매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT16, HT10 Hi-Res, HT08, HT20, CT06, T17 APP, T29 APP, HT19, AirPods Pro 3, AirPods 5, Marshall MOTIF II A.N.C.와 MINOR IV, 젠하이저 MOMENTUM True Wireless 5, 앤커 P31i·P41i·에어로클립·리버티 5·리버티 5 프로와 오디오테크니카 ATH-SQ1TW2NC·ATH-AC5TW의 공식 페이지 스물한 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
 
 작업 요약에서 `QUOTE_PRESENT`는 단순 문구 존재, `QUOTE_MISSING`은 미발견, `UNAVAILABLE`은 접근 실패, `UNSUPPORTED_SOURCE`는 허용된 고정 주소가 아닌 사양이다. 제목은 등록된 예상 제목과 비교하며 `MATCH`, `MISMATCH`, `UNAVAILABLE`로 표시한다. 문구가 다른 상품·추천 영역에 나타날 수도 있고 제목만으로 모델을 확정할 수 없으므로 **제목과 문구 일치는 동일 모델이나 사양의 정확성을 검증하지 않는다**. 점검 기한이 7일 이내이거나 제목 불일치·문구 미발견·접근 실패가 있으면 작업을 실패로 표시한다. 광고 문구 등 제목의 무해한 변경도 경고가 될 수 있으므로 실제 모델을 확인한 뒤 예상 제목을 수정한다. 수집 실패의 HTTP 상태와 크기 초과는 간단한 코드만 남긴다. GitHub 알림 수신 여부는 계정 설정에 달려 있으며 예약 자체가 누락된 경우 이 workflow가 알림을 보장하지 않는다.
 
