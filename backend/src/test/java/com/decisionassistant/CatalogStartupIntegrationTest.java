@@ -2,6 +2,7 @@ package com.decisionassistant;
 
 import com.decisionassistant.guidance.EvidenceWorkflowWorker;
 import com.decisionassistant.guidance.FirecrawlWebEvidenceProvider;
+import com.decisionassistant.guidance.CatalogImporter;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,13 @@ class CatalogStartupIntegrationTest {
         var deadline = Instant.now().plus(Duration.ofSeconds(15));
         while (Instant.now().isBefore(deadline) && jdbc.queryForObject("select count(*) from catalog_observations where outcome <> 'ATTEMPTED'", Integer.class) == 0)
             Thread.sleep(100);
-        assertThat(jdbc.queryForObject("select count(*) from catalog_products where active", Integer.class)).isEqualTo(21);
+        CatalogImporter.Entry[] entries;
+        try (var in = getClass().getResourceAsStream("/catalog/earbuds.json")) {
+            entries = new tools.jackson.databind.ObjectMapper().readValue(in, CatalogImporter.Entry[].class);
+        }
+        var expected = java.util.Arrays.stream(entries).filter(CatalogImporter.Entry::active).count();
+        assertThat(expected).isPositive();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_products where active", Integer.class)).isEqualTo((int) expected);
         assertThat(jdbc.queryForObject("select count(*) from catalog_observations", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("select calls from catalog_monthly_usage", Integer.class)).isEqualTo(1);
         verify(web, times(1)).scrapeProduct(anyString());
