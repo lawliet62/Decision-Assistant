@@ -62,6 +62,7 @@ class CatalogApiIntegrationTest {
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
     @MockitoBean EvidenceWorkflowWorker evidenceWorker;
+    @MockitoBean CatalogStartupRefresh startupRefresh;
     final ObjectMapper json = new ObjectMapper();
     RequestPostProcessor owner;
     private static final String BODY = """
