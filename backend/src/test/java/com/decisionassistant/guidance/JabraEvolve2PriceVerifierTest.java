@@ -5,9 +5,9 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import static org.assertj.core.api.Assertions.*;
 
-class JabraEvolve2PriceVerifierTest {
+public class JabraEvolve2PriceVerifierTest {
     private static final Instant NOW = Instant.parse("2026-11-03T00:00:00Z");
-    private static final String HTML = """
+    public static final String HTML = """
             <link rel='canonical' href='https://jabramall.com/product/핫딜-jabra-evolve2-buds/2162/'>
             <script type='application/ld+json'>
               {"@type":"ProductGroup","@id":"https://www.jabramall.com/product/핫딜-jabra-evolve2-buds/2162/",
