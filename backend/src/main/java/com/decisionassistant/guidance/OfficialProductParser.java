@@ -47,6 +47,14 @@ final class OfficialProductParser {
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
+        if (store.id().equals("audio-technica-kr")) {
+            if (!catalog || !AudioTechnicaProductVerifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var price = AudioTechnicaProductVerifier.price(page.html()).orElse(null);
+            if (price == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct("ATH-SQ1TW2NC", "audio-technica-kr:cafe24_audiotechnica_1_955",
+                    new OfficialOffer(requestedUrl, store.name(), price, "KRW", null, fetchedAt,
+                            "공식 상품 색상별 가격·재고와 구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + price + "원"), null);
+        }
         if (store.id().equals("anker-kr")) {
             if (!catalog || !(AnkerProductVerifier.URL.equals(requestedUrl) || AnkerProductVerifier.AERO_URL.equals(requestedUrl)
                     || AnkerProductVerifier.LIBERTY_URL.equals(requestedUrl) || AnkerProductVerifier.PRO_URL.equals(requestedUrl)
