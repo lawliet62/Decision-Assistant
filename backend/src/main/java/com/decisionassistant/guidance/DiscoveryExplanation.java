@@ -20,7 +20,7 @@ final class DiscoveryExplanation {
                     });
         }
         if (offer == null || CatalogProperties.VERSION.equals(offer.policyVersion()) && !CatalogDiscovery.fresh(offer, java.time.Instant.now())) {
-            parts.add("24시간 안에 확인한 판매가가 없어 예산 충족 여부를 판정하지 않았습니다.");
+            parts.add("72시간 안에 확인한 판매가가 없어 예산 충족 여부를 판정하지 않았습니다.");
         } else {
             var price = offer.price().stripTrailingZeros().toPlainString();
             parts.add("확인 시점의 공식 판매가는 " + price + "원입니다." + (input.maxBudget() == null ? "" : offer.price().compareTo(input.maxBudget()) > 0 ? " 선택한 예산을 초과합니다." : " 선택한 예산 이내입니다."));

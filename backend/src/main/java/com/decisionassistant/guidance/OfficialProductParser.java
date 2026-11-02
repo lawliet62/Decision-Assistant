@@ -121,7 +121,10 @@ final class OfficialProductParser {
             if (!condition.isBlank() && !condition.endsWith("/NewCondition")) return Result.rejected(Rejection.NOT_NEW);
             if (row.has("url") && !samePage(requestedUrl, row.path("url").asText())) return Result.rejected(Rejection.OFFER_URL_MISMATCH);
             try {
-                if (row.has("priceValidUntil") && LocalDate.parse(row.path("priceValidUntil").asText()).isBefore(LocalDate.now(java.time.ZoneOffset.UTC))) return Result.rejected(Rejection.PRICE_EXPIRED);
+                if (row.has("priceValidUntil") && LocalDate.parse(row.path("priceValidUntil").asText()).isBefore(
+                        catalog ? LocalDate.ofInstant(fetchedAt.plusSeconds(72 * 3600L), java.time.ZoneOffset.UTC)
+                                : LocalDate.now(java.time.ZoneOffset.UTC)))
+                    return Result.rejected(Rejection.PRICE_EXPIRED);
                 var raw = row.path("price").asText("");
                 if (!raw.matches("[0-9]+(?:\\.0+)?")) return Result.rejected(Rejection.PRICE_INVALID);
                 var price = new BigDecimal(raw);

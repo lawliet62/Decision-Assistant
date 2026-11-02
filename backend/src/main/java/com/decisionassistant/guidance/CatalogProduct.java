@@ -46,7 +46,7 @@ public class CatalogProduct {
         this.revision = revision; this.name = name; purchaseUrl = url; expectedIdentity = identity;
         this.facts = List.copyOf(facts); this.active = active;
     }
-    public void attempted(Instant now) { lastAttemptAt = now; nextAttemptAt = now.plus(Duration.ofDays(1)); }
+    public void attempted(Instant now) { lastAttemptAt = now; nextAttemptAt = now.plus(Duration.ofDays(2)); }
     public void observed(OfficialProduct product) {
         var source = product.offer();
         offer = new OfficialOffer(source.purchaseUrl(), source.seller(), source.price(), source.currency(), source.imageUrl(),

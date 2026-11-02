@@ -20,8 +20,8 @@ class CatalogPolicyTest {
         return p;
     }
     @Test void priceExpiresAtBoundaryAndNeverBecomesFreshThroughReading() {
-        assertThat(CatalogDiscovery.fresh(offer(checked), checked.plusSeconds(86399))).isTrue();
-        assertThat(CatalogDiscovery.fresh(offer(checked), checked.plusSeconds(86400))).isFalse();
+        assertThat(CatalogDiscovery.fresh(offer(checked), checked.plusSeconds(259199))).isTrue();
+        assertThat(CatalogDiscovery.fresh(offer(checked), checked.plusSeconds(259200))).isFalse();
         assertThat(CatalogDiscovery.fresh(offer(checked), checked.minusSeconds(1))).isFalse();
         assertThat(CatalogDiscovery.fresh(null, checked)).isFalse();
     }

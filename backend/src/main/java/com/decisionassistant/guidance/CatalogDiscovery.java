@@ -21,7 +21,7 @@ public class CatalogDiscovery {
     public static boolean isCatalog(DiscoveryRequest request) { return CatalogProperties.TEMPLATE.equals(request.templateVersion()); }
     public static boolean fresh(OfficialOffer offer, Instant now) {
         return offer != null && offer.fetchedAt() != null && !offer.fetchedAt().isAfter(now)
-                && now.isBefore(offer.fetchedAt().plus(Duration.ofHours(24)));
+                && now.isBefore(offer.fetchedAt().plus(Duration.ofHours(72)));
     }
     public static String priceStatus(OfficialOffer offer) { return offer == null ? "UNVERIFIED" : fresh(offer, Instant.now()) ? "VERIFIED" : "EXPIRED"; }
     public void populate(Decision decision, ProductDiscovery run) {

@@ -18,6 +18,14 @@ class OfficialProductParserTest {
     }
     private String product(String offer) { return "{\"@type\":\"Product\",\"name\":\"Buds\",\"sku\":\"buds-1\",\"image\":\"/web/product/buds.jpg\"," + offer + "}"; }
 
+    @Test void catalogRejectsKnownOfferExpiryBeforeItsPriceLifetime() {
+        var checked = Instant.parse("2026-11-01T00:00:00Z");
+        var offer = "\"offers\":{\"@type\":\"Offer\",\"price\":21900,\"priceCurrency\":\"KRW\",\"priceValidUntil\":\"2026-11-03\"}";
+        var html = "<script type='application/ld+json'>" + product(offer) + "</script>" + PURCHASE;
+        var result = OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", html, URL), checked, true);
+        assertThat(result.rejection()).isEqualTo(OfficialProductParser.Rejection.PRICE_EXPIRED);
+    }
+
     @Test void sonySingleProductRequiresUnambiguousPurchaseArea() {
         var url = "https://store.sony.co.kr/product-view/109871591";
         var html = "<title>플로트 런 Float Run : 소니</title><div class='product_view_about'>"

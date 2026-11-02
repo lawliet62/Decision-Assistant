@@ -43,7 +43,7 @@ for (const scenario of scenarios) {
     await page.getByText("최소 조건·호환성·예산에 미달한 제품 (1)", { exact: true }).click();
     await expect(beta).toBeVisible();
     await expect(beta.getByText("미달", { exact: true })).toHaveCount(scenario.choices.length);
-    await beta.getByRole("list", { name: "최소 사양 확인" }).getByText("출처·조회 시점").first().click();
+    await beta.getByRole("list", { name: "최소 사양 확인" }).getByText("출처 보기").first().click();
     await expect(beta.getByRole("link", { name: "웹페이지 보기 ↗" }).first()).toHaveAttribute("href", "https://example.com/Beta");
     await beta.getByRole("button", { name: "비교에 추가", exact: true }).click();
     await alpha.getByRole("button", { name: "비교에 추가", exact: true }).click();

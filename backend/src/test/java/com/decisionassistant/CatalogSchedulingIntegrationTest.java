@@ -59,7 +59,7 @@ class CatalogSchedulingIntegrationTest {
         Thread.sleep(1000); // 여러 scheduler tick에서 재시도가 발생하지 않는지 확인한다.
         assertThat(jdbc.queryForObject("select count(*) from catalog_observations", Integer.class)).isEqualTo(20);
         assertThat(jdbc.queryForObject("select calls from catalog_monthly_usage", Integer.class)).isEqualTo(20);
-        assertThat(jdbc.queryForObject("select count(*) from catalog_products where active and next_attempt_at >= last_attempt_at + interval '24 hours'", Integer.class)).isEqualTo(20);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_products where active and next_attempt_at >= last_attempt_at + interval '48 hours'", Integer.class)).isEqualTo(20);
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where next_attempt_at > now() + interval '6 days'", Integer.class)).isEqualTo(19);
         verify(web, times(20)).scrapeProduct(anyString());
     }
