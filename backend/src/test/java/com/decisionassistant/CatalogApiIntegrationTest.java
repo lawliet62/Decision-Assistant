@@ -59,6 +59,7 @@ class CatalogApiIntegrationTest {
     @MockitoBean AnkerP41iSpecificationSource ankerP41iSpecificationSource;
     @MockitoBean AudioTechnicaSpecificationSource audioTechnicaSource;
     @MockitoBean AudioTechnicaAc5Source audioTechnicaAc5Source;
+    @MockitoBean BoseQcSpecificationSource boseQcSource;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean ProductDiscoverer ai;
@@ -819,6 +820,25 @@ class CatalogApiIntegrationTest {
         verify(audioTechnicaAc5Source, times(1)).fetch();
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
         assertThat(jdbc.queryForObject("select jsonb_exists(fact_reviews, '형태') from catalog_products where id=?", Boolean.class, id)).isTrue();
+    }
+    @Test void boseQcSpecReviewPersistsAndRespectsWeeklyInterval() throws Exception {
+        var id = "bose-qc-earbuds-ice-blue";
+        var url = "https://www.bose.com/p/earbuds/bose-quietcomfort-headphones/QCEARB24-HEADPHONEIN.html";
+        var quote = "Active Noise Cancellation";
+        var product = new CatalogProduct(id);
+        product.register(1, "QC Earbuds", "https://www.bose.co.kr/357/?idx=307", "bose-kr:307",
+                List.of(new CatalogProduct.Fact(new ProductFact("ANC 지원", "지원", url, quote, Instant.now().minus(Duration.ofDays(10)), "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+        products.saveAndFlush(product);
+        when(boseQcSource.fetch()).thenReturn("<link rel='canonical' href='" + url + "'><h1 class='product-name'>Bose QuietComfort Earbuds</h1>"
+                + "<input class='color-attribute' data-color='Ice Blue' id='iceblue-qcearb24-headphonein-ddpmnt-ww'>"
+                + "<div class='product-description__content'>New Bose QuietComfort Earbuds offer iconic audio, renowned noise cancellation</div>"
+                + "<li class='product-carousel__item'><a class='image-container-product-url-label' href='/p/earbuds/bose-quietcomfort-headphones/QCEARB24-HEADPHONEIN.html'>Bose QuietComfort Earbuds</a>"
+                + "<p class='product-attribute-name'>Active Noise Cancellation</p><p class='product-attribute-value'>Yes</p></li>");
+        var spec = new BoseQcSpecificationRefreshWorker(true, catalogProperties, products, jdbc, boseQcSource, transactionManager);
+        spec.refresh(); spec.refresh();
+        verify(boseQcSource, times(1)).fetch();
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("select jsonb_exists(fact_reviews, 'ANC 지원') from catalog_products where id=?", Boolean.class, id)).isTrue();
     }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(4))); product(2, null); product(3, null);

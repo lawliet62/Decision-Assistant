@@ -402,11 +402,23 @@
   },
   {
     "id": "bose-qc-earbuds-ice-blue",
-    "revision": 1,
+    "revision": 2,
     "name": "[New Launch] BOSE 보스 QC 이어버드(New)(아이스 블루)",
     "purchaseUrl": "https://www.bose.co.kr/357/?idx=307",
     "expectedIdentity": "bose-kr:307",
-    "facts": [],
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.bose.com/p/earbuds/bose-quietcomfort-headphones/QCEARB24-HEADPHONEIN.html",
+          "quote": "Active Noise Cancellation",
+          "fetchedAt": "2026-11-02T20:17:00Z",
+          "verificationStatus": "UNREVIEWED"
+        },
+        "cycle": "HARDWARE"
+      }
+    ],
     "active": true
   },
   {
