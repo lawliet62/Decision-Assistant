@@ -67,6 +67,8 @@ QCY 제조사 사양 검증은 등록 모델명이 포함된 사양 영역을 �
 
 대체 경로 조사에서 [Cafe24 Front API 문서](https://developers.cafe24.com/docs/ko/api/front/)는 상품 진열 정보와 Basic 인증을, [인증 정책 공지](https://developers.cafe24.com/cs/front/notice/429)는 개발자 앱의 Front API 사용 설정과 키 발급을 설명한다. 한편 [Admin API 개발 절차](https://developers.cafe24.com/app/front/common)는 쇼핑몰 운영자의 앱 설치와 OAuth 권한 승인을 요구한다. Front API에 Admin API와 같은 판매처별 승인이 필요한지는 확인되지 않았으므로 두 경로를 구분한다. 대상 판매처의 적용 가능 여부, 옵션별 재고와 실제 할인 가격·기간의 제공 여부, 이용 조건 및 비용은 아직 검증하지 않았다. 공식 API 존재만으로 가격 갱신에 사용 가능하다고 판단하지 않는다.
 
+[Front API 상품 상세 문서](https://developers.cafe24.com/docs/en/api/front/?version=2025-12-01)는 상품 번호로 조회할 때 품목·옵션·할인가 리소스를 포함하는 방법과 별도 할인 판매가 조회를 설명한다. [권한 안내](https://developers.cafe24.com/app/front/app/develop/api/scope)는 공개 Front 정보와 판매처 동의가 필요한 Admin 정보를 구별한다. 이 안내와 후속 인증 정책의 적용 관계, 해당 쇼핑몰의 실제 응답, 개별 옵션의 재고 및 비회원 할인 조건·유효기간이 현재 검증 기준을 충족하는지는 확인이 필요하다. 상품 상세 API를 실제로 호출한 결과는 아니다.
+
 ## 진단 스크립트의 인코딩
 
 삼성 상품의 Firecrawl 응답 진단에서 모델·가격 문자열을 확인한 뒤 문맥 요약이 두 번 실패했다. Windows PowerShell에서 BOM 없는 UTF-8 임시 스크립트의 한글 해석이 깨졌고, 가짜 응답 시험에서도 원래 방식은 구문 오류가 발생했다. 한글 문자열을 비교한 최초의 `구매하기` 미발견 결과는 신뢰할 수 없다. 스크립트를 BOM이 있는 UTF-8로 저장하자 가짜 응답의 한글 문맥 요약과 JSON-LD 확인이 통과했고 실제 재조회에서는 `구매하기`가 확인됐다. 인코딩 문제는 재현됐지만 원래 두 번의 요약 실패와 동일한 예외였는지는 기록 부족으로 확정하지 못한다. 재사용 시 유료 호출 전에 인코딩과 응답 후처리를 가짜 응답으로 확인하고 호출·후처리 실패를 구분한다. 상세 호출 기록은 [평가](../evaluations/catalog-2026-10-29/README.md)를 따른다.
