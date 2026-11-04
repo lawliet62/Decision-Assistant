@@ -4,6 +4,7 @@
 
 ## 사례와 진단 방법
 
+- [연결 worktree에서 Codex Hook이 보이지 않는 경우](codex-worktree-hooks.md): 프로젝트 Hook 발견 실패와 사용자 Hook 검증
 - [공식 문서 보완 후에도 추천 품질이 개선되지 않은 사례](discovery-quality-2026-10-06.md): 관찰 결과, 병목, 검증 한계와 미해결 상태
 - [AI 품질 문제의 원인을 분리하는 방법](ai-quality-diagnosis.md): 수집·입력·추출·검증·표현을 구분하는 진단 절차
 

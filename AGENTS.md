@@ -18,6 +18,7 @@
 
 ## Git safety and delivery
 
+- 독립 agent 세션은 각자 별도 Git worktree에서 작업한다. 다른 실행 중인 세션이 점유한 worktree에서는 작업을 거부하고 별도 worktree를 사용한다. 하위 agent는 부모 세션의 worktree를 공유할 수 있다.
 - 변경 작업은 repository의 canonical default branch가 아닌 작업별 branch에서 수행하고, default branch에 직접 commit하거나 push하지 않는다.
 - 작업 전에 current branch, upstream, working tree를 확인하고, 사용자의 미커밋·untracked·unrelated change를 임의로 discard, overwrite, stash, stage, commit하지 않는다.
 - `reset --hard`, `clean -fd`, 강제 checkout, history rewrite, force push 등 복구 위험이 큰 Git 작업은 agent가 독자적으로 실행하지 않는다.
