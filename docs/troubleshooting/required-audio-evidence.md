@@ -1,6 +1,6 @@
 # ANC·호환성 필수 조건의 미확인 원인 분리
 
-진단일: 2026-11-05. 기준: `origin/main`의 `8d0e3c0`. 상태: **세 가지 판정 결함과 리버티 5 멀티포인트 근거 누락을 수정했다. Android·iOS 근거의 넓은 부족과 사용자 실행 환경의 동일 사례 대조는 미완료**.
+진단일: 2026-11-05. 기준: `origin/main`의 `8d0e3c0`. 상태: **판정 결함과 리버티 5 멀티포인트 근거 누락을 수정했다. 추가 플랫폼 근거의 판정 혼합도 수정했으며, 별도 문서의 자동 재확인 확장은 결정 대기 중이다. Android·iOS 근거의 넓은 부족과 사용자 실행 환경의 동일 사례 대조는 미완료**.
 
 ## 증상과 기대 결과
 
@@ -47,3 +47,20 @@ ANC 지원 판정에서 `최대 <수치> dB`와 `up to <수치> dB`만 모호성
 공개 출처를 소량 확인했지만 [QCY HT19의 기존 제조사 페이지](https://www.qcy.com/products/qcy-melobuds-n60)에서는 기본 플랫폼 호환성 문구를 확보하지 못했다. [BOSE 페이지](https://www.bose.com/p/earbuds/bose-quietcomfort-headphones/QCEARB24-HEADPHONEIN.html)의 Android 언급은 다른 Ultra 모델의 추가 기능 설명이므로 QC 이어버드의 기본 호환성 근거로 채택하지 않았다. [Apple의 비 Apple 기기 연결 안내](https://support.apple.com/en-gb/guide/airpods/dev499c9718b/web)는 Android의 듣기·통화와 해당 모델의 페어링 절차를 설명한다. 이를 등록하려면 기존 제품 사양 URL 외의 추가 문서와 모델별 근거 연결·갱신 범위를 함께 검토해야 한다. 이번 보완은 기존 출처를 재사용한 리버티 5 멀티포인트에 한정한다.
 
 사용자 사례는 제품명·선택한 호환성·실행 환경과 당시 후보의 `facts`, `requirementChecks`, `compatibilityCheck`, `priceStatus`를 대조해야 한다. 운영 DB나 개인 비교 데이터를 조회하지 않았으므로 실제 장애의 단일 원인 확정과 운영 복구는 아직 주장하지 않는다. 새로운 유료 수집 실험이나 호출 상한 변경도 하지 않았다.
+
+## 별도 플랫폼 근거를 연결할 때 발견한 추가 병목
+
+공식 지원 문서 보완을 준비하며 현재 Java 코드에 두 개의 독립 근거를 넣어 재현했다. `Android 기본 연결 지원` 하나는 MEETS지만 별도 URL의 `iOS 기본 연결 지원`을 함께 넣으면 Android가 UNKNOWN으로 바뀌었다. 판정기가 이름이 같은 호환성 근거를 모두 결합하여, 다른 플랫폼의 근거를 선택한 플랫폼의 모호함으로 처리했기 때문이다. 이 재현은 외부 호출이나 DB 변경 없이 수행했다.
+
+선택한 플랫폼을 언급하지 않고 다른 Android·iOS·멀티포인트 대상만 명시한 근거는 해당 검사에서 제외하도록 수정했다. 선택한 플랫폼의 부정·상충과 일반적인 미확인 근거는 보존한다. `DiscoveryVerificationTest.independentPlatformEvidenceDoesNotInvalidateRequestedCompatibility`와 `CatalogApiIntegrationTest.separatePlatformSourcesRemainIndependentInCatalogResponses`가 판정과 원래 근거 목록의 보존을 검사한다.
+
+수정된 코드에 같은 재현 입력을 다시 넣으면 단독·복수 출처 모두 Android가 MEETS다. 재확인 시각 저장은 아직 `IllegalArgumentException`이며 아래 결정 대상이다. Apple의 [비 Apple 기기 연결 문서](https://support.apple.com/en-gb/guide/airpods/dev499c9718b/web)와 [Apple 기기 연결 문서](https://support.apple.com/en-gb/guide/airpods/dev7c85810f2/web)는 직접 HTTP 진단에서 모두 200이었다. 한국어 URL과 웹 조회 도구에서 일부 429를 관찰했다. HTTP 200이나 본문의 플랫폼 문자열 존재를 모델·사양 검증 성공으로 취급하지 않으며, 아직 근거 등록이나 자동 수집은 하지 않았다.
+
+자동 재확인은 별개의 문제다. `CatalogProduct.reviewedFact`는 같은 이름의 근거가 하나여야 하므로 별도 Android·iOS 근거 두 개에 확인 시각을 기록하려고 하면 `IllegalArgumentException`을 던진다. 저장된 확인 시각도 항목명 하나에 연결되어 있다. 기존 제품별 주간 예약과 출처 점검은 한 사양 URL을 전제로 한다. 다른 공식 문서에 있는 근거를 추가하는 일과 그 문서를 안전하게 계속 확인하는 일은 같은 작업이 아니다.
+
+추가 복잡도에 대한 결정 요청은 다음 두 방식으로 구체화했다. 아직 선택되지 않았으며 정기 호출·확인 시각 저장 방식은 변경하지 않았다.
+
+- **자동 재확인 확장:** 검토한 고정 공식 문서만 제품당 최대 2개 추가하고 기존 7일 간격·30일 SOFTWARE 만료를 유지한다. 근거별 확인 시각을 관리하고 과거 비교 snapshot을 보존한다. Apple 2개 제품부터 적용하면 앱과 CI 각각 최대 4회, 합계 최대 8회의 HTTP 요청이 주당 추가된다. 현재 22개 모두에 상한까지 적용할 경우 합계 최대 88회/주 추가다. 새 유료 API는 도입하지 않지만 문서별 검증·실패 격리·기존 확인 시각 호환성의 구현과 유지보수가 필요하다. 이는 정상 주기 실행의 상한이며 수동 점검을 포함하지 않는다.
+- **수동 검토·등록:** 추가 정기 호출과 갱신 구조 변경 없이 공식 근거를 등록하고 운영자가 30일마다 재검토한다. 재검토가 없으면 새 추천에서 UNKNOWN으로 돌아간다.
+
+자동안의 검증 범위는 같은 모델·기능·플랫폼의 연결, 서로 다른 출처의 독립 성공/실패, 재시작·중복 실행의 호출 상한, 기존 확인 시각과 개인 snapshot의 보존, 기본 호환성과 ANC를 함께 요구하는 API 흐름이다. Android·iOS를 검증 없이 일괄 지원으로 바꾸거나 앱·Bluetooth 버전만으로 확정하는 안은 포함하지 않는다.

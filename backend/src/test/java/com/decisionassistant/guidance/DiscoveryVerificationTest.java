@@ -111,6 +111,24 @@ class DiscoveryVerificationTest {
         assertThat(result.reason()).doesNotContain("만족");
     }
     private ProductFact fact(String name, String value, String quote) { return new ProductFact(name, value, URL, quote, NOW, "UNREVIEWED"); }
+    @Test void independentPlatformEvidenceDoesNotInvalidateRequestedCompatibility() {
+        var android = fact("호환성", "Android", "Android 기본 연결 지원");
+        var ios = new ProductFact("호환성", "iOS", "https://example.com/ios", "iOS 기본 연결 지원", NOW, "UNREVIEWED");
+        var all = List.of(android, ios, fact("호환성", "멀티포인트", "멀티포인트 지원"));
+        for (var target : List.of("Android", "iOS", "멀티포인트")) {
+            var check = CompatibilityMatcher.check(EARBUDS, target, all, null, true);
+            assertThat(check.status()).isEqualTo(RequirementStatus.MEETS);
+            assertThat(check.facts()).hasSize(1);
+            assertThat(check.facts().getFirst().value()).isEqualTo(target);
+        }
+        assertThat(all).hasSize(3);
+        assertThat(CompatibilityMatcher.check(EARBUDS, "Android", List.of(ios), null, true).unknownReason()).isEqualTo(UnknownReason.MISSING);
+        var denied = fact("호환성", "Android", "Android 미지원");
+        assertThat(CompatibilityMatcher.check(EARBUDS, "Android", List.of(ios, denied), null, true).status()).isEqualTo(RequirementStatus.BELOW);
+        assertThat(CompatibilityMatcher.check(EARBUDS, "Android", List.of(android, ios, denied), null, true).unknownReason()).isEqualTo(UnknownReason.CONFLICT);
+        var unknown = fact("호환성", "미확인", "호환성 미확인");
+        assertThat(CompatibilityMatcher.check(EARBUDS, "Android", List.of(android, unknown), null, true).status()).isEqualTo(RequirementStatus.UNKNOWN);
+    }
     @Test void multipointSpecificationRowHasAnExplicitBooleanMeaning() {
         for (var pair : Map.of("Yes", RequirementStatus.MEETS, "No", RequirementStatus.BELOW).entrySet()) {
             var facts = List.of(fact("호환성", "멀티포인트", "Multipoint Connection " + pair.getKey()));

@@ -13,7 +13,8 @@ public final class CompatibilityMatcher {
     public static RequirementCheck check(TemplateKey category, String requested, List<ProductFact> facts, OfficialOffer offer, boolean catalog) {
         if (requested == null || !catalog && !OfficialStorePolicy.verifiesCompatibility(offer)) return null;
         var name = switch (category) { case EARBUDS -> "호환성"; case MONITOR -> "연결 단자"; default -> "OS"; };
-        var evidence = facts.stream().filter(f -> name.equals(f.name())).toList();
+        var evidence = facts.stream().filter(f -> name.equals(f.name()))
+                .filter(f -> category != TemplateKey.EARBUDS || relevantTo(requested, f)).toList();
         var values = evidence.stream().map(f -> value(category, requested, f)).toList();
         var status = RequirementStatus.UNKNOWN;
         if (!values.isEmpty() && values.stream().noneMatch(Objects::isNull) && values.stream().distinct().count() == 1)
@@ -36,11 +37,9 @@ public final class CompatibilityMatcher {
             if (text.matches("(?is).*(?:선택|옵션|또는|설치 가능|별도 설치|optional|depending|\\bor\\b).*")) return null;
             if (platforms(fact.value()).size() > 1) return null;
         }
-        var token = switch (requested) { case "멀티포인트" -> "(?:멀티포인트|multipoint)";
-            case "Android" -> "(?:Android|안드로이드)"; default -> Pattern.quote(requested); };
         var positive = false; var negative = false;
         for (var clause : text.split("[,;\\n]|(?<=지원)\\s+(?=(?:Android|iOS|Windows|macOS))")) {
-            if (!Pattern.compile("(?i)(?<![a-z])" + token + "(?![a-z])").matcher(clause).find()) continue;
+            if (!targetPattern(requested).matcher(clause).find()) continue;
             if (category == TemplateKey.EARBUDS && "멀티포인트".equals(requested)
                     && clause.strip().matches("(?i)Multipoint Connection\\s*:?\\s*(?:Yes|No)")) {
                 positive |= clause.strip().toLowerCase(Locale.ROOT).endsWith("yes");
@@ -63,6 +62,18 @@ public final class CompatibilityMatcher {
             if (found.size() == 1 && !found.getFirst().equalsIgnoreCase(requested)) return false;
         }
         return null;
+    }
+    private static boolean relevantTo(String requested, ProductFact fact) {
+        var text = Objects.toString(fact.value(), "") + " " + Objects.toString(fact.quote(), "");
+        if (targetPattern(requested).matcher(text).find()) return true;
+        // 다른 플랫폼의 명시적 근거는 선택한 플랫폼의 모호함·상충으로 합치지 않는다.
+        // 대상이 명시되지 않은 일반적인 미확인 근거는 보존한다.
+        return List.of("Android", "iOS", "멀티포인트").stream().noneMatch(target -> targetPattern(target).matcher(text).find());
+    }
+    private static Pattern targetPattern(String requested) {
+        var token = switch (requested) { case "멀티포인트" -> "(?:멀티포인트|multipoint)";
+            case "Android" -> "(?:Android|안드로이드)"; default -> Pattern.quote(requested); };
+        return Pattern.compile("(?i)(?<![a-z])" + token + "(?![a-z])");
     }
     private static List<String> platforms(String value) {
         return List.of("Windows", "macOS", "Android", "iOS", "iPadOS").stream()

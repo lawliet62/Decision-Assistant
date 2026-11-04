@@ -139,6 +139,24 @@ class CatalogApiIntegrationTest {
             verifyNoInteractions(search, web, ai);
         }
     }
+    @Test void separatePlatformSourcesRemainIndependentInCatalogResponses() throws Exception {
+        var p = product(1, Instant.now());
+        var facts = new ArrayList<>(p.facts());
+        facts.add(new CatalogProduct.Fact(new ProductFact("호환성", "iOS", "https://example.com/ios",
+                "iOS 기본 연결 지원", Instant.now(), "UNREVIEWED"), CatalogProduct.ReviewCycle.SOFTWARE));
+        facts.add(new CatalogProduct.Fact(new ProductFact("호환성", "멀티포인트", "https://example.com/multipoint",
+                "멀티포인트 지원", Instant.now(), "UNREVIEWED"), CatalogProduct.ReviewCycle.SOFTWARE));
+        p.register(2, p.name(), p.purchaseUrl(), p.expectedIdentity(), facts, true);
+        products.saveAndFlush(p);
+        var id = create();
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck.status").value("MEETS"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck.facts.length()").value(1))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].facts.length()").value(5));
+        assertThat(products.findById(p.id()).orElseThrow().facts()).hasSize(4);
+        verifyNoInteractions(search, web, ai);
+    }
     @Test void catalogWorksWithoutExternalConsentAndPreservesOwnershipAndHistoricalFacts() throws Exception {
         var p = product(1, Instant.now()); product(2, Instant.now().minus(Duration.ofDays(4))); product(3, null);
         var id = create();
