@@ -46,6 +46,15 @@ ANC 지원 판정에서 `최대 <수치> dB`와 `up to <수치> dB`만 모호성
 
 공개 출처를 소량 확인했지만 [QCY HT19의 기존 제조사 페이지](https://www.qcy.com/products/qcy-melobuds-n60)에서는 기본 플랫폼 호환성 문구를 확보하지 못했다. [BOSE 페이지](https://www.bose.com/p/earbuds/bose-quietcomfort-headphones/QCEARB24-HEADPHONEIN.html)의 Android 언급은 다른 Ultra 모델의 추가 기능 설명이므로 QC 이어버드의 기본 호환성 근거로 채택하지 않았다. [Apple의 비 Apple 기기 연결 안내](https://support.apple.com/en-gb/guide/airpods/dev499c9718b/web)는 Android의 듣기·통화와 해당 모델의 페어링 절차를 설명한다. 이를 등록하려면 기존 제품 사양 URL 외의 추가 문서와 모델별 근거 연결·갱신 범위를 함께 검토해야 한다. 이번 보완은 기존 출처를 재사용한 리버티 5 멀티포인트에 한정한다.
 
+추가 공식 문서를 대조한 결과, 검색 요약에 플랫폼명이 나타나는 것만으로 기본 호환성 근거를 확보했다고 판단할 수 없었다. 2026-11-05에 다음 두 사례의 본문과 상위 제목·각주 연결을 확인했다. 정기 수집이나 manifest 등록은 하지 않았다.
+
+| 공식 출처 | 검색 요약과 본문 대조 | 채택하지 않은 이유 |
+| --- | --- | --- |
+| [Liberty 5 Pro 시리즈 소개](https://www.soundcore.com/liberty-5-pro-series) | iOS·Android 호환 문구는 각주 9·10에 있고, 본문 연결 대상은 Pro Max 충전 케이스의 녹음·동기화 기능이다. | 등록된 Pro 모델의 기본 음악·통화 호환성으로 옮기면 모델과 기능 범위를 모두 바꾸게 된다. |
+| [Liberty 5 영국 공식 FAQ](https://www.anker.com/uk/products/a3957-liberty-5-tws-earbuds?position=Liberty+5) | iOS 13 미만의 연결 제한은 soundcore 앱에서 제품을 찾거나 연결하지 못하는 문제의 답변에 포함된다. | 해당 문장만 떼어 기본 Bluetooth 연결의 지원 또는 미지원으로 판정할 수 없다. |
+
+[Apple 기기 연결 문서](https://support.apple.com/en-gb/guide/airpods/dev7c85810f2/web)는 웹 조회 도구에서 429였지만 직접 HTTP 응답의 본문을 읽을 수 있었다. iPhone·iPad 페어링 절차와 수동 페어링의 AirPods 5·Pro 3 분기를 확인했다. 최신 iOS 설치 안내와 문서 전체의 iOS 27 대상 표시는 보존해야 할 문맥이며, 이를 모든 iOS 버전에 대한 지원 선언으로 바꾸지 않는다. 이는 추가 근거의 후보를 확보한 결과이고, 자동 검증기나 갱신 방식이 검증됐다는 뜻은 아니다. 원문 전체는 저장하지 않았다.
+
 사용자 사례는 제품명·선택한 호환성·실행 환경과 당시 후보의 `facts`, `requirementChecks`, `compatibilityCheck`, `priceStatus`를 대조해야 한다. 운영 DB나 개인 비교 데이터를 조회하지 않았으므로 실제 장애의 단일 원인 확정과 운영 복구는 아직 주장하지 않는다. 새로운 유료 수집 실험이나 호출 상한 변경도 하지 않았다.
 
 ## 별도 플랫폼 근거를 연결할 때 발견한 추가 병목
