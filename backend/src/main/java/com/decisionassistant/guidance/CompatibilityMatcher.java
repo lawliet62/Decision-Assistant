@@ -25,7 +25,13 @@ public final class CompatibilityMatcher {
     private static Boolean value(TemplateKey category, String requested, ProductFact fact) {
         if (fact.value() == null || fact.quote() == null || "DISPUTED".equals(fact.verificationStatus())) return null;
         var text = fact.quote();
-        if (text.matches("(?is).*(?:미확인|알 수 없|unknown|앱|app\\b).*")) return null;
+        if (text.matches("(?is).*(?:미확인|알 수 없|unknown).*")) return null;
+        if (category == TemplateKey.EARBUDS) {
+            // 쉼표·줄바꿈으로 이어지는 앱 플랫폼 목록 전체를 제외한다. 명시적으로 분리된 구간만 독립 판정한다.
+            text = Arrays.stream(text.split(";"))
+                    .filter(segment -> !segment.matches("(?is).*(?:앱|\\bapp\\b).*"))
+                    .collect(java.util.stream.Collectors.joining(";"));
+        } else if (text.matches("(?is).*(?:앱|\\bapp\\b).*")) return null;
         if (category != TemplateKey.EARBUDS && category != TemplateKey.MONITOR) {
             if (text.matches("(?is).*(?:선택|옵션|또는|설치 가능|별도 설치|optional|depending|\\bor\\b).*")) return null;
             if (platforms(fact.value()).size() > 1) return null;
@@ -35,6 +41,12 @@ public final class CompatibilityMatcher {
         var positive = false; var negative = false;
         for (var clause : text.split("[,;\\n]|(?<=지원)\\s+(?=(?:Android|iOS|Windows|macOS))")) {
             if (!Pattern.compile("(?i)(?<![a-z])" + token + "(?![a-z])").matcher(clause).find()) continue;
+            if (category == TemplateKey.EARBUDS && "멀티포인트".equals(requested)
+                    && clause.strip().matches("(?i)Multipoint Connection\\s*:?\\s*(?:Yes|No)")) {
+                positive |= clause.strip().toLowerCase(Locale.ROOT).endsWith("yes");
+                negative |= clause.strip().toLowerCase(Locale.ROOT).endsWith("no");
+                continue;
+            }
             if (clause.matches("(?is).*(?:미지원|지원하지 않|지원 안|불가|없음|not supported|unsupported|without).*")) { negative = true; continue; }
             if (category == TemplateKey.EARBUDS) {
                 positive |= (clause.matches("(?is).*(?:호환|지원|연결|compatible|supported).*" ) || text.startsWith("호환성:"))

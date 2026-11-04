@@ -12,12 +12,14 @@ public class AnkerLibertySpecificationRefreshWorker {
             CatalogProperties config, CatalogProductRepository products, JdbcTemplate jdbc,
             AnkerLibertySpecificationSource source, PlatformTransactionManager manager) {
         runner = new SpecificationRefreshRunner(enabled, config, products, jdbc, manager, "anker-liberty5-a3957",
-                source::fetch, AnkerLibertySpecificationRefreshWorker::supports, (html, e) -> AnkerLibertySpecificationVerifier.matches(html));
+                source::fetch, AnkerLibertySpecificationRefreshWorker::supports, (html, e) -> "호환성".equals(e.name())
+                        ? AnkerLibertySpecificationVerifier.matchesMultipoint(html) : AnkerLibertySpecificationVerifier.matches(html));
     }
     @Scheduled(fixedDelayString = "${decision-assistant.catalog.spec-poll-interval:3600000}")
     public void refresh() { runner.refresh(); }
     private static boolean supports(DiscoveryContracts.ProductFact e) {
-        return "ANC 지원".equals(e.name()) && "지원".equals(e.value()) && AnkerLibertySpecificationVerifier.QUOTE.equals(e.quote())
-                && AnkerLibertySpecificationVerifier.URL.equals(e.sourceUrl());
+        return AnkerLibertySpecificationVerifier.URL.equals(e.sourceUrl())
+                && ("ANC 지원".equals(e.name()) && "지원".equals(e.value()) && AnkerLibertySpecificationVerifier.QUOTE.equals(e.quote())
+                    || "호환성".equals(e.name()) && "멀티포인트".equals(e.value()) && AnkerLibertySpecificationVerifier.MULTIPOINT_QUOTE.equals(e.quote()));
     }
 }
