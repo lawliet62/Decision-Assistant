@@ -40,7 +40,7 @@ public class CatalogProduct {
             return;
         }
         if (!Objects.equals(purchaseUrl, url) || !Objects.equals(expectedIdentity, identity)) {
-            offer = null; priceQuote = null; priceStatus = "UNVERIFIED"; nextAttemptAt = Instant.EPOCH;
+            offer = null; priceQuote = null; priceStatus = "UNVERIFIED";
         }
         factReviews = new HashMap<>();
         this.revision = revision; this.name = name; purchaseUrl = url; expectedIdentity = identity;

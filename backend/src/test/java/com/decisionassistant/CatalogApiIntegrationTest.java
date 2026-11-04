@@ -840,6 +840,19 @@ class CatalogApiIntegrationTest {
         assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at > now() + interval '6 days'", Integer.class, id)).isEqualTo(1);
         assertThat(jdbc.queryForObject("select jsonb_exists(fact_reviews, 'ANC 지원') from catalog_products where id=?", Boolean.class, id)).isTrue();
     }
+    @Test void changedProductIdentityDoesNotBypassTheAttemptInterval() {
+        var p = product(1, Instant.now());
+        p.attempted(Instant.now());
+        p = products.saveAndFlush(p);
+        var next = jdbc.queryForObject("select next_attempt_at from catalog_products where id=?", java.sql.Timestamp.class, p.id());
+        p.register(2, "Buds new", url(2), "qcy-kr:buds new", p.facts(), true);
+        products.saveAndFlush(p);
+        assertThat(p.usableOffer()).isNull();
+        assertThat(jdbc.queryForObject("select next_attempt_at from catalog_products where id=?", java.sql.Timestamp.class, p.id())).isEqualTo(next);
+        worker.refreshNext();
+        verify(web, never()).scrapeProduct(anyString());
+        assertThat(jdbc.queryForObject("select count(*) from catalog_monthly_usage", Integer.class)).isZero();
+    }
     @Test void refreshBudgetSurvivesFailureAndRepeatedTicks() {
         product(1, Instant.now().minus(Duration.ofDays(4))); product(2, null); product(3, null);
         when(web.scrapeProduct(anyString())).thenThrow(new IllegalStateException("private provider error"));
