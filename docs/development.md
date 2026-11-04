@@ -76,7 +76,9 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 
 ### Codex worktree 점유
 
-독립 Codex 세션은 worktree를 독점한다. 하위 agent는 부모의 세션 ID와 worktree를 공유하므로 부모가 작업 충돌을 조정한다. 이 저장소의 `.codex/hooks.json`은 시작·재개, 사용자 입력, 지원되는 도구 호출에서 점유를 확인하며 종료 시 소유 기록을 해제한다. Node.js와 Git이 필요하다. 새 worktree의 프로젝트 설정을 신뢰하고 Codex `/hooks`에서 Hook 정의를 검토·신뢰해야 실행된다. 정의가 바뀌면 다시 검토한다. 설정이 적용되지 않은 세션은 보호되지 않는다.
+독립 Codex 세션은 worktree를 독점한다. 하위 agent는 부모의 세션 ID와 worktree를 공유하므로 부모가 작업 충돌을 조정한다. Node.js와 Git을 준비한 뒤 저장소 루트에서 `node scripts/install-worktree-guard.mjs`를 실행하고, 새 Codex CLI 세션의 `/hooks`에서 Hook 정의를 검토·신뢰한다. 이미 실행 중인 세션은 종료하고 다시 시작해야 보호된다. 정의가 바뀌면 다시 검토한다.
+
+설치기는 사용자 홈의 `.codex/hooks.json`, `.codex/worktree-guard-runtime/`, `.codex/worktree-guard-repos.json`을 사용한다. 다른 사용자 Hook 설정은 덮어쓰지 않는다. 연결 worktree에서 프로젝트 Hook을 발견하지 못하는 Codex 환경을 고려해 사용자 Hook을 사용하고, 등록된 Git 공통 디렉터리에 속한 저장소만 점유를 확인한다. 다른 저장소는 통과시킨다. 공통 설정 파일이 손상되면 적용 대상을 판단할 수 없어 다른 저장소의 작업도 차단될 수 있다. 다른 저장소에 적용할 때도 해당 저장소에서 설치기를 실행한다. 시작·재개, 사용자 입력, 지원되는 도구 호출에서 점유를 확인하며 종료 시 소유 기록을 해제한다. 설정이 적용되지 않은 세션은 보호되지 않는다.
 
 기록은 `~/.codex/worktree-guard`에 있으며 같은 사용자와 파일 시스템을 공유하는 worktree만 조정한다. sandbox에서 이 디렉터리에 접근할 수 있어야 한다. 같은 세션 ID를 동시에 재개한 실행은 서로 구별할 수 없다. Hook을 건너뛰는 도구 경로, 다른 agent 제품, 다른 컴퓨터 및 Hook 미실행을 차단하는 보안 경계는 아니다. Hook 실행 실패나 시간 초과 자체는 도구 호출을 차단하지 않을 수 있다. 보호가 활성화되지 않으면 별도 worktree를 사용한다. [Codex Hook 문서](https://learn.chatgpt.com/docs/hooks)를 참조한다.
 

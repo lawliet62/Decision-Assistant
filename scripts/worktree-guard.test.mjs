@@ -4,7 +4,9 @@ import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { acquire, release, response, run, worktree, recordPath } from "./worktree-guard.mjs";
+import { commonDirectory, dispatch } from "./worktree-guard-dispatch.mjs";
 
 test("worktree ownership persists across events and only its owner can release it", () => {
   const dir = mkdtempSync(join(tmpdir(), "guard-"));
@@ -69,13 +71,45 @@ test("concurrent processes cannot both acquire the same worktree", async () => {
 test("configured command passes hook input to Node", () => {
   const dir = mkdtempSync(join(tmpdir(), "guard-command-"));
   try {
-    const config = JSON.parse(readFileSync(new URL("../.codex/hooks.json", import.meta.url), "utf8"));
-    const handler = config.hooks.SessionStart[0].hooks[0];
-    const command = process.platform === "win32" ? handler.commandWindows : handler.command;
     const env = { ...process.env, HOME: dir, USERPROFILE: dir };
+    const install = spawnSync(process.execPath, [fileURLToPath(new URL("./install-worktree-guard.mjs", import.meta.url))], { cwd: process.cwd(), env, encoding: "utf8" });
+    assert.equal(install.status, 0, install.stderr);
+    const config = JSON.parse(readFileSync(join(dir, ".codex", "hooks.json"), "utf8"));
+    const handler = config.hooks.SessionStart[0].hooks[0];
+    const command = handler.command;
     const result = spawnSync(command, { cwd: process.cwd(), shell: true, env, input: JSON.stringify({ cwd: process.cwd(), session_id: "command-test", hook_event_name: "SessionStart" }), encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(JSON.parse(result.stdout), {});
     assert.equal(acquire(worktree(process.cwd()), "other", join(dir, ".codex", "worktree-guard")), false);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("installer refuses to overwrite existing user hooks", () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-existing-"));
+  try {
+    const configDir = join(dir, ".codex"); mkdirSync(configDir);
+    const existing = '{"hooks":{}}';
+    writeFileSync(join(configDir, "hooks.json"), existing);
+    const result = spawnSync(process.execPath, [fileURLToPath(new URL("./install-worktree-guard.mjs", import.meta.url))], { cwd: process.cwd(), env: { ...process.env, HOME: dir, USERPROFILE: dir }, encoding: "utf8" });
+    assert.notEqual(result.status, 0);
+    assert.equal(readFileSync(join(configDir, "hooks.json"), "utf8"), existing);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test("dispatcher ignores unrelated repositories and preserves linked-worktree identity", () => {
+  const dir = mkdtempSync(join(tmpdir(), "guard-dispatch-"));
+  try {
+    const repo = join(dir, "repo"), unrelated = join(dir, "other"), linked = join(dir, "linked");
+    mkdirSync(repo); mkdirSync(unrelated);
+    assert.equal(spawnSync("git", ["init", repo]).status, 0);
+    assert.equal(spawnSync("git", ["init", unrelated]).status, 0);
+    assert.equal(spawnSync("git", ["-C", repo, "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "--allow-empty", "-m", "test"]).status, 0);
+    assert.equal(spawnSync("git", ["-C", repo, "worktree", "add", "-b", "linked", linked]).status, 0);
+    const config = join(dir, "repos.json"), state = join(dir, "state");
+    writeFileSync(config, JSON.stringify({ commonDirectories: [commonDirectory(repo)] }));
+    const input = { cwd: linked, session_id: "a", hook_event_name: "SessionStart" };
+    assert.deepEqual(dispatch(input, config, state), {});
+    assert.equal(dispatch({ ...input, session_id: "b" }, config, state).continue, false);
+    assert.deepEqual(dispatch({ ...input, cwd: unrelated, session_id: "b" }, config, state), {});
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
