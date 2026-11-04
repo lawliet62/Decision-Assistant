@@ -74,6 +74,14 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 
 ## Git workflow details
 
+### Codex worktree 점유
+
+독립 Codex 세션은 worktree를 독점한다. 하위 agent는 부모의 세션 ID와 worktree를 공유하므로 부모가 작업 충돌을 조정한다. 이 저장소의 `.codex/hooks.json`은 시작·재개, 사용자 입력, 지원되는 도구 호출에서 점유를 확인하며 종료 시 소유 기록을 해제한다. Node.js와 Git이 필요하다. 새 worktree의 프로젝트 설정을 신뢰하고 Codex `/hooks`에서 Hook 정의를 검토·신뢰해야 실행된다. 정의가 바뀌면 다시 검토한다. 설정이 적용되지 않은 세션은 보호되지 않는다.
+
+기록은 `~/.codex/worktree-guard`에 있으며 같은 사용자와 파일 시스템을 공유하는 worktree만 조정한다. sandbox에서 이 디렉터리에 접근할 수 있어야 한다. 같은 세션 ID를 동시에 재개한 실행은 서로 구별할 수 없다. Hook을 건너뛰는 도구 경로, 다른 agent 제품, 다른 컴퓨터 및 Hook 미실행을 차단하는 보안 경계는 아니다. Hook 실행 실패나 시간 초과 자체는 도구 호출을 차단하지 않을 수 있다. 보호가 활성화되지 않으면 별도 worktree를 사용한다. [Codex Hook 문서](https://learn.chatgpt.com/docs/hooks)를 참조한다.
+
+비정상 종료 후 기록은 자동 만료되지 않는다. 해당 worktree에서 `node scripts/worktree-guard.mjs inspect`로 소유 세션 ID를 확인하고, 그 세션과 하위 작업이 모두 끝났음을 확인한 후 `node scripts/worktree-guard.mjs release <세션ID>`를 실행한다. 손상된 기록은 확인 없이 삭제하지 않는다. 이 복구는 현재 소유자의 작업과 동시에 실행하면 안 된다. 충돌한 세션은 다른 worktree를 사용하거나 기존 세션 종료 후 다시 시도한다.
+
 ### Working tree and branch safety
 
 - 새 branch를 만들기 전에 기존 변경이 없거나 해당 변경이 현재 task에 속함이 명확해야 한다. 소유권이 불명확하면 branch 전환, stash, commit으로 임의 이동하지 않고 human에게 확인한다.

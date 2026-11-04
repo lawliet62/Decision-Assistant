@@ -1,0 +1,9 @@
+{
+  "description": "독립 Codex 세션의 워크트리 점유를 확인한다.",
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/scripts/worktree-guard.mjs\"", "commandWindows": "powershell -NoProfile -Command \"node ((git rev-parse --show-toplevel) + '/scripts/worktree-guard.mjs')\"" }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/scripts/worktree-guard.mjs\"", "commandWindows": "powershell -NoProfile -Command \"node ((git rev-parse --show-toplevel) + '/scripts/worktree-guard.mjs')\"" }] }],
+    "PreToolUse": [{ "hooks": [{ "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/scripts/worktree-guard.mjs\"", "commandWindows": "powershell -NoProfile -Command \"node ((git rev-parse --show-toplevel) + '/scripts/worktree-guard.mjs')\"" }] }],
+    "SessionEnd": [{ "hooks": [{ "type": "command", "command": "node \"$(git rev-parse --show-toplevel)/scripts/worktree-guard.mjs\"", "commandWindows": "powershell -NoProfile -Command \"node ((git rev-parse --show-toplevel) + '/scripts/worktree-guard.mjs')\"", "timeout": 3 }] }]
+  }
+}
