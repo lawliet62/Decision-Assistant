@@ -16,6 +16,16 @@ import static com.decisionassistant.decision.DecisionTypes.TemplateKey.*;
 import static org.assertj.core.api.Assertions.*;
 
 class MinimumRequirementMatcherTest {
+    @Test void maximumAncAttenuationDoesNotMakeExplicitSupportOptional() {
+        for (var quote : List.of("ANC 지원, 최대 50dB 소음 감소", "Active Noise Cancellation, up to 50 dB")) {
+            var fact = new ProductFact("ANC 지원", "지원", "https://example.com/spec", quote, Instant.now(), "UNREVIEWED");
+            assertThat(check(EARBUDS, "anc", "required", fact).status()).isEqualTo(RequirementStatus.MEETS);
+        }
+        for (var quote : List.of("ANC 지원 여부 미확인, 최대 50dB", "ANC 옵션별 지원, 최대 50dB", "ANC 미지원, 최대 50dB")) {
+            var fact = new ProductFact("ANC 지원", "지원", "https://example.com/spec", quote, Instant.now(), "UNREVIEWED");
+            assertThat(check(EARBUDS, "anc", "required", fact).status()).isEqualTo(RequirementStatus.UNKNOWN);
+        }
+    }
     @Test void recognizesOnlyTheExplicitJapaneseAncSupportQuote() {
         var quote = "アクティブノイズキャンセリング搭載";
         var fact = new ProductFact("ANC 지원", "지원", "https://www.ankerjapan.com/products/d1202", quote, Instant.now(), "UNREVIEWED");
