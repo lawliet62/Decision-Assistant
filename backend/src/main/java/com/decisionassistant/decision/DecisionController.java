@@ -97,6 +97,16 @@ public class DecisionController {
         return service.resolve(decisionId, request);
     }
 
+    @PutMapping("/{decisionId}/comparison")
+    public DecisionResponse comparison(@PathVariable UUID decisionId, @Valid @RequestBody Comparison.UpdateRequest request) {
+        return service.updateComparison(decisionId, request);
+    }
+
+    @PutMapping("/{decisionId}/comparison/confirmation")
+    public DecisionResponse confirmation(@PathVariable UUID decisionId, @Valid @RequestBody Comparison.ConfirmRequest request) {
+        return service.confirmFeature(decisionId, request);
+    }
+
     @PostMapping("/{decisionId}/outcome-check-ins")
     @ResponseStatus(HttpStatus.CREATED)
     public OutcomeData addOutcome(@PathVariable UUID decisionId,

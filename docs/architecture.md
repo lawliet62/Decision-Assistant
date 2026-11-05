@@ -41,6 +41,8 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 
 ## 요청 흐름
 
+같은 후보의 비교 조건과 직접 확인은 Decision의 JSONB `comparison_state`에 저장한다. Resolution 생성 시 현재 조건·판정·근거를 JSONB `comparison_snapshot`에 복사한다. 조회는 과거 snapshot을 현재 카탈로그나 matcher로 재계산하지 않는다. 최초 추천 이력·평가 snapshot과의 경계는 [ADR 0017](decisions/0017-comparison-and-resolution-context.md)에 기록한다.
+
 1. 사용자가 versioned template로 Decision을 만든다.
 2. draft 저장은 expected version을 검사한다.
 3. 평가 시 완전성과 constraint 상태를 검증하고 immutable snapshot을 만든다.

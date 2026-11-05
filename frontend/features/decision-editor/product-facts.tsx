@@ -11,7 +11,7 @@ import { confirmationTime } from "@/features/product-lookup/confirmation-time";
 type Fact = components["schemas"]["ProductFact"];
 type Check = components["schemas"]["RequirementCheck"];
 
-export function RequirementChecks({ checks, label = "최소 사양 확인" }: { checks?: Check[]; label?: string }) {
+export function RequirementChecks({ checks, label = "최소 사양 확인", compact = false }: { checks?: Check[]; label?: string; compact?: boolean }) {
   if (!checks?.length) return null;
   return <ul aria-label={label} className="space-y-3 text-sm">{checks.map(check => {
     const confirmed = check.facts?.length && check.facts.every(fact => fact.verificationStatus === "CONFIRMED");
@@ -19,8 +19,8 @@ export function RequirementChecks({ checks, label = "최소 사양 확인" }: { 
     const label = check.status === "BELOW" ? "미달" : check.status === "MEETS" ? confirmed ? "확인한 사양상 충족" : "수집 사양상 충족" : unknown;
     return <li key={check.id} className="rounded-xl bg-zinc-50 p-3">
       <p className="font-medium">{check.label}: {check.requiredValue}</p>
-      <p className={check.status === "BELOW" ? "text-red-700" : check.status === "MEETS" ? "text-emerald-800" : "text-amber-800"}>{label}</p>
-      {check.facts?.map((fact, index) => <div key={index} className="mt-2"><FactValue fact={fact} compact /></div>)}
+      <p className={check.status === "BELOW" ? "text-red-700" : check.status === "MEETS" ? "text-emerald-800" : "text-amber-800"}>{compact && check.status === "UNKNOWN" ? "미확인 · " : ""}{label}</p>
+      {compact ? !!check.facts?.length && <details className="mt-2 text-xs text-zinc-600"><summary className="cursor-pointer">판정 근거 ({check.facts.length})</summary>{check.facts.map((fact, index) => <div key={index} className="mt-2"><FactValue fact={fact} compact /></div>)}</details> : check.facts?.map((fact, index) => <div key={index} className="mt-2"><FactValue fact={fact} compact /></div>)}
     </li>;
   })}</ul>;
 }
@@ -29,7 +29,7 @@ export function FactValue({ fact, compact = false }: { fact?: Fact; compact?: bo
   if (!fact) return <span className="text-zinc-400">미확인</span>;
   return <div className="space-y-1"><span className="font-medium">{fact.value}</span>{(!compact || fact.verificationStatus !== "UNREVIEWED") && <span className="block text-xs text-amber-800">{fact.verificationStatus === "CONFIRMED" ? "확인됨" : fact.verificationStatus === "DISPUTED" ? "이견 있음" : "사용자 확인 전"}</span>}
     <p className="text-xs text-zinc-500">{fact.name === "가격" ? "가격" : "사양"} 확인 시각: {confirmationTime(fact.fetchedAt) ?? "미확인"}</p>
-    {fact.sourceUrl && <details className="text-xs text-zinc-500"><summary className="cursor-pointer">출처 보기</summary><SourceLink url={fact.sourceUrl} /><p className="mt-1">{fact.quote}</p></details>}</div>;
+    {(fact.sourceUrl || fact.quote) && <details className="text-xs text-zinc-500"><summary className="cursor-pointer">출처 보기</summary>{fact.sourceUrl && <SourceLink url={fact.sourceUrl} />}<p className="mt-1">{fact.quote}</p></details>}</div>;
 }
 
 export function ProductFacts({ decision }: { decision: DecisionResponse }) {

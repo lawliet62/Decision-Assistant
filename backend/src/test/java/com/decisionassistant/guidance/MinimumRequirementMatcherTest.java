@@ -146,6 +146,10 @@ class MinimumRequirementMatcherTest {
         assertThat(decision.constraints()).noneMatch(item -> item.active());
         value.markGenerated(DecisionTypes.ValueOrigin.AI_INFERRED, DecisionTypes.VerificationStatus.UNREVIEWED);
         assertThat(ProductFactResolver.resolve(decision, option.id(), extracted, null)).isEqualTo(extracted);
+        value.markGenerated(DecisionTypes.ValueOrigin.USER, DecisionTypes.VerificationStatus.DISPUTED);
+        var disputed = ProductFactResolver.resolve(decision, option.id(), extracted, null);
+        assertThat(disputed.getFirst().verificationStatus()).isEqualTo("DISPUTED");
+        assertThat(check(LAPTOP, "storage", "1000", disputed.getFirst()).status()).isEqualTo(RequirementStatus.UNKNOWN);
     }
 
     @Test void oldTemplateRetainsOriginalFactsAndHasNoMinimumRequirements() {

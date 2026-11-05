@@ -35,6 +35,12 @@ public class Resolution {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "comparison_snapshot", columnDefinition = "jsonb")
+    private Comparison.Snapshot comparisonSnapshot;
+
+    public Comparison.Snapshot comparisonSnapshot() { return comparisonSnapshot; }
+
     protected Resolution() {
     }
 
@@ -45,6 +51,12 @@ public class Resolution {
         this.selectedOptionId = selectedOptionId;
         this.rationale = rationale;
         this.createdAt = createdAt;
+    }
+
+    public Resolution(UUID decisionId, ResolutionKind kind, UUID selectedOptionId, String rationale,
+                      Instant createdAt, Comparison.Snapshot snapshot) {
+        this(decisionId, kind, selectedOptionId, rationale, createdAt);
+        this.comparisonSnapshot = snapshot;
     }
 
     public UUID id() { return id; }
