@@ -325,6 +325,14 @@ public class DecisionService {
                 normalizeCurrency(request.context().currency()), request.context().notes()), Instant.now(clock));
 
         syncOptions(decision, request.options());
+        if (decision.comparisonState() != null) {
+            var state = decision.comparisonState();
+            var settings = state.settings();
+            var ids = decision.options().stream().map(DecisionOption::id).toList();
+            decision.comparisonState(new Comparison.State(new Comparison.Settings(settings.maxBudget(), settings.ancRequired(),
+                    settings.compatibility(), settings.focus(), settings.deferredOptionIds().stream().filter(ids::contains).toList()),
+                    state.confirmations().stream().filter(item -> ids.contains(item.optionId())).toList()), Instant.now(clock));
+        }
         syncCriteria(decision, request.criteria());
         syncConstraints(decision, request.constraints());
         validateReferences(decision, request.values(), request.constraintResults());
@@ -337,6 +345,8 @@ public class DecisionService {
     @Transactional
     public ResolutionData resolve(UUID id, CreateResolutionRequest request) {
         var decision = required(id);
+        if (request.expectedVersion() != null && request.expectedVersion() != decision.version())
+            throw new ConflictException("비교가 변경되었습니다. 최신 내용을 확인한 뒤 기록하세요.");
         if (request.kind() == DecisionTypes.ResolutionKind.CHOSEN) {
             if (request.selectedOptionId() == null
                     || decision.options().stream().noneMatch(option -> option.id().equals(request.selectedOptionId()))) {
@@ -347,7 +357,7 @@ public class DecisionService {
         }
         var now = Instant.now(clock);
         var resolution = resolutions.save(new Resolution(
-                id, request.kind(), request.selectedOptionId(), request.rationale(), now));
+                id, request.kind(), request.selectedOptionId(), request.rationale(), now, Comparison.Snapshot.capture(response(decision), now)));
         decision.resolve(switch (request.kind()) {
             case CHOSEN -> DecisionTypes.DecisionStatus.CHOSEN;
             case DEFERRED -> DecisionTypes.DecisionStatus.DEFERRED;
@@ -356,6 +366,46 @@ public class DecisionService {
         if (request.kind() == DecisionTypes.ResolutionKind.CHOSEN) scheduleReminders(id, now);
         log.info("product_event=decision_resolved decision_id={} kind={}", id, request.kind());
         return resolutionData(resolution);
+    }
+
+    private Comparison.State comparisonState(Decision decision) {
+        if (decision.comparisonState() != null) return decision.comparisonState();
+        var run = discoveries.findById(decision.id()).orElse(null);
+        return Comparison.initial(decision, run == null ? null : run.conditions());
+    }
+
+    private Decision editableVersion(UUID id, long version) {
+        var decision = required(id);
+        ensureEditable(decision);
+        if (decision.version() != version) throw new ConflictException("비교가 변경되었습니다. 최신 내용을 확인한 뒤 다시 적용하세요.");
+        return decision;
+    }
+
+    @Transactional
+    public DecisionResponse updateComparison(UUID id, Comparison.UpdateRequest request) {
+        var decision = editableVersion(id, request.expectedVersion());
+        Comparison.validate(decision, request.settings());
+        decision.comparisonState(new Comparison.State(request.settings(), comparisonState(decision).confirmations()), Instant.now(clock));
+        decisions.flush();
+        return response(decision);
+    }
+
+    @Transactional
+    public DecisionResponse confirmFeature(UUID id, Comparison.ConfirmRequest request) {
+        var decision = editableVersion(id, request.expectedVersion());
+        var state = comparisonState(decision);
+        Comparison.validate(decision, state.settings());
+        if (decision.options().stream().noneMatch(option -> option.id().equals(request.optionId()))
+                || !List.of("anc", "Android", "iOS", "멀티포인트").contains(request.feature()))
+            throw new InvalidDecisionException(List.of("현재 후보와 확인 가능한 기능을 지정하세요."));
+        var sourceUrl = request.sourceUrl() == null || request.sourceUrl().isBlank() ? null : urlPolicy.validate(request.sourceUrl());
+        var confirmations = new ArrayList<>(state.confirmations().stream()
+                .filter(c -> !(c.optionId().equals(request.optionId()) && c.feature().equals(request.feature()))).toList());
+        if (request.supported() != null) confirmations.add(new Comparison.Confirmation(request.optionId(), request.feature(),
+                request.supported(), request.note(), sourceUrl, Instant.now(clock)));
+        decision.comparisonState(new Comparison.State(state.settings(), List.copyOf(confirmations)), Instant.now(clock));
+        decisions.flush();
+        return response(decision);
     }
 
     @Transactional
@@ -638,7 +688,8 @@ public class DecisionService {
                                 round.generation(), round.status(), round.error(), round.emptyReason(), round.policyVersion(), round.completedAt(),
                                 suggestions.stream().filter(item -> item.discovered() && item.generation() == round.generation()).sorted(DiscoveryRanking.byPrice())
                                         .map(item -> candidateData(decision, selected, item, discoveryBudget)).toList())).toList()),
-                productFacts);
+                productFacts, decision.templateKey() == DecisionTypes.TemplateKey.EARBUDS
+                        ? Comparison.calculate(comparisonState(decision), productFacts, Instant.now(clock)) : null);
     }
 
     private List<DiscoveryContracts.RequirementCheck> requirementChecks(Decision decision, java.util.Map<String, String> selected,
@@ -648,7 +699,7 @@ public class DecisionService {
 
     private ResolutionData resolutionData(Resolution resolution) {
         return new ResolutionData(resolution.id(), resolution.kind(), resolution.selectedOptionId(),
-                resolution.rationale(), resolution.createdAt());
+                resolution.rationale(), resolution.createdAt(), resolution.comparisonSnapshot());
     }
 
     private OutcomeData outcomeData(OutcomeCheckIn outcome) {

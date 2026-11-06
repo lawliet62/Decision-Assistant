@@ -20,6 +20,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["comparison"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/{decisionId}/comparison/confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["confirmation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product-lookups": {
         parameters: {
             query?: never;
@@ -511,6 +543,21 @@ export interface components {
             compatibilityCheck?: components["schemas"]["RequirementCheck"];
             priceStatus?: string;
         };
+        Confirmation: {
+            /** Format: uuid */
+            optionId?: string;
+            feature?: string;
+            supported?: boolean;
+            note?: string;
+            sourceUrl?: string;
+            /** Format: date-time */
+            confirmedAt?: string;
+        };
+        Data: {
+            settings?: components["schemas"]["Settings"];
+            confirmations?: components["schemas"]["Confirmation"][];
+            options?: components["schemas"]["OptionComparison"][];
+        };
         DecisionResponse: {
             /** Format: uuid */
             id?: string;
@@ -537,6 +584,7 @@ export interface components {
             updatedAt?: string;
             discovery?: components["schemas"]["DiscoveryData"];
             productFacts?: components["schemas"]["ProductFactsData"][];
+            comparison?: components["schemas"]["Data"];
         };
         DiscoveryData: {
             /** Format: int64 */
@@ -624,6 +672,13 @@ export interface components {
             fetchedAt?: string;
             priceBasis?: string;
             policyVersion?: string;
+        };
+        OptionComparison: {
+            /** Format: uuid */
+            optionId?: string;
+            price?: number;
+            priceOrigin?: string;
+            checks?: components["schemas"]["RequirementCheck"][];
         };
         OutcomeData: {
             /** Format: uuid */
@@ -715,6 +770,42 @@ export interface components {
             rationale?: string;
             /** Format: date-time */
             createdAt?: string;
+            comparisonSnapshot?: components["schemas"]["Snapshot"];
+        };
+        Settings: {
+            maxBudget?: number;
+            ancRequired?: boolean;
+            compatibility?: string;
+            focus: string;
+            deferredOptionIds: string[];
+        };
+        Snapshot: {
+            schemaVersion?: string;
+            /** Format: date-time */
+            capturedAt?: string;
+            context?: components["schemas"]["ContextData"];
+            options?: components["schemas"]["OptionData"][];
+            criteria?: components["schemas"]["CriterionData"][];
+            values?: components["schemas"]["OptionValueData"][];
+            constraints?: components["schemas"]["ConstraintData"][];
+            constraintResults?: components["schemas"]["ConstraintResultData"][];
+            productFacts?: components["schemas"]["ProductFactsData"][];
+            comparison?: components["schemas"]["Data"];
+        };
+        UpdateRequest: {
+            /** Format: int64 */
+            expectedVersion?: number;
+            settings: components["schemas"]["Settings"];
+        };
+        ConfirmRequest: {
+            /** Format: int64 */
+            expectedVersion?: number;
+            /** Format: uuid */
+            optionId: string;
+            feature: string;
+            supported?: boolean;
+            note?: string;
+            sourceUrl?: string;
         };
         LookupRequest: {
             query: string;
@@ -813,6 +904,8 @@ export interface components {
             /** Format: uuid */
             selectedOptionId?: string;
             rationale?: string;
+            /** Format: int64 */
+            expectedVersion?: number;
         };
         AnswerQuestionRequest: {
             answer: string;
@@ -1030,6 +1123,58 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["UpdateDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    comparison: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    confirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmRequest"];
             };
         };
         responses: {

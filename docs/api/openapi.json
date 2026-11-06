@@ -45,6 +45,80 @@
         }
       }
     },
+    "/api/v1/decisions/{decisionId}/comparison" : {
+      "put" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "comparison",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/{decisionId}/comparison/confirmation" : {
+      "put" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "confirmation",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/product-lookups" : {
       "post" : {
         "tags" : [ "product-lookup-controller" ],
@@ -1196,6 +1270,51 @@
           }
         }
       },
+      "Confirmation" : {
+        "type" : "object",
+        "properties" : {
+          "optionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "feature" : {
+            "type" : "string"
+          },
+          "supported" : {
+            "type" : "boolean"
+          },
+          "note" : {
+            "type" : "string"
+          },
+          "sourceUrl" : {
+            "type" : "string"
+          },
+          "confirmedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "Data" : {
+        "type" : "object",
+        "properties" : {
+          "settings" : {
+            "$ref" : "#/components/schemas/Settings"
+          },
+          "confirmations" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Confirmation"
+            }
+          },
+          "options" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OptionComparison"
+            }
+          }
+        }
+      },
       "DecisionResponse" : {
         "type" : "object",
         "properties" : {
@@ -1285,6 +1404,9 @@
             "items" : {
               "$ref" : "#/components/schemas/ProductFactsData"
             }
+          },
+          "comparison" : {
+            "$ref" : "#/components/schemas/Data"
           }
         }
       },
@@ -1542,6 +1664,27 @@
           }
         }
       },
+      "OptionComparison" : {
+        "type" : "object",
+        "properties" : {
+          "optionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "price" : {
+            "type" : "number"
+          },
+          "priceOrigin" : {
+            "type" : "string"
+          },
+          "checks" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RequirementCheck"
+            }
+          }
+        }
+      },
       "OutcomeData" : {
         "type" : "object",
         "properties" : {
@@ -1774,8 +1917,141 @@
           "createdAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "comparisonSnapshot" : {
+            "$ref" : "#/components/schemas/Snapshot"
           }
         }
+      },
+      "Settings" : {
+        "type" : "object",
+        "properties" : {
+          "maxBudget" : {
+            "type" : "number",
+            "maximum" : 100000000,
+            "minimum" : 1
+          },
+          "ancRequired" : {
+            "type" : "boolean"
+          },
+          "compatibility" : {
+            "type" : "string",
+            "maxLength" : 40,
+            "minLength" : 0
+          },
+          "focus" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "deferredOptionIds" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "format" : "uuid"
+            },
+            "maxItems" : 5,
+            "minItems" : 0
+          }
+        },
+        "required" : [ "deferredOptionIds", "focus" ]
+      },
+      "Snapshot" : {
+        "type" : "object",
+        "properties" : {
+          "schemaVersion" : {
+            "type" : "string"
+          },
+          "capturedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "context" : {
+            "$ref" : "#/components/schemas/ContextData"
+          },
+          "options" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OptionData"
+            }
+          },
+          "criteria" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CriterionData"
+            }
+          },
+          "values" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/OptionValueData"
+            }
+          },
+          "constraints" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConstraintData"
+            }
+          },
+          "constraintResults" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ConstraintResultData"
+            }
+          },
+          "productFacts" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ProductFactsData"
+            }
+          },
+          "comparison" : {
+            "$ref" : "#/components/schemas/Data"
+          }
+        }
+      },
+      "UpdateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "expectedVersion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "settings" : {
+            "$ref" : "#/components/schemas/Settings"
+          }
+        },
+        "required" : [ "settings" ]
+      },
+      "ConfirmRequest" : {
+        "type" : "object",
+        "properties" : {
+          "expectedVersion" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "optionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "feature" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "supported" : {
+            "type" : "boolean"
+          },
+          "note" : {
+            "type" : "string",
+            "maxLength" : 1000,
+            "minLength" : 0
+          },
+          "sourceUrl" : {
+            "type" : "string",
+            "maxLength" : 2048,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "feature", "optionId" ]
       },
       "LookupRequest" : {
         "type" : "object",
@@ -2072,6 +2348,10 @@
           },
           "rationale" : {
             "type" : "string"
+          },
+          "expectedVersion" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         },
         "required" : [ "kind" ]

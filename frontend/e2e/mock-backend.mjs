@@ -1,5 +1,6 @@
 import http from "node:http";
 import { randomUUID } from "node:crypto";
+import { comparisonFixture, recalculate } from "./comparison-fixture.mjs";
 
 const decisionId = "11111111-1111-1111-1111-111111111111";
 const numeric = (id, label, factName, values, unit) => ({ id, label, factName,
@@ -114,6 +115,7 @@ const server = http.createServer(async (request, response) => {
   }
   if (request.method === "POST" && request.url === "/api/v1/decisions") {
     current = body.discovery ? createDiscovery(body) : create(body);
+    if (body.title === "조건 비교 브라우저 검증 (가상제품)") comparisonFixture(current);
     discoveryHistoryCandidates = current.guidance.candidateSuggestions; pendingCandidates = undefined;
     if (body.webConsent) current.guidance.evidence = current.options.map(item => ({
       id: randomUUID(), optionId: item.id, url: item.sourceUrl, status: "FAILED", error: "수집 실패", stale: false,
@@ -134,6 +136,17 @@ const server = http.createServer(async (request, response) => {
   }
   if (request.url === "/api/v1/ai/capabilities") return send(200, { enabled: true, provider: "gemini", model: "test", requiresSensitiveDataAcknowledgement: true });
   if (!current) return send(404, { detail: "Not found" });
+  if (request.method === "PUT" && request.url.endsWith("/comparison")) {
+    if (body.expectedVersion !== current.version) return send(409, { detail: "최신 비교를 확인하세요." });
+    current.comparison.settings = body.settings; current.version++;
+    return send(200, recalculate(current));
+  }
+  if (request.method === "PUT" && request.url.endsWith("/comparison/confirmation")) {
+    if (body.expectedVersion !== current.version) return send(409, { detail: "최신 비교를 확인하세요." });
+    current.comparison.confirmations = current.comparison.confirmations.filter(item => item.optionId !== body.optionId || item.feature !== body.feature);
+    if (body.supported != null) current.comparison.confirmations.push({ ...body, confirmedAt: new Date().toISOString() });
+    current.version++; return send(200, recalculate(current));
+  }
   if (request.method === "PATCH" && request.url.includes("/candidate-suggestions/")) {
     const id = request.url.split("/").at(-1);
     const candidate = current.guidance.candidateSuggestions.find(item => item.id === id);
@@ -185,6 +198,7 @@ const server = http.createServer(async (request, response) => {
   });
   if (request.method === "POST" && request.url.endsWith("/resolutions")) {
     const resolution = { id: randomUUID(), ...body, createdAt: new Date().toISOString() };
+    if (current.comparison) resolution.comparisonSnapshot = structuredClone({ schemaVersion: "comparison-v1", capturedAt: resolution.createdAt, options: current.options, criteria: current.criteria, values: current.values, productFacts: current.productFacts, comparison: current.comparison });
     current.status = body.kind; current.resolutions.unshift(resolution); current.version++;
     return send(201, resolution);
   }

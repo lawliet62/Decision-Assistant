@@ -48,6 +48,19 @@
 - **동작:** outcome check-in은 `CHOSEN` 상태의 Decision에만 추가할 수 있으며, 여러 번의 check-in을 시간순 기록으로 보존한다.
 - **이유:** 실제 선택과 사후 결과를 연결하면서, 아직 선택되지 않은 후보에 대한 임의의 outcome 기록을 막는다.
 
+### BR-CMP-01: 같은 후보의 비교 조건을 변경하고 확인 근거를 구분한다
+
+- **동작:** 이어폰 비교의 예산·ANC·기본 연결 호환성을 바꿔도 후보와 최초 추천 조건을 유지한다. 선택한 필수 조건의 미달·미확인을 우선 표시하고 모든 비교 후보가 충족하는 조건은 접는다. 우선 표시 정보는 새 점수가 아니며 기존 Criterion 중요도는 기존 평가에만 적용한다.
+- **동작:** 직접 확인한 기능은 후보와 기능별로 보존하고 해당 판정에 우선 사용한다. Android 확인을 iOS에 적용하지 않으며, 수집 근거는 별도로 남긴다. 확인값 해제는 수집 근거로 돌아가는 동작이다. 누락·모호·상충은 자동으로 지원이나 미지원으로 바꾸지 않는다.
+- **동작:** 후보 보류는 비교 표시에서 잠시 빼는 동작이다. 후보·입력·확인 기록을 삭제하거나 점수 평가에서 자동 제외하지 않으며 복원할 수 있다. 저장 실패·충돌 시 입력을 유지한다.
+- **동작:** 가격 차이는 유효한 수집 KRW 가격 또는 직접 확인한 가격끼리 계산한다. 더 비싼 후보의 MEETS와 기준 후보의 BELOW가 확인된 조건만 지원 차이로 설명한다. UNKNOWN을 기능 없음으로 해석하지 않는다.
+- **이유:** 카탈로그의 모든 누락을 보완하지 않아도 근거의 한계를 알고 비교할 수 있게 한다.
+
+### BR-CMP-02: 결정 당시의 근거는 이후 변경으로 다시 쓰지 않는다
+
+- **동작:** 신규 선택·보류·포기 기록은 당시 조건, 후보, 평가 입력과 기준, 수집 사양, 직접 확인 및 미확인 판정을 보존한다. 나중의 조건 변경·수집·카탈로그 갱신·가격 만료는 이 기록을 변경하지 않는다. 고정본이 없는 과거 기록은 현재 자료로 소급 생성하지 않는다.
+- **이유:** 사용자가 당시 어떤 정보를 알고 무엇을 감수했는지 다시 이해할 수 있어야 한다.
+
 ### BR-DEC-06: 선택 후 회고 기회를 만들고 사용자가 통제한다
 
 - **동작:** `CHOSEN` 기록 시 기본 14일·60일 in-app/email reminder를 만든다. 사용자는 개별 reminder를 건너뛰거나 전체 reminder email을 해제할 수 있다. email 재시도는 reminder identifier로 중복 전송을 막는다.
@@ -222,6 +235,7 @@
 
 | 규칙 | 현재 자동 검증 |
 | --- | --- |
+| BR-CMP-01~02 | `ComparisonTest`, `DecisionApiIntegrationTest.comparisonConditionsConfirmationAndResolutionSnapshotSurviveReopening`, `frontend/e2e/comparison-flow.spec.ts` |
 | BR-AUTH-01 | `UserProvisioningServiceTest` |
 | BR-CAT-01~03 | `CatalogPolicyTest`, `CatalogApiIntegrationTest`, `frontend/e2e/catalog.spec.ts`, `scripts/catalog/report.test.mjs` |
 | BR-OWN-01 | `DecisionApiIntegrationTest.isolatesEveryDecisionOperationByOwner`, `DecisionApiIntegrationTest.requiresAuthenticationAndCsrf` |

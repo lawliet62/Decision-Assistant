@@ -101,6 +101,52 @@ class DecisionApiIntegrationTest {
     }
 
     @Test
+    void comparisonConditionsConfirmationAndResolutionSnapshotSurviveReopening() throws Exception {
+        var created = mapper.readTree(mvc.perform(post("/api/v1/decisions").with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"intentText":"비교 흐름 검증", "templateKey":"EARBUDS", "webConsent":false,
+                 "selectedSources":[{"url":"https://example.com/alpha", "name":"Alpha"},
+                                    {"url":"https://example.com/beta", "name":"Beta"}]}
+                """)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        var id = created.path("id").asText();
+        var optionId = created.path("options").get(0).path("id").asText();
+        var settings = """
+                {"maxBudget":100000,"ancRequired":true,"compatibility":"iOS","focus":"ANC 지원","deferredOptionIds":["%s"]}
+                """.formatted(optionId);
+        var changed = mapper.readTree(mvc.perform(put("/api/v1/decisions/{id}/comparison", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":" + created.path("version") + ",\"settings\":" + settings + "}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.comparison.options[0].checks[0].status").value("UNKNOWN"))
+                .andExpect(jsonPath("$.comparison.options[0].checks[1].status").value("UNKNOWN"))
+                .andExpect(jsonPath("$.comparison.options[0].checks[2].status").value("UNKNOWN"))
+                .andReturn().getResponse().getContentAsString());
+        mvc.perform(put("/api/v1/decisions/{id}/comparison", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":" + created.path("version") + ",\"settings\":" + settings + "}"))
+                .andExpect(status().isConflict());
+        var confirmed = mapper.readTree(mvc.perform(put("/api/v1/decisions/{id}/comparison/confirmation", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"expectedVersion":%s,"optionId":"%s","feature":"anc","supported":true,
+                 "note":"설명서에서 직접 확인", "sourceUrl":"https://example.com/manual"}
+                """.formatted(changed.path("version"), optionId)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.comparison.options[0].checks[0].status").value("MEETS"))
+                .andExpect(jsonPath("$.comparison.options[0].checks[1].status").value("UNKNOWN"))
+                .andReturn().getResponse().getContentAsString());
+        mvc.perform(post("/api/v1/decisions/{id}/resolutions", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"kind":"DEFERRED","rationale":"iOS 확인 대기","expectedVersion":%s}
+                """.formatted(confirmed.path("version"))))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.comparisonSnapshot.comparison.options[0].checks[1].status").value("UNKNOWN"));
+        var reopened = mapper.readTree(mvc.perform(get("/api/v1/decisions/{id}", id).with(signedIn()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.comparison.confirmations[0].note").value("설명서에서 직접 확인"))
+                .andReturn().getResponse().getContentAsString());
+        mvc.perform(put("/api/v1/decisions/{id}/comparison/confirmation", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"expectedVersion":%s,"optionId":"%s","feature":"anc","supported":false,"note":"다른 모델의 설명서였음"}
+                """.formatted(reopened.path("version"), optionId)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.comparison.options[0].checks[0].status").value("BELOW"))
+                .andExpect(jsonPath("$.resolutions[0].comparisonSnapshot.comparison.options[0].checks[0].status").value("MEETS"));
+    }
+
+    @Test
     void lookupRequiresAuthenticationCsrfAndExplicitConsentEvenWhenDisabled() throws Exception {
         mvc.perform(post("/api/v1/product-lookups").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"query\":\"Buds\",\"searchConsent\":true}")).andExpect(status().isUnauthorized());
@@ -233,6 +279,7 @@ class DecisionApiIntegrationTest {
                 .andReturn().getResponse().getContentAsString());
 
         var other = createOtherUser();
+
         mvc.perform(get("/api/v1/decisions/{decisionId}/evaluations/{evaluationId}",
                         decisionId, evaluation.get("id").asText()).with(signedIn(other)))
                 .andExpect(status().isNotFound());
@@ -329,6 +376,17 @@ class DecisionApiIntegrationTest {
                 .andReturn().getResponse().getContentAsString());
         var decisionId = created.get("id").asText();
         var other = createOtherUser();
+
+        mvc.perform(put("/api/v1/decisions/{id}/comparison", decisionId).with(signedIn(other)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"expectedVersion":0,"settings":{"ancRequired":false,"focus":"가격","deferredOptionIds":[]}}
+                """))
+                .andExpect(status().isNotFound());
+        mvc.perform(put("/api/v1/decisions/{id}/comparison/confirmation", decisionId).with(signedIn(other)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"expectedVersion":0,"optionId":"00000000-0000-0000-0000-000000000001","feature":"anc","supported":true}
+                """))
+                .andExpect(status().isNotFound());
 
         mvc.perform(get("/api/v1/decisions").with(signedIn(other)))
                 .andExpect(status().isOk())

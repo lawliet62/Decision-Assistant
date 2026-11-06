@@ -14,6 +14,14 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 
 `openapi-fetch`는 browser client의 request/response type을 제공한다. frontend가 DTO interface를 수기로 복제하지 않는다. breaking change 자동 분류와 API version 추가는 외부 소비자가 생길 때 검토한다.
 
+## 같은 후보의 비교 조건과 직접 확인
+
+- `DecisionResponse.comparison`은 이어폰에서 현재 settings·confirmations·후보별 price/priceOrigin/checks를 반환한다. 최초 추천의 `discovery.conditions`와 기존 `productFacts.requirementChecks`는 최초 추천 기준을 유지한다. 다른 제품군의 comparison은 null이다.
+- `PUT /decisions/{id}/comparison`은 `{expectedVersion, settings: {maxBudget?, ancRequired, compatibility?, focus, deferredOptionIds}}`를 받는다. compatibility는 Android/iOS/멀티포인트 또는 null, focus는 가격/ANC 지원/호환성/배터리/무게다. 빈 예산은 제한 없음이며 양수 1억원 이하만 허용한다. 보류 ID는 현재 후보여야 한다.
+- `PUT /decisions/{id}/comparison/confirmation`은 `{expectedVersion, optionId, feature, supported?, note?, sourceUrl?}`를 받는다. feature는 anc/Android/iOS/멀티포인트다. supported true/false는 직접 확인한 지원/미지원이며 null·생략은 해당 확인값 해제다. URL은 공개 URL 검증 후 참조로만 저장한다. 기록 시각은 서버가 정한다.
+- 두 PUT은 소유권·CSRF·편집 가능 상태·Decision version을 확인하고 갱신된 DecisionResponse를 반환한다. 외부 호출이나 최초 추천 재실행은 없다.
+- `CreateResolutionRequest.expectedVersion`은 additive optional 필드다. 새 화면은 반드시 전송하고 불일치는 409다. `ResolutionData.comparisonSnapshot`은 서버가 생성한 당시의 고정본이며 과거 기록에는 null이다.
+
 ## 제품명 lookup (additive MVP contract)
 
 - `GET /api/v1/product-lookups/capabilities`: 검색/페이지 수집의 활성 여부, provider 이름과 전송 고지. secret은 반환하지 않는다.

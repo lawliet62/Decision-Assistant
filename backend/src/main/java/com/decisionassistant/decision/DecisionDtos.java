@@ -73,7 +73,8 @@ public final class DecisionDtos {
             Instant createdAt,
             Instant updatedAt,
             DiscoveryData discovery,
-            List<ProductFactsData> productFacts
+            List<ProductFactsData> productFacts,
+            Comparison.Data comparison
     ) {
     }
 
@@ -157,7 +158,8 @@ public final class DecisionDtos {
     public record CreateResolutionRequest(
             @NotNull DecisionTypes.ResolutionKind kind,
             UUID selectedOptionId,
-            String rationale
+            String rationale,
+            Long expectedVersion
     ) {
     }
 
@@ -166,7 +168,8 @@ public final class DecisionDtos {
             DecisionTypes.ResolutionKind kind,
             UUID selectedOptionId,
             String rationale,
-            Instant createdAt
+            Instant createdAt,
+            Comparison.Snapshot comparisonSnapshot
     ) {
     }
 

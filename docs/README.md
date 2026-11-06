@@ -1,5 +1,8 @@
 # 문서 색인
 
+- [조건 비교와 결정 당시 근거](decisions/0017-comparison-and-resolution-context.md): 같은 후보에서 조건 변경, 직접 확인, 보류·복원, 결정 snapshot
+- [비교 흐름 검증과 사용자 평가 준비](evaluations/comparison-flow-2026-11-05/README.md): 자동 검증·가상 자료·범용 AI와 비교할 과제·미검증 한계
+
 - [등록 제품 카탈로그 운영](catalog-operations.md): 가격 48시간 갱신·72시간 유효, 사양 30/90일, 호출 한도, 출처 검토와 주기 평가
 - [카탈로그 MVP 결정](decisions/0016-curated-catalog.md): 후보 없는 진입 유지, 이어폰 범위 축소, 캐시 도입 유보
 - [카탈로그 실제 갱신·국내 판매처 확장 평가](evaluations/catalog-2026-10-29/README.md): 실제 Firecrawl→DB→추천 API와 판매 종료·상품명 변경 진단
