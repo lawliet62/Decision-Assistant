@@ -36,6 +36,7 @@ const questions = [
 ].map(([kind, targetKey, prompt]) => ({ id: randomUUID(), kind, targetKey, prompt,
   impact: "비교 참고 정보입니다.", options: kind === "SINGLE_CHOICE" ? criteria.map(item => item.name) : [], status: "OPEN" }));
 let current;
+let listFixture;
 let discoveryHistoryCandidates = [];
 let pendingCandidates;
 const option = (source) => ({ id: randomUUID(), name: source.name || "후보 · example.com", sourceUrl: source.url });
@@ -96,9 +97,41 @@ const server = http.createServer(async (request, response) => {
   const send = (status, body, headers = {}) => { response.writeHead(status, { "content-type": "application/json", ...headers }); response.end(JSON.stringify(body)); };
   let body = {};
   if (request.method !== "GET") { let raw = ""; for await (const chunk of request) raw += chunk; body = raw ? JSON.parse(raw) : {}; }
+  const url = new URL(request.url, "http://localhost");
+  if (request.method === "POST" && url.pathname === "/__test/decision-list") {
+    listFixture = Array.from({ length: body.empty ? 0 : 15 }, (_, i) => ({
+      id: `99999999-9999-9999-9999-${String(i).padStart(12, "0")}`, version: 0,
+      title: `결정 ${String(i + 1).padStart(2, "0")}`, templateKey: i % 2 ? "LAPTOP" : "EARBUDS",
+      status: i < 11 ? "DRAFT" : i < 13 ? "CHOSEN" : i === 13 ? "DEFERRED" : "ABANDONED",
+      createdAt: new Date(Date.UTC(2026, 0, i + 1)).toISOString(), updatedAt: new Date(Date.UTC(2026, 1, i + 1)).toISOString(),
+    }));
+    return send(200, { ok: true });
+  }
+  if (request.method === "GET" && url.pathname === "/api/v1/decisions/counts") {
+    const rows = listFixture ?? (current ? [current] : []);
+    return send(200, ["DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED"].map(status => ({ status, count: rows.filter(d => d.status === status).length })));
+  }
+  if (request.method === "GET" && url.pathname === "/api/v1/decisions") {
+    const selected = url.searchParams.getAll("statuses").flatMap(s => s.split(","));
+    const rows = (listFixture ?? (current ? [current] : [])).filter(d => !selected.length || selected.includes(d.status));
+    const field = { UPDATED_AT: "updatedAt", CREATED_AT: "createdAt", TITLE: "title", TEMPLATE_KEY: "templateKey" }[url.searchParams.get("sort")] ?? "updatedAt";
+    const factor = url.searchParams.get("direction") === "ASC" ? 1 : -1;
+    rows.sort((a, b) => factor * String(a[field]).localeCompare(String(b[field])) || a.id.localeCompare(b.id));
+    const size = Number(url.searchParams.get("size") ?? 10);
+    const totalPages = Math.ceil(rows.length / size);
+    const page = Math.max(0, Math.min(Number(url.searchParams.get("page") ?? 0), totalPages - 1));
+    return send(200, { items: rows.slice(page * size, (page + 1) * size), page, size, totalElements: rows.length, totalPages });
+  }
+  const listRow = listFixture?.find(d => url.pathname === `/api/v1/decisions/${d.id}`);
+  if (listRow && request.method === "GET") return send(200, { ...create({ intentText: listRow.title, templateKey: listRow.templateKey, selectedSources: [] }), ...listRow });
+  if (request.method === "DELETE" && url.pathname.startsWith("/api/v1/decisions/")) {
+    if (!listRow) return send(404, { detail: "결정을 찾을 수 없습니다." });
+    if (Number(url.searchParams.get("expectedVersion")) !== listRow.version) return send(409, { detail: "결정이 변경되었습니다." });
+    listFixture = listFixture.filter(d => d.id !== listRow.id);
+    return send(204);
+  }
   if (request.url === "/api/v1/me") return send(200, { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", email: "user@example.com" }, { "set-cookie": "XSRF-TOKEN=test-token; Path=/; SameSite=Lax" });
   if (request.url === "/api/v1/intake-templates") return send(200, templates);
-  if (request.method === "GET" && request.url === "/api/v1/decisions") return send(200, current ? [current] : []);
   if (request.url === "/api/v1/product-lookups/capabilities") return send(200, {
     searchEnabled: true, searchProvider: "Serper", searchNotice: "입력한 제품명을 Serper로 전송하는 데 동의합니다.",
     importEnabled: true, importProvider: "Firecrawl", importNotice: "선택한 공개 URL을 Firecrawl로 보내 정보를 가져오는 데 동의합니다.",
@@ -114,6 +147,7 @@ const server = http.createServer(async (request, response) => {
     ] });
   }
   if (request.method === "POST" && request.url === "/api/v1/decisions") {
+    listFixture = undefined;
     current = body.discovery ? createDiscovery(body) : create(body);
     if (body.title === "조건 비교 브라우저 검증 (가상제품)") comparisonFixture(current);
     discoveryHistoryCandidates = current.guidance.candidateSuggestions; pendingCandidates = undefined;

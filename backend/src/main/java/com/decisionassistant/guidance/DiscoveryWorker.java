@@ -140,8 +140,10 @@ public class DiscoveryWorker {
             trace.enter(stage);
             progress(work, stage);
             tx.executeWithoutResult(status -> {
-                var run = runs.findById(work.id()).orElseThrow();
-                var decision = decisions.lockByIdAndOwner(work.id(), work.owner()).orElseThrow();
+                var decision = decisions.lockByIdAndOwner(work.id(), work.owner()).orElse(null);
+                if (decision == null) return;
+                var run = runs.findById(work.id()).orElse(null);
+                if (run == null) return;
                 if (!active(run, work)) return;
                 if (!editable(decision)) { run.finish(ProductDiscovery.Status.FAILED, "종료된 비교입니다."); return; }
                 var existing = candidates.findByDecisionIdOrderByCreatedAtAsc(work.id());
@@ -175,7 +177,9 @@ public class DiscoveryWorker {
         // 실패 상태 저장까지 불가능한 경우에도 최초 실패 단계를 관측할 수 있게 한다.
         logFailure("discovery_failed", work, failure, cause);
         tx.executeWithoutResult(status -> {
-            var run = runs.findById(work.id()).orElseThrow();
+            if (decisions.lockByIdAndOwner(work.id(), work.owner()).isEmpty()) return;
+            var run = runs.findById(work.id()).orElse(null);
+            if (run == null) return;
             if (active(run, work))
                 run.finish(ProductDiscovery.Status.FAILED, failure.message());
         });
@@ -186,14 +190,18 @@ public class DiscoveryWorker {
     }
     private void progress(Work work, Stage stage) {
         tx.executeWithoutResult(status -> {
-            var run = runs.findById(work.id()).orElseThrow();
+            if (decisions.lockByIdAndOwner(work.id(), work.owner()).isEmpty()) throw new IllegalStateException("삭제된 결정입니다.");
+            var run = runs.findById(work.id()).orElse(null);
+            if (run == null) return;
             if (!active(run, work)) throw new IllegalStateException("추천 실행이 변경되었습니다.");
             run.stage(stage);
         });
     }
     private void empty(Work work, String reason, boolean partial) {
         tx.executeWithoutResult(status -> {
-            var run = runs.findById(work.id()).orElseThrow();
+            if (decisions.lockByIdAndOwner(work.id(), work.owner()).isEmpty()) return;
+            var run = runs.findById(work.id()).orElse(null);
+            if (run == null) return;
             if (!active(run, work)) return;
             run.empty(reason);
             if (partial) run.finish(ProductDiscovery.Status.PARTIAL, "일부 페이지를 가져오지 못했습니다. 다시 시도할 수 있습니다.");

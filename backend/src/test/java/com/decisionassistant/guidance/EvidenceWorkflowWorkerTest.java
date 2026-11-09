@@ -48,7 +48,7 @@ class EvidenceWorkflowWorkerTest {
         when(imports.findFirstByStatusOrderByCreatedAtAsc(EvidenceImport.Status.PENDING)).thenReturn(Optional.of(run));
         when(imports.countByDecisionIdAndStatusIn(any(), any())).thenReturn(0L);
         when(imports.findByDecisionIdOrderByCreatedAtAsc(decision.id())).thenReturn(List.of(run));
-        when(decisions.findById(decision.id())).thenReturn(Optional.of(decision));
+        when(decisions.lockById(decision.id())).thenReturn(Optional.of(decision));
         when(web.scrape(run.url())).thenReturn(new WebEvidenceProvider.Page("Example Laptop", "# Example Laptop\n16GB RAM"));
         when(search.search(any(), any(Integer.class))).thenReturn(List.of(
                 new WebSearchProvider.SearchResult("Alternative", "https://example.org/b", "더 가벼운 대안")));
@@ -209,7 +209,7 @@ class EvidenceWorkflowWorkerTest {
             run = new EvidenceImport(decision.id(), option.id(), option.sourceUrl(), Instant.now());
             when(imports.findFirstByStatusOrderByCreatedAtAsc(EvidenceImport.Status.PENDING)).thenReturn(Optional.of(run));
             when(imports.findByDecisionIdOrderByCreatedAtAsc(decision.id())).thenReturn(List.of(run));
-            when(decisions.findById(decision.id())).thenReturn(Optional.of(decision));
+            when(decisions.lockById(decision.id())).thenReturn(Optional.of(decision));
             when(executor.call(any())).thenAnswer(invocation -> ((Callable<?>) invocation.getArgument(0)).call());
         }
 

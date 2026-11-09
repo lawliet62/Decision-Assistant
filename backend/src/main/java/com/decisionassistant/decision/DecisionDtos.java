@@ -50,9 +50,15 @@ public final class DecisionDtos {
             String title,
             DecisionTypes.TemplateKey templateKey,
             DecisionTypes.DecisionStatus status,
+            Instant createdAt,
             Instant updatedAt
     ) {
     }
+
+    public record DecisionPage(List<DecisionSummary> items, int page, int size, long totalElements, int totalPages) {}
+    public record StatusCount(DecisionTypes.DecisionStatus status, long count) {}
+    public enum ListSort { UPDATED_AT, CREATED_AT, TITLE, TEMPLATE_KEY }
+    public enum ListDirection { ASC, DESC }
 
     public record DecisionResponse(
             UUID id,

@@ -1,0 +1,15 @@
+# 로컬 synthetic smoke 전용. 실제 인증·TLS·GCP Identity 검증을 대체하지 않는다.
+services:
+  postgres:
+    environment:
+      DB_BOOTSTRAP_MODE: local-smoke
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SERVER_ADDRESS: 0.0.0.0
+      DECISION_ASSISTANT_SECRETS_MODE: offline
+      DB_SECRET_VERSION: ""
+      AUTH0_SECRET_VERSION: ""
+  proxy:
+    ports: !override ["127.0.0.1:3180:80"]
+    volumes: !override ["./Caddyfile.local:/etc/caddy/Caddyfile:ro"]

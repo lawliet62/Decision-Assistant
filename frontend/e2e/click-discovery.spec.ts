@@ -141,10 +141,11 @@ test("같은 조건으로 다른 제품을 찾아도 비교 선택과 이전 추
 test("재탐색 실패 안내가 와도 이전 후보와 비교를 유지한다", async ({ page }) => {
   await page.goto("/decisions/new"); await consent(page);
   await page.getByRole("button", { name: "추천 제품 보기", exact: true }).click();
+  await expect(page.getByRole("button", { name: "같은 조건으로 다른 제품 찾기", exact: true })).toBeEnabled();
+  const response = await page.request.get(page.url().replace("/decisions/", "/api/v1/decisions/"));
+  const data = await response.json();
+  data.discovery = { ...data.discovery, generation: 1, displayedGeneration: 0, status: "FAILED", error: "이번 달 제품 검색 한도에 도달했습니다." };
   await page.route("**/discovery/refresh", async route => {
-    const response = await page.request.get(page.url().replace("/decisions/", "/api/v1/decisions/"));
-    const data = await response.json();
-    data.discovery = { ...data.discovery, generation: 1, displayedGeneration: 0, status: "FAILED", error: "이번 달 제품 검색 한도에 도달했습니다." };
     await route.fulfill({ json: data });
   });
   await page.getByRole("button", { name: "같은 조건으로 다른 제품 찾기", exact: true }).click();

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Link from "next/link";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,7 +24,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-zinc-50 text-zinc-950">{children}</body>
+      <body className="flex min-h-full flex-col bg-zinc-50 text-zinc-950">{children}
+        <footer className="mx-auto w-full max-w-5xl px-6 py-6 text-sm text-zinc-500"><Link href="/privacy" className="underline">데이터 이용·삭제 안내</Link></footer>
+      </body>
     </html>
   );
 }

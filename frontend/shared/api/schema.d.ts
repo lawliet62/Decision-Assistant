@@ -399,7 +399,7 @@ export interface paths {
         get: operations["get"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["delete_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -413,6 +413,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["counts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1082,6 +1098,17 @@ export interface components {
             /** Format: int32 */
             height?: number;
         };
+        DecisionPage: {
+            items?: components["schemas"]["DecisionSummary"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
         DecisionSummary: {
             /** Format: uuid */
             id?: string;
@@ -1093,7 +1120,15 @@ export interface components {
             /** @enum {string} */
             status?: "DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED";
             /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
             updatedAt?: string;
+        };
+        StatusCount: {
+            /** @enum {string} */
+            status?: "DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED";
+            /** Format: int64 */
+            count?: number;
         };
         AiCapabilitiesResponse: {
             enabled?: boolean;
@@ -1215,7 +1250,13 @@ export interface operations {
     };
     list: {
         parameters: {
-            query?: never;
+            query?: {
+                statuses?: ("DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED")[];
+                page?: number;
+                size?: number;
+                sort?: "UPDATED_AT" | "CREATED_AT" | "TITLE" | "TEMPLATE_KEY";
+                direction?: "ASC" | "DESC";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1228,7 +1269,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["DecisionSummary"][];
+                    "*/*": components["schemas"]["DecisionPage"];
                 };
             };
         };
@@ -1787,6 +1828,28 @@ export interface operations {
             };
         };
     };
+    delete_1: {
+        parameters: {
+            query: {
+                expectedVersion: number;
+            };
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_1: {
         parameters: {
             query?: never;
@@ -1806,6 +1869,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["EvaluationResponse"];
+                };
+            };
+        };
+    };
+    counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["StatusCount"][];
                 };
             };
         };
