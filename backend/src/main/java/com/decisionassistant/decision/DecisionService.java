@@ -190,12 +190,48 @@ public class DecisionService {
     }
 
     @Transactional(readOnly = true)
-    public List<DecisionSummary> list() {
-        return decisions.findAllByOwnerUserIdOrderByUpdatedAtDesc(currentUser.current().id()).stream()
-                .map(decision -> new DecisionSummary(
-                        decision.id(), decision.version(), decision.title(), decision.templateKey(),
-                        decision.status(), decision.updatedAt()))
-                .toList();
+    public DecisionPage list(Set<DecisionTypes.DecisionStatus> statuses, int page, int size,
+                             ListSort sort, ListDirection direction) {
+        var selected = statuses == null ? java.util.EnumSet.allOf(DecisionTypes.DecisionStatus.class) : statuses;
+        if (selected.isEmpty()) return new DecisionPage(List.of(), 0, size, 0, 0);
+        var property = switch (sort) {
+            case UPDATED_AT -> "updatedAt"; case CREATED_AT -> "createdAt";
+            case TITLE -> "title"; case TEMPLATE_KEY -> "templateKey";
+        };
+        var ordering = org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Direction.valueOf(direction.name()), property).and(
+                org.springframework.data.domain.Sort.by("id"));
+        var owner = currentUser.current().id();
+        var result = decisions.findSummaries(owner, selected, org.springframework.data.domain.PageRequest.of(page, size, ordering));
+        // 삭제로 마지막 페이지가 사라졌거나 오래된 링크로 진입하면 마지막 유효 페이지를 반환한다.
+        if (page > 0 && page >= result.getTotalPages()) {
+            result = decisions.findSummaries(owner, selected,
+                    org.springframework.data.domain.PageRequest.of(Math.max(0, result.getTotalPages() - 1), size, ordering));
+        }
+        return new DecisionPage(result.getContent(), result.getNumber(), size, result.getTotalElements(), result.getTotalPages());
+    }
+
+    @Transactional(readOnly = true)
+    public List<StatusCount> counts() {
+        var counts = decisions.countStatuses(currentUser.current().id()).stream()
+                .collect(Collectors.toMap(StatusCount::status, StatusCount::count));
+        return java.util.Arrays.stream(DecisionTypes.DecisionStatus.values())
+                .map(status -> new StatusCount(status, counts.getOrDefault(status, 0L))).toList();
+    }
+
+    @Transactional
+    public void delete(UUID id, long expectedVersion) {
+        var decision = decisions.lockByIdAndOwner(id, currentUser.current().id())
+                .orElseThrow(() -> new NotFoundException("결정을 찾을 수 없습니다."));
+        if (decision.version() != expectedVersion) throw new ConflictException("결정이 변경되었습니다. 최신 목록을 확인한 뒤 다시 삭제하세요.");
+        decisions.deleteAggregate(id);
+        org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override public void afterCommit() {
+                        // 백업 복원 시 재삭제할 최소 식별자만 남긴다. 제목·소유자·본문은 기록하지 않는다.
+                        log.info("product_event=decision_deleted decision_id={} deleted_at={}", id, Instant.now(clock));
+                    }
+                });
     }
 
     @Transactional(readOnly = true)

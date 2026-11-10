@@ -24,6 +24,8 @@ Decision Assistant는 용도·예산을 선택해 개인 전자기기 후보를 
 - 회고 reminder와 사용자가 확인·수정·삭제하는 category별 성향 기억
 - 재현 가능한 algorithm result와 독립적인 LLM assessment
 - 최종 선택·보류·포기와 여러 outcome check-in
+- 기본 접힘 상태 그룹, 복수 상태 필터, 그룹별 페이지와 수정일·생성일·제목·제품군 정렬
+- 소유자 확인 후 결정 및 종속 기록·원본 성향 기억의 DB 영구 삭제. 공유 카탈로그·다른 결정의 복사값은 유지
 
 지원하지 않는다.
 

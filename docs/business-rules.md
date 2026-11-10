@@ -12,6 +12,16 @@
 
 ## Decision과 결과 기록
 
+### BR-LIST-01: 결정 목록은 소유자 범위에서 분류·정렬·페이지 처리한다
+
+- **동작:** 상태 그룹은 기본으로 접고 건수를 표시한다. 복수 상태 선택과 그룹별 페이지 이동을 제공하며 기본 10개·수정일 최신순이다. 생성일·제목·제품군 정렬도 지원하고 동일 값은 ID로 안정적으로 정렬한다. 필터·정렬 변경은 페이지를 초기화하고 상세에서 돌아오면 탐색 상태를 복원한다.
+- **이유:** 결정이 늘어도 불필요한 전체 다운로드와 화면 혼잡 없이 필요한 기록을 찾게 한다.
+
+### BR-DELETE-01: 결정 삭제는 원본과 종속 기록을 실제로 제거한다
+
+- **동작:** 소유자가 최신 version으로 확인하면 결정과 종속 데이터·원본 결정에서 생성된 성향 기억을 DB에서 영구 삭제한다. 공유 카탈로그·계정·다른 결정에 복사된 값은 유지한다. 삭제 뒤 늦은 결과가 결정을 재생성하거나 새 알림을 보내지 않는다. 이미 외부로 전송된 요청·메일은 취소하지 않는다.
+- **이유:** 화면 숨김·보관과 데이터 삭제를 구분하고 사용자의 기록 통제권을 보장한다. 복구와 백업의 경계는 [ADR 0018](decisions/0018-decision-management-and-deletion.md)을 따른다.
+
 ### BR-AUTH-01: 초대되고 검증된 사용자만 로그인한다
 
 - **동작:** Auth0가 제공한 verified email이 배포의 exact-email allowlist에 포함될 때만 로컬 사용자를 생성하고 접근을 허용한다. 같은 이메일의 다른 issuer/subject identity는 자동 병합하지 않는다.
@@ -235,6 +245,7 @@
 
 | 규칙 | 현재 자동 검증 |
 | --- | --- |
+| BR-LIST-01, BR-DELETE-01 | `DecisionApiIntegrationTest`, `DiscoveryApiIntegrationTest.lateAiCompletionCannotRecreateADeletedDecision`, `frontend/e2e/decision-list.spec.ts` |
 | BR-CMP-01~02 | `ComparisonTest`, `DecisionApiIntegrationTest.comparisonConditionsConfirmationAndResolutionSnapshotSurviveReopening`, `frontend/e2e/comparison-flow.spec.ts` |
 | BR-AUTH-01 | `UserProvisioningServiceTest` |
 | BR-CAT-01~03 | `CatalogPolicyTest`, `CatalogApiIntegrationTest`, `frontend/e2e/catalog.spec.ts`, `scripts/catalog/report.test.mjs` |

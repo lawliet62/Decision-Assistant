@@ -1,0 +1,10 @@
+[Unit]
+Description=Decision Assistant 일일 DB 백업
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/decision-assistant/backup.conf
+ExecStart=/bin/sh /opt/decision-assistant/deploy/backup.sh
+TimeoutStartSec=300

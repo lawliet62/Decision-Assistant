@@ -1,0 +1,10 @@
+[Unit]
+Description=Decision Assistant 일일 백업 일정
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

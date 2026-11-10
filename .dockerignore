@@ -1,0 +1,11 @@
+.git
+.idea
+**/node_modules
+**/.next
+**/.env*
+**/test-results
+**/playwright-report
+backend/.gradle
+backend/build/*
+!backend/build/libs
+docs/evaluations

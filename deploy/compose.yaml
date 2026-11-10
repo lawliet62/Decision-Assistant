@@ -1,0 +1,82 @@
+name: decision-assistant
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+services:
+  postgres:
+    build:
+      context: ..
+      dockerfile: deploy/postgres.Dockerfile
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: decision_assistant
+      # upstream 초기화 절차용이며 실제 서버는 아래 고정 hba_file만 사용한다.
+      POSTGRES_HOST_AUTH_METHOD: trust
+      DB_BOOTSTRAP_MODE: gcp
+      PROD_PROJECT_ID: ${PROD_PROJECT_ID:?운영 프로젝트 ID 필요}
+      DB_SECRET_VERSION: ${DB_SECRET_VERSION:?숫자 Secret 버전 필요}
+    command: ["postgres", "-c", "hba_file=/etc/postgresql/pg_hba.conf", "-c", "shared_buffers=128MB", "-c", "max_connections=30", "-c", "log_min_error_statement=panic"]
+    volumes: ["database:/var/lib/postgresql/data"]
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD-SHELL", "gosu postgres pg_isready -U postgres -d decision_assistant"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+    logging: *logging
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/backend.Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: oidc
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      DECISION_ASSISTANT_SECRETS_MODE: gcp
+      DECISION_ASSISTANT_SECRETS_DEV_PROJECT_ID: ${DEV_PROJECT_ID:?개발 프로젝트 ID 필요}
+      DECISION_ASSISTANT_SECRETS_PROD_PROJECT_ID: ${PROD_PROJECT_ID:?운영 프로젝트 ID 필요}
+      DB_SECRET_VERSION: ${DB_SECRET_VERSION:?숫자 Secret 버전 필요}
+      AUTH0_SECRET_VERSION: ${AUTH0_SECRET_VERSION:?숫자 Secret 버전 필요}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID:?Auth0 client ID 필요}
+      AUTH0_ISSUER_URI: ${AUTH0_ISSUER_URI:?Auth0 issuer 필요}
+      DECISION_ASSISTANT_ALLOWED_EMAILS: ${ALLOWED_EMAILS:?초대 목록 필요}
+      DECISION_ASSISTANT_PUBLIC_BASE_URL: https://${PUBLIC_HOST:?공개 hostname 필요}
+      DB_URL: jdbc:postgresql://postgres:5432/decision_assistant
+      DB_USERNAME: decision_assistant
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "10"
+      DECISION_ASSISTANT_CATALOG_ENABLED: "true"
+      DECISION_ASSISTANT_CATALOG_REFRESH_ENABLED: "false"
+      DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED: "false"
+      DECISION_ASSISTANT_AI_ENABLED: "false"
+      DECISION_ASSISTANT_SEARCH_ENABLED: "false"
+      DECISION_ASSISTANT_WEB_ENABLED: "false"
+      DECISION_ASSISTANT_REMINDERS_ENABLED: "false"
+    depends_on:
+      postgres: { condition: service_healthy }
+    mem_limit: 1024m
+    restart: unless-stopped
+    logging: *logging
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/frontend.Dockerfile
+    mem_limit: 384m
+    depends_on: [backend]
+    restart: unless-stopped
+    logging: *logging
+  proxy:
+    image: caddy:2-alpine
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?공개 hostname 필요}
+    ports: ["80:80", "443:443"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "tls:/data", "caddy_config:/config"]
+    mem_limit: 128m
+    depends_on: [frontend]
+    restart: unless-stopped
+    logging: *logging
+volumes:
+  database:
+  tls:
+  caddy_config:

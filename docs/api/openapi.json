@@ -151,16 +151,66 @@
       "get" : {
         "tags" : [ "decision-controller" ],
         "operationId" : "list",
+        "parameters" : [ {
+          "name" : "statuses",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED" ]
+            },
+            "uniqueItems" : true
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "maximum" : 1000000,
+            "minimum" : 0
+          }
+        }, {
+          "name" : "size",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 10,
+            "maximum" : 50,
+            "minimum" : 1
+          }
+        }, {
+          "name" : "sort",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "UPDATED_AT",
+            "enum" : [ "UPDATED_AT", "CREATED_AT", "TITLE", "TEMPLATE_KEY" ]
+          }
+        }, {
+          "name" : "direction",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "default" : "DESC",
+            "enum" : [ "ASC", "DESC" ]
+          }
+        } ],
         "responses" : {
           "200" : {
             "description" : "OK",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "array",
-                  "items" : {
-                    "$ref" : "#/components/schemas/DecisionSummary"
-                  }
+                  "$ref" : "#/components/schemas/DecisionPage"
                 }
               }
             }
@@ -909,6 +959,33 @@
             }
           }
         }
+      },
+      "delete" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "expectedVersion",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
       }
     },
     "/api/v1/decisions/{decisionId}/evaluations/{evaluationId}" : {
@@ -939,6 +1016,27 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/EvaluationResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/counts" : {
+      "get" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "counts",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/StatusCount"
+                  }
                 }
               }
             }
@@ -2857,6 +2955,33 @@
           }
         }
       },
+      "DecisionPage" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/DecisionSummary"
+            }
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "size" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "totalElements" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "totalPages" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
       "DecisionSummary" : {
         "type" : "object",
         "properties" : {
@@ -2879,9 +3004,26 @@
             "type" : "string",
             "enum" : [ "DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED" ]
           },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
           "updatedAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "StatusCount" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "enum" : [ "DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED" ]
+          },
+          "count" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         }
       },

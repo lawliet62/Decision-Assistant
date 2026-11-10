@@ -54,6 +54,9 @@ public class EvidenceWorkflowWorker {
         if (!webProperties.configured()) return;
         var run = imports.findFirstByStatusOrderByCreatedAtAsc(EvidenceImport.Status.PENDING).orElse(null);
         if (run == null) return;
+        // 삭제와 같은 부모 행 잠금 순서를 사용한다. 삭제 후에는 외부 호출을 시작하지 않는다.
+        var decision = decisions.lockById(run.decisionId()).orElse(null);
+        if (decision == null) return;
         var now = Instant.now(clock);
         run.running(now);
         imports.flush();
@@ -67,13 +70,12 @@ public class EvidenceWorkflowWorker {
             run.failed("제품 정보를 가져오지 못했습니다. 다시 시도하거나 직접 입력하세요.", web.name(), Instant.now(clock));
             log.warn("product_event=evidence_import_failed decision_id={} import_id={} reason={}",
                     run.decisionId(), run.id(), exception.getClass().getSimpleName());
-            decisions.findById(run.decisionId()).ifPresent(this::completeIfSettled);
+            completeIfSettled(decision);
             return;
         }
         var excerpt = excerpt(page.markdown(), 6000);
         run.succeeded(page.title(), hash(page.markdown()), excerpt, web.name(), Instant.now(clock));
         log.info("product_event=evidence_import_succeeded decision_id={} import_id={}", run.decisionId(), run.id());
-        var decision = decisions.findById(run.decisionId()).orElseThrow();
         if (!editable(decision)) return;
         decision.applyImportedOption(run.optionId(), page.title(), excerpt, Instant.now(clock));
         completeIfSettled(decision);

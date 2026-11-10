@@ -1,0 +1,15 @@
+# VM 운영자가 Google Cloud Ops Agent에 적용한다. 로그 bucket retention은 별도로 14일 설정한다.
+logging:
+  receivers:
+    decision_containers:
+      type: files
+      include_paths:
+        - /var/lib/docker/containers/*/*-json.log
+  processors:
+    docker_json:
+      type: parse_json
+  service:
+    pipelines:
+      decision_logs:
+        receivers: [decision_containers]
+        processors: [docker_json]

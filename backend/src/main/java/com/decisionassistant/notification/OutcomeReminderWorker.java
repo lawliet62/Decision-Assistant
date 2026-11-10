@@ -37,7 +37,8 @@ public class OutcomeReminderWorker {
     }
     private void send(OutcomeReminder reminder, Instant now) {
         try {
-            var decision = decisions.findById(reminder.decisionId()).orElseThrow();
+            var decision = decisions.lockById(reminder.decisionId()).orElse(null);
+            if (decision == null) return;
             var user = users.findById(decision.ownerUserId()).orElseThrow();
             if (!user.reminderEmailsEnabled()) { reminder.skip(); return; }
             var link = publicBaseUrl + "/decisions/" + decision.id() + "#outcome";

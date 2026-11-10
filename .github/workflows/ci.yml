@@ -56,3 +56,9 @@ jobs:
 
       - name: Verify product lookup and decision lifecycle in browser
         run: npm --prefix frontend run test:e2e
+
+      - name: Verify deployment configuration without cloud credentials
+        run: |
+          python3 -m unittest discover -s deploy -p 'test_*.py'
+          docker compose --env-file deploy/.env.example -f deploy/compose.yaml config --quiet
+          docker compose --env-file deploy/.env.example -f deploy/compose.yaml -f deploy/compose.local.yaml config --quiet

@@ -310,6 +310,34 @@ class DiscoveryApiIntegrationTest {
         worker.processNext();
         assertThat(runs.findById(UUID.fromString(id)).orElseThrow().status()).isEqualTo(ProductDiscovery.Status.SUCCEEDED);
     }
+    @Test @Timeout(20) void lateAiCompletionCannotRecreateADeletedDecision() throws Exception {
+        var id = create();
+        var entered = new java.util.concurrent.CountDownLatch(1);
+        var release = new java.util.concurrent.CountDownLatch(1);
+        when(ai.timeout()).thenReturn(Duration.ofSeconds(10));
+        when(discoverer.discover(any())).thenAnswer(call -> {
+            entered.countDown();
+            if (!release.await(8, java.util.concurrent.TimeUnit.SECONDS)) throw new AssertionError("삭제가 완료되지 않았습니다.");
+            return new AiContracts.AiResult<>(new DiscoveryProposal(List.of(product("Buds A", "100000 KRW"))), 1, 1);
+        });
+        try (var pool = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var future = pool.submit(worker::processNext);
+            try {
+                assertThat(entered.await(5, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                var version = jdbc.queryForObject("select version from decisions where id = ?", Long.class, UUID.fromString(id));
+                mvc.perform(delete("/api/v1/decisions/" + id).param("expectedVersion", version.toString()).with(owner).with(csrf()))
+                        .andExpect(status().isNoContent());
+                release.countDown();
+                future.get(5, java.util.concurrent.TimeUnit.SECONDS);
+                worker.processNext();
+                for (var table : List.of("product_discoveries", "candidate_suggestions"))
+                    assertThat(jdbc.queryForObject("select count(*) from " + table + " where decision_id = ?", Integer.class, UUID.fromString(id))).isZero();
+                mvc.perform(get("/api/v1/decisions/" + id).with(owner)).andExpect(status().isNotFound());
+                verify(discoverer, times(1)).discover(any());
+            } finally { release.countDown(); }
+        }
+    }
+
     private String create() throws Exception {
         return create(BODY);
     }

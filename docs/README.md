@@ -1,5 +1,10 @@
 # 문서 색인
 
+- [MVP 배포 준비 보고서](mvp-readiness.md): 승인된 범위·검증 결과·무료 VM 가능성·배포 전 남은 작업
+- [단일 VM 배포 자산](../deploy/README.md): 컨테이너·로컬 smoke·백업/복원·비용 통제
+- [목록 관리·영구 삭제 결정](decisions/0018-decision-management-and-deletion.md)
+- [초대형 MVP 배포 준비 결정](decisions/0019-portfolio-deployment-preparation.md)
+
 - [조건 비교와 결정 당시 근거](decisions/0017-comparison-and-resolution-context.md): 같은 후보에서 조건 변경, 직접 확인, 보류·복원, 결정 snapshot
 - [비교 흐름 검증과 사용자 평가 준비](evaluations/comparison-flow-2026-11-05/README.md): 자동 검증·가상 자료·범용 AI와 비교할 과제·미검증 한계
 
