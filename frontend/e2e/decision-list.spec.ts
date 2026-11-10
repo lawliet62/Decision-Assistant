@@ -4,11 +4,44 @@ test.beforeEach(async ({ request }) => {
   await request.post("http://127.0.0.1:18080/__test/decision-list", { data: {} });
 });
 
+test("상태별 페이지 선택과 모든 페이지 선택은 다른 상태의 선택을 유지한다", async ({ page }) => {
+  await page.goto("/?open=DRAFT,CHOSEN");
+  const draft = page.getByRole("region", { name: "비교 중", exact: true });
+  const chosen = page.getByRole("region", { name: "선택 완료", exact: true });
+  await chosen.getByRole("checkbox", { name: "결정 12 선택" }).check();
+  await draft.getByRole("button", { name: "이 페이지 선택" }).click();
+  await expect(page.getByText("11개 선택", { exact: false })).toBeVisible();
+  await draft.getByRole("button", { name: "다음" }).click();
+  await expect(draft.getByRole("checkbox", { name: "결정 01 선택" })).not.toBeChecked();
+  await expect(chosen.getByRole("checkbox", { name: "결정 12 선택" })).toBeChecked();
+  await draft.getByRole("button", { name: "이 상태 전체 선택" }).click();
+  await expect(page.getByText("12개 선택", { exact: false })).toBeVisible();
+  await expect(draft.getByRole("checkbox", { name: "결정 01 선택" })).toBeChecked();
+  await expect(chosen.getByRole("checkbox", { name: "결정 12 선택" })).toBeChecked();
+  await expect(chosen.getByRole("checkbox", { name: "결정 13 선택" })).not.toBeChecked();
+  await page.getByRole("button", { name: "선택 삭제" }).click();
+  await expect(page.getByRole("dialog")).toContainText("12개");
+});
+
+test("상태 전체 선택 실패 시 다른 선택을 보존하고 빈 그룹은 선택을 비활성화한다", async ({ page }) => {
+  await page.goto("/?open=DRAFT,ARCHIVED");
+  const draft = page.getByRole("region", { name: "비교 중", exact: true });
+  const archived = page.getByRole("region", { name: "보관됨", exact: true });
+  await expect(archived.getByRole("button", { name: "이 페이지 선택" })).toBeDisabled();
+  await expect(archived.getByRole("button", { name: "이 상태 전체 선택" })).toBeDisabled();
+  await draft.getByRole("checkbox", { name: "결정 11 선택" }).check();
+  await page.route("**/api/v1/decisions/selection?*", route => route.fulfill({ status: 503, json: {} }));
+  await draft.getByRole("button", { name: "이 상태 전체 선택" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "전체 선택을 불러오지 못했습니다" })).toBeVisible();
+  await expect(draft.getByRole("checkbox", { name: "결정 11 선택" })).toBeChecked();
+  await expect(page.getByText("1개 선택", { exact: false })).toBeVisible();
+});
+
 test("표시 상태 전체 선택은 모든 페이지와 접힌 그룹을 포함하고 선택 후 필터 변경에도 유지된다", async ({ page }) => {
   await page.goto("/?statuses=DRAFT,CHOSEN&open=DRAFT");
   const draft = page.getByRole("region", { name: "비교 중", exact: true });
   await expect(draft.getByRole("listitem")).toHaveCount(10);
-  await page.getByRole("button", { name: "표시 상태의 결정 전체 선택" }).click();
+  await page.getByRole("button", { name: "표시 상태 전체 선택" }).click();
   await expect(page.getByText("13개 선택", { exact: false })).toBeVisible();
   await page.getByRole("checkbox", { name: "선택 완료", exact: true }).uncheck();
   await expect(page.getByText("현재 화면에 없는 결정 3개", { exact: false })).toBeVisible();
@@ -49,7 +82,7 @@ test("페이지 간 개별 선택과 전체 선택 오류, 이미 삭제된 결�
   await draft.getByRole("button", { name: "다음" }).click();
   await draft.getByRole("checkbox", { name: "결정 01 선택" }).check();
   await page.route("**/api/v1/decisions/selection?*", route => route.fulfill({ status: 503, json: {} }));
-  await page.getByRole("button", { name: "표시 상태의 결정 전체 선택" }).click();
+  await page.getByRole("button", { name: "표시 상태 전체 선택" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "전체 선택을 불러오지 못했습니다" })).toBeVisible();
   await expect(page.getByText("2개 선택", { exact: false })).toBeVisible();
   await page.route("**/api/v1/decisions/*?expectedVersion=*", route => route.fulfill({ status: 404, json: {} }));

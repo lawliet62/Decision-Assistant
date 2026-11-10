@@ -75,13 +75,16 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
     if (!item.id) return;
     setChosen(previous => { const next = { ...previous }; if (checked) next[item.id!] = item; else delete next[item.id!]; return next; });
   }
-  async function selectAll() {
-    if (!selected.length) return;
+  function selectItems(items: Summary[]) {
+    setChosen(previous => { const next = { ...previous }; items.forEach(item => { if (item.id) next[item.id] = item; }); return next; });
+  }
+  async function selectAll(scope: Status[]) {
+    if (!scope.length || selecting) return;
     setSelecting(true); setSelectionError("");
     try {
-      const result = await api.GET("/api/v1/decisions/selection", { params: { query: { statuses: selected } } });
+      const result = await api.GET("/api/v1/decisions/selection", { params: { query: { statuses: scope } } });
       if (!result.data) throw new Error("selection failed");
-      setChosen(previous => { const next = { ...previous }; result.data!.forEach(item => { if (item.id) next[item.id] = item; }); return next; });
+      selectItems(result.data);
     } catch { setSelectionError("전체 선택을 불러오지 못했습니다. 다시 시도해 주세요."); }
     finally { setSelecting(false); }
   }
@@ -96,7 +99,7 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
       <div className="mt-4 flex gap-2"><button className={button} onClick={() => select(statuses)}>전체 선택</button><button className={button} onClick={() => select([])}>전체 해제</button></div>
     </fieldset>
     <div className="flex flex-wrap items-center gap-2" aria-label="결정 선택">
-      <button className={button} disabled={selecting || selected.length === 0} onClick={selectAll}>{selecting ? "불러오는 중…" : "표시 상태의 결정 전체 선택"}</button>
+      <button className={button} disabled={selecting || selected.length === 0} onClick={() => selectAll(selected)}>{selecting ? "불러오는 중…" : "표시 상태 전체 선택"}</button>
       <button className={button} disabled={!Object.keys(chosen).length || selecting} onClick={() => setChosen({})}>결정 선택 해제</button>
       <button className={button + " text-red-700"} disabled={!Object.keys(chosen).length || selecting} onClick={() => setBulkOpen(true)}>선택 삭제</button>
       <span role="status" className="text-sm">{Object.keys(chosen).length}개 선택 · 현재 화면에 없는 결정 {Object.keys(chosen).filter(id => !Object.values(visibleGroups).some(ids => ids?.includes(id))).length}개</span>
@@ -121,7 +124,7 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
         <h3><button aria-expanded={open} aria-controls={`group-${s}`} className="flex w-full items-center justify-between gap-4 p-4 text-left font-semibold hover:bg-zinc-50" onClick={() => changeQuery(p => p.set("open", (open ? opened.filter(item => item !== s) : [...opened.filter(Boolean), s]).join(",")))}>
           <span>{labels[s]} <span className="ml-2 text-sm font-normal text-zinc-500">{counts.find(item => item.status === s)?.count ?? 0}건</span></span><span aria-hidden="true">{open ? "−" : "+"}</span>
         </button></h3>
-        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}-${revision}`} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} chosen={chosen} onToggle={toggle} updateVisible={updateVisible} />}</div>
+        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}-${revision}`} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} chosen={chosen} onToggle={toggle} updateVisible={updateVisible} selecting={selecting} onSelectItems={selectItems} onSelectStatus={() => selectAll([s])} />}</div>
       </section>;
     })}
     {deleting && <DeleteDialog decision={deleting} onCancel={() => setDeleting(undefined)} onDeleted={onDeleted} onRefresh={onRefresh} />}
@@ -129,7 +132,7 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
   </>;
 }
 
-function DecisionGroup({ status, page, sort, direction, onDelete, chosen, onToggle, updateVisible }: { status: Status; page: number; sort: Sort; direction: "ASC" | "DESC"; onDelete: (d: Summary) => void; chosen: Record<string, Summary>; onToggle: (d: Summary, checked: boolean) => void; updateVisible: (status: Status, ids: string[]) => void }) {
+function DecisionGroup({ status, page, sort, direction, onDelete, chosen, onToggle, updateVisible, selecting, onSelectItems, onSelectStatus }: { status: Status; page: number; sort: Sort; direction: "ASC" | "DESC"; onDelete: (d: Summary) => void; chosen: Record<string, Summary>; onToggle: (d: Summary, checked: boolean) => void; updateVisible: (status: Status, ids: string[]) => void; selecting: boolean; onSelectItems: (items: Summary[]) => void; onSelectStatus: () => void }) {
   const [result, setResult] = useState<Page>();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -150,6 +153,10 @@ function DecisionGroup({ status, page, sort, direction, onDelete, chosen, onTogg
   if (error) return <div role="alert" className="p-4">결정을 불러오지 못했습니다. <button className={button} onClick={() => setAttempt(v => v + 1)}>다시 시도</button></div>;
   if (!result) return <p role="status" className="p-4">결정을 불러오는 중입니다.</p>;
   return <div className="border-t border-zinc-100 p-4">
+    <div className="mb-4 flex flex-wrap gap-2">
+      <button className={button} disabled={selecting || !result.items?.length} onClick={() => onSelectItems(result.items ?? [])}>이 페이지 선택</button>
+      <button className={button} disabled={selecting || !result.totalElements} onClick={onSelectStatus}>이 상태 전체 선택</button>
+    </div>
     {!result.items?.length ? <p className="text-sm text-zinc-500">이 상태의 결정이 없습니다.</p> : <ul className="divide-y divide-zinc-100">{result.items.map(d => <li key={d.id} className="flex items-center gap-3 py-3 first:pt-0">
       <input type="checkbox" aria-label={`${d.title} 선택`} checked={!!d.id && !!chosen[d.id]} onChange={e => onToggle(d, e.target.checked)} />
       <Link href={`/decisions/${d.id}`} className="min-w-0 flex-1 rounded-md py-1 hover:text-emerald-700">
