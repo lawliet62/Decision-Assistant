@@ -48,6 +48,12 @@ public class DecisionController {
     @GetMapping("/counts")
     public List<StatusCount> counts() { return service.counts(); }
 
+    @GetMapping("/selection")
+    public List<DecisionSummary> selection(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) java.util.Set<DecisionTypes.DecisionStatus> statuses) {
+        return service.selection(statuses);
+    }
+
     @org.springframework.web.bind.annotation.DeleteMapping("/{decisionId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID decisionId,

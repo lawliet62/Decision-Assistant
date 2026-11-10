@@ -139,6 +139,12 @@ class DecisionApiIntegrationTest {
         seedDecision(owner, "완료", "CHOSEN", "LAPTOP");
         seedDecision(owner, "보류", "DEFERRED", "PHONE");
         seedDecision(createOtherUser(), "다른 사용자", "DRAFT", "EARBUDS");
+        mvc.perform(get("/api/v1/decisions/selection").with(signedIn(owner)).param("statuses", "DRAFT", "CHOSEN"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(14))
+                .andExpect(jsonPath("$[0].id").isNotEmpty()).andExpect(jsonPath("$[0].version").value(0));
+        mvc.perform(get("/api/v1/decisions/selection").with(signedIn(owner)).param("statuses", "ARCHIVED"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/v1/decisions/selection")).andExpect(status().isUnauthorized());
         var seen = new java.util.HashSet<String>();
         for (int page = 0; page < 2; page++) {
             var response = mapper.readTree(mvc.perform(get("/api/v1/decisions").with(signedIn(owner))

@@ -421,6 +421,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["selection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/counts": {
         parameters: {
             query?: never;
@@ -1869,6 +1885,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["EvaluationResponse"];
+                };
+            };
+        };
+    };
+    selection: {
+        parameters: {
+            query?: {
+                statuses?: ("DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionSummary"][];
                 };
             };
         };

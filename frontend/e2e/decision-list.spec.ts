@@ -4,6 +4,62 @@ test.beforeEach(async ({ request }) => {
   await request.post("http://127.0.0.1:18080/__test/decision-list", { data: {} });
 });
 
+test("표시 상태 전체 선택은 모든 페이지와 접힌 그룹을 포함하고 선택 후 필터 변경에도 유지된다", async ({ page }) => {
+  await page.goto("/?statuses=DRAFT,CHOSEN&open=DRAFT");
+  const draft = page.getByRole("region", { name: "비교 중", exact: true });
+  await expect(draft.getByRole("listitem")).toHaveCount(10);
+  await page.getByRole("button", { name: "표시 상태의 결정 전체 선택" }).click();
+  await expect(page.getByText("13개 선택", { exact: false })).toBeVisible();
+  await page.getByRole("checkbox", { name: "선택 완료", exact: true }).uncheck();
+  await expect(page.getByText("현재 화면에 없는 결정 3개", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "선택 삭제" }).click();
+  await expect(page.getByRole("dialog")).toContainText("13개");
+  await page.getByRole("dialog").getByRole("button", { name: "취소" }).click();
+  await expect(page.getByText("13개 선택", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "선택 삭제" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "영구 삭제" }).click();
+  await expect(page.getByRole("dialog")).toContainText("13개 삭제 또는 이미 삭제됨");
+  await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByRole("button", { name: "비교 중 0건" })).toBeVisible();
+});
+
+test("개별 복수 선택의 일부 충돌과 통신 실패를 표시하고 성공분만 선택에서 제거한다", async ({ page }) => {
+  await page.goto("/?open=DRAFT");
+  await page.getByRole("checkbox", { name: "결정 11 선택" }).check();
+  await page.getByRole("checkbox", { name: "결정 10 선택" }).check();
+  await page.getByRole("checkbox", { name: "결정 09 선택" }).check();
+  await page.route("**/api/v1/decisions/*?expectedVersion=*", async route => {
+    if (route.request().url().includes("99999999-9999-9999-9999-000000000009")) return route.fulfill({ status: 409, json: {} });
+    if (route.request().url().includes("99999999-9999-9999-9999-000000000008")) return route.abort();
+    return route.continue();
+  });
+  await page.getByRole("button", { name: "선택 삭제" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "영구 삭제" }).click();
+  await expect(page.getByRole("dialog")).toContainText("1개 삭제 또는 이미 삭제됨 · 2개 확인 필요");
+  await expect(page.getByRole("dialog")).toContainText("다른 곳에서 변경됨");
+  await expect(page.getByRole("dialog")).toContainText("결과 확인 불가");
+  await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByText("2개 선택", { exact: false })).toBeVisible();
+});
+
+test("페이지 간 개별 선택과 전체 선택 오류, 이미 삭제된 결정의 결과를 처리한다", async ({ page }) => {
+  await page.goto("/?open=DRAFT");
+  const draft = page.getByRole("region", { name: "비교 중", exact: true });
+  await draft.getByRole("checkbox", { name: "결정 11 선택" }).check();
+  await draft.getByRole("button", { name: "다음" }).click();
+  await draft.getByRole("checkbox", { name: "결정 01 선택" }).check();
+  await page.route("**/api/v1/decisions/selection?*", route => route.fulfill({ status: 503, json: {} }));
+  await page.getByRole("button", { name: "표시 상태의 결정 전체 선택" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "전체 선택을 불러오지 못했습니다" })).toBeVisible();
+  await expect(page.getByText("2개 선택", { exact: false })).toBeVisible();
+  await page.route("**/api/v1/decisions/*?expectedVersion=*", route => route.fulfill({ status: 404, json: {} }));
+  await page.getByRole("button", { name: "선택 삭제" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "영구 삭제" }).click();
+  await expect(page.getByRole("dialog")).toContainText("2개 삭제 또는 이미 삭제됨 · 0개 확인 필요");
+  await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+  await expect(page.getByText("0개 선택", { exact: false })).toBeVisible();
+});
+
 test("상태 그룹은 기본 접힘이며 복수 선택과 그룹별 페이지·탐색 복원을 지원한다", async ({ page }) => {
   const lists: string[] = [];
   page.on("request", r => { if (new URL(r.url()).pathname === "/api/v1/decisions") lists.push(r.url()); });

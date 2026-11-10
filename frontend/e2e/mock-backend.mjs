@@ -111,6 +111,10 @@ const server = http.createServer(async (request, response) => {
     const rows = listFixture ?? (current ? [current] : []);
     return send(200, ["DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED"].map(status => ({ status, count: rows.filter(d => d.status === status).length })));
   }
+  if (request.method === "GET" && url.pathname === "/api/v1/decisions/selection") {
+    const selected = url.searchParams.getAll("statuses").flatMap(s => s.split(","));
+    return send(200, (listFixture ?? (current ? [current] : [])).filter(d => !selected.length || selected.includes(d.status)));
+  }
   if (request.method === "GET" && url.pathname === "/api/v1/decisions") {
     const selected = url.searchParams.getAll("statuses").flatMap(s => s.split(","));
     const rows = (listFixture ?? (current ? [current] : [])).filter(d => !selected.length || selected.includes(d.status));
