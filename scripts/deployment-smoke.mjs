@@ -1,9 +1,10 @@
-// 로컬 Compose synthetic DB 전용: 실제 사용자/운영 endpoint를 인자로 받을 수 없다.
+// 로컬 Compose synthetic DB 전용: 승인된 loopback 주소 외에는 요청하지 않는다.
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
-const origin = "http://127.0.0.1:3180";
+const origin = process.env.DECISION_SMOKE_ORIGIN ?? "http://127.0.0.1:3180";
+assert(["http://127.0.0.1:3180", "http://127.0.0.1:3101"].includes(origin), "local smoke origin only");
 const created = [];
 let cookie = "";
 let csrf = "";
@@ -49,6 +50,10 @@ try {
   assert.equal(finished.status, "ABANDONED");
   const multi = await call("/api/v1/decisions?statuses=DRAFT,ABANDONED&size=50");
   assert(multi.items.some(d => d.id === item.id));
+  const selection = await call("/api/v1/decisions/selection?statuses=DRAFT&statuses=ABANDONED");
+  assert.equal(selection.length, 13);
+  assert(selection.some(d => d.id === item.id && d.version === finished.version));
+  assert.equal((await call("/api/v1/decisions/selection?statuses=ABANDONED")).length, 1);
   const times = [];
   for (let batch = 0; batch < 20; batch++) await Promise.all(Array.from({ length: 5 }, async () => {
     const start = performance.now();
@@ -90,6 +95,14 @@ try {
     await mkdir("backend/build/deployment-smoke", { recursive: true });
     await page.goto(origin + "/?open=DRAFT,ABANDONED");
     await page.getByRole("region", { name: "비교 중", exact: true }).getByRole("listitem").first().waitFor();
+    const group = page.getByRole("region", { name: "비교 중", exact: true });
+    const statusToggle = group.getByRole("button", { name: "이 상태 전체 선택" });
+    await statusToggle.click();
+    await page.waitForFunction(() => document.querySelector('[aria-label="비교 중"] button[aria-pressed="true"]') !== null);
+    assert.equal(await statusToggle.getAttribute("aria-pressed"), "true");
+    await statusToggle.click();
+    assert.equal(await statusToggle.getAttribute("aria-pressed"), "false");
+    report.browserSelectionToggle = true;
     await page.screenshot({ path: "backend/build/deployment-smoke/desktop.png", fullPage: true });
     await page.setViewportSize({ width: 375, height: 812 });
     await page.screenshot({ path: "backend/build/deployment-smoke/mobile.png", fullPage: true });

@@ -15,6 +15,7 @@ const labels: Record<Status, string> = { DRAFT: "비교 중", DEFERRED: "보류"
 const categories: Record<string, string> = { LAPTOP: "노트북", PHONE: "휴대폰", TABLET: "태블릿", MONITOR: "모니터", EARBUDS: "무선 이어폰", CUSTOM: "직접 비교" };
 const sorts: Record<Sort, string> = { UPDATED_AT: "수정일", CREATED_AT: "생성일", TITLE: "제목", TEMPLATE_KEY: "제품군" };
 const button = "rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed";
+const pressedButton = button + " aria-disabled:opacity-40 aria-disabled:cursor-wait aria-pressed:bg-emerald-700 aria-pressed:text-white aria-pressed:border-emerald-700 aria-pressed:hover:bg-emerald-800";
 const date = (value?: string) => value ? new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeZone: "Asia/Seoul" }).format(new Date(value)) : "확인 필요";
 
 function changeQuery(change: (params: URLSearchParams) => void) {
@@ -41,7 +42,7 @@ export function DecisionList() {
       <button ref={refreshButton} className={button} onClick={() => setRevision(v => v + 1)}>목록 새로고침</button></div>
     <p className="text-sm text-zinc-600">상태를 선택하고 그룹을 펼쳐 저장한 결정을 확인하세요.</p>
     <p role="status" className="text-sm text-emerald-800">{notice}</p>
-    <LoadedList key={revision} onRefresh={() => { setRevision(v => v + 1); refreshButton.current?.focus(); }} onDeleted={() => { setNotice("결정과 연결된 기록을 영구 삭제했습니다."); setRevision(v => v + 1); refreshButton.current?.focus(); }} />
+    <LoadedList key={revision} onRefresh={() => { setRevision(v => v + 1); refreshButton.current?.focus(); }} onDeleted={() => { setNotice("결정과 연결된 기록을 영구 삭제했습니다."); refreshButton.current?.focus(); }} />
   </section>;
 }
 
@@ -52,8 +53,10 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
   const [error, setError] = useState(false);
   const [deleting, setDeleting] = useState<Summary>();
   const [chosen, setChosen] = useState<Record<string, Summary>>({});
+  const [snapshots, setSnapshots] = useState<Partial<Record<Status, Summary[]>>>({});
   const [selecting, setSelecting] = useState(false);
   const [selectionError, setSelectionError] = useState("");
+  const [errorStatus, setErrorStatus] = useState<Status>();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [revision, setRevision] = useState(0);
   const [visibleGroups, setVisibleGroups] = useState<Partial<Record<Status, string[]>>>({});
@@ -78,14 +81,37 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
   function selectItems(items: Summary[]) {
     setChosen(previous => { const next = { ...previous }; items.forEach(item => { if (item.id) next[item.id] = item; }); return next; });
   }
-  async function selectAll(scope: Status[]) {
+  function unselectItems(items: Summary[]) {
+    setChosen(previous => { const next = { ...previous }; items.forEach(item => { if (item.id) delete next[item.id]; }); return next; });
+  }
+  function scopeIsSelected(scope: Status[]) {
+    const populated = scope.filter(s => (counts?.find(item => item.status === s)?.count ?? 0) > 0);
+    return populated.length > 0 && populated.every(s => {
+      const snapshot = snapshots[s];
+      return snapshot && snapshot.length === counts?.find(item => item.status === s)?.count && snapshot.every(item => item.id && chosen[item.id]);
+    });
+  }
+  async function selectAll(scope: Status[], source?: Status) {
     if (!scope.length || selecting) return;
+    setErrorStatus(source);
+    if (scopeIsSelected(scope)) {
+      unselectItems(scope.flatMap(s => snapshots[s] ?? []));
+      setSelectionError("");
+      return;
+    }
     setSelecting(true); setSelectionError("");
     try {
       const result = await api.GET("/api/v1/decisions/selection", { params: { query: { statuses: scope } } });
-      if (!result.data) throw new Error("selection failed");
+      if (!result.data) {
+        setSelectionError(result.response.status === 403 || result.response.status === 404
+          ? "선택 요청이 거부되었습니다. 로그인과 앱 서버 버전을 확인하고, 서버를 최신 버전으로 다시 시작한 뒤 시도해 주세요."
+          : "결정 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
       selectItems(result.data);
-    } catch { setSelectionError("전체 선택을 불러오지 못했습니다. 다시 시도해 주세요."); }
+      const items = result.data;
+      setSnapshots(previous => { const next = { ...previous }; scope.forEach(s => { next[s] = items.filter(item => item.status === s); }); return next; });
+    } catch { setSelectionError("서버에 연결하지 못했습니다. 연결을 확인하고 다시 시도해 주세요."); }
     finally { setSelecting(false); }
   }
   if (error) return <div role="alert" className="rounded-xl border border-red-200 p-5">목록을 불러오지 못했습니다. <button className={button} onClick={onRefresh}>다시 시도</button></div>;
@@ -94,17 +120,18 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
     <fieldset className="rounded-xl border border-zinc-200 p-4">
       <legend className="px-1 text-sm font-semibold">표시할 상태 (복수 선택)</legend>
       <div className="flex flex-wrap gap-x-5 gap-y-3">{statuses.map(s => <label key={s} className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={selected.includes(s)} onChange={e => select(e.target.checked ? [...selected, s] : selected.filter(item => item !== s))} />{labels[s]}
+        <input type="checkbox" disabled={selecting} checked={selected.includes(s)} onChange={e => select(e.target.checked ? [...selected, s] : selected.filter(item => item !== s))} />{labels[s]}
       </label>)}</div>
-      <div className="mt-4 flex gap-2"><button className={button} onClick={() => select(statuses)}>전체 선택</button><button className={button} onClick={() => select([])}>전체 해제</button></div>
+      <div className="mt-4 flex gap-2"><button className={button} disabled={selecting} onClick={() => select(statuses)}>전체 선택</button><button className={button} disabled={selecting} onClick={() => select([])}>전체 해제</button></div>
     </fieldset>
     <div className="flex flex-wrap items-center gap-2" aria-label="결정 선택">
-      <button className={button} disabled={selecting || selected.length === 0} onClick={() => selectAll(selected)}>{selecting ? "불러오는 중…" : "표시 상태 전체 선택"}</button>
+      <button className={pressedButton} aria-pressed={scopeIsSelected(selected)} aria-disabled={selecting} disabled={selected.length === 0} onClick={() => selectAll(selected)}>선택한 상태 결정 모두 선택</button>
       <button className={button} disabled={!Object.keys(chosen).length || selecting} onClick={() => setChosen({})}>결정 선택 해제</button>
       <button className={button + " text-red-700"} disabled={!Object.keys(chosen).length || selecting} onClick={() => setBulkOpen(true)}>선택 삭제</button>
       <span role="status" className="text-sm">{Object.keys(chosen).length}개 선택 · 현재 화면에 없는 결정 {Object.keys(chosen).filter(id => !Object.values(visibleGroups).some(ids => ids?.includes(id))).length}개</span>
     </div>
-    {selectionError && <p role="alert">{selectionError}</p>}
+    <p className="text-xs text-zinc-500">전체 선택은 누른 시점의 결정을 기준으로 합니다. 새로 추가된 결정은 다시 선택해 주세요.</p>
+    {selectionError && !errorStatus && <p role="alert">{selectionError}</p>}
     <div className="flex flex-wrap items-center gap-3">
       <label className="text-sm">정렬 기준 <select className={button} value={sort} onChange={e => changeQuery(p => { p.set("sort", e.target.value); resetPages(p); })}>
         {Object.entries(sorts).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -124,15 +151,15 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
         <h3><button aria-expanded={open} aria-controls={`group-${s}`} className="flex w-full items-center justify-between gap-4 p-4 text-left font-semibold hover:bg-zinc-50" onClick={() => changeQuery(p => p.set("open", (open ? opened.filter(item => item !== s) : [...opened.filter(Boolean), s]).join(",")))}>
           <span>{labels[s]} <span className="ml-2 text-sm font-normal text-zinc-500">{counts.find(item => item.status === s)?.count ?? 0}건</span></span><span aria-hidden="true">{open ? "−" : "+"}</span>
         </button></h3>
-        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}-${revision}`} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} chosen={chosen} onToggle={toggle} updateVisible={updateVisible} selecting={selecting} onSelectItems={selectItems} onSelectStatus={() => selectAll([s])} />}</div>
+        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}-${revision}`} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} chosen={chosen} onToggle={toggle} updateVisible={updateVisible} selecting={selecting} onSelectItems={selectItems} onUnselectItems={unselectItems} onSelectStatus={() => selectAll([s], s)} statusSelected={!!scopeIsSelected([s])} allSelected={!!scopeIsSelected(selected)} onSelectAll={() => selectAll(selected, s)} onClear={() => setChosen({})} onBulkDelete={() => setBulkOpen(true)} selectionError={errorStatus === s ? selectionError : ""} />}</div>
       </section>;
     })}
-    {deleting && <DeleteDialog decision={deleting} onCancel={() => setDeleting(undefined)} onDeleted={onDeleted} onRefresh={onRefresh} />}
+    {deleting && <DeleteDialog decision={deleting} onCancel={() => setDeleting(undefined)} onDeleted={() => { if (deleting.id) setChosen(previous => { const next = { ...previous }; delete next[deleting.id!]; return next; }); setDeleting(undefined); setRevision(v => v + 1); onDeleted(); }} onRefresh={onRefresh} />}
     {bulkOpen && <BulkDeleteDialog decisions={Object.values(chosen)} onCancel={() => setBulkOpen(false)} onFinished={remaining => { setChosen(Object.fromEntries(remaining.filter(item => item.id).map(item => [item.id!, item]))); setRevision(v => v + 1); }} />}
   </>;
 }
 
-function DecisionGroup({ status, page, sort, direction, onDelete, chosen, onToggle, updateVisible, selecting, onSelectItems, onSelectStatus }: { status: Status; page: number; sort: Sort; direction: "ASC" | "DESC"; onDelete: (d: Summary) => void; chosen: Record<string, Summary>; onToggle: (d: Summary, checked: boolean) => void; updateVisible: (status: Status, ids: string[]) => void; selecting: boolean; onSelectItems: (items: Summary[]) => void; onSelectStatus: () => void }) {
+function DecisionGroup({ status, page, sort, direction, onDelete, chosen, onToggle, updateVisible, selecting, onSelectItems, onUnselectItems, onSelectStatus, statusSelected, allSelected, onSelectAll, onClear, onBulkDelete, selectionError }: { status: Status; page: number; sort: Sort; direction: "ASC" | "DESC"; onDelete: (d: Summary) => void; chosen: Record<string, Summary>; onToggle: (d: Summary, checked: boolean) => void; updateVisible: (status: Status, ids: string[]) => void; selecting: boolean; onSelectItems: (items: Summary[]) => void; onUnselectItems: (items: Summary[]) => void; onSelectStatus: () => void; statusSelected: boolean; allSelected: boolean; onSelectAll: () => void; onClear: () => void; onBulkDelete: () => void; selectionError: string }) {
   const [result, setResult] = useState<Page>();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -152,13 +179,18 @@ function DecisionGroup({ status, page, sort, direction, onDelete, chosen, onTogg
   }, [status, result, updateVisible]);
   if (error) return <div role="alert" className="p-4">결정을 불러오지 못했습니다. <button className={button} onClick={() => setAttempt(v => v + 1)}>다시 시도</button></div>;
   if (!result) return <p role="status" className="p-4">결정을 불러오는 중입니다.</p>;
+  const pageSelected = !!result.items?.length && result.items.every(item => item.id && chosen[item.id]);
   return <div className="border-t border-zinc-100 p-4">
-    <div className="mb-4 flex flex-wrap gap-2">
-      <button className={button} disabled={selecting || !result.items?.length} onClick={() => onSelectItems(result.items ?? [])}>이 페이지 선택</button>
-      <button className={button} disabled={selecting || !result.totalElements} onClick={onSelectStatus}>이 상태 전체 선택</button>
+    <div className="mb-4 flex flex-wrap items-center gap-2" aria-label={`${labels[status]} 결정 선택`}>
+      <button className={pressedButton} aria-pressed={pageSelected} aria-disabled={selecting} disabled={!result.items?.length} onClick={() => { if (selecting) return; if (pageSelected) onUnselectItems(result.items ?? []); else onSelectItems(result.items ?? []); }}>이 페이지 선택</button>
+      <button className={pressedButton} aria-pressed={statusSelected} aria-disabled={selecting} disabled={!result.totalElements} onClick={onSelectStatus}>이 상태 전체 선택</button>
+      <button className={pressedButton} aria-pressed={allSelected} aria-disabled={selecting} onClick={onSelectAll}>선택한 상태 결정 모두 선택</button>
+      <button className={button} disabled={selecting || !Object.keys(chosen).length} onClick={onClear}>결정 선택 해제</button>
+      <button className={button + " text-red-700"} disabled={selecting || !Object.keys(chosen).length} onClick={onBulkDelete}>선택 삭제</button>
     </div>
+    {selectionError && <p role="alert" className="mb-4 text-red-700">{selectionError}</p>}
     {!result.items?.length ? <p className="text-sm text-zinc-500">이 상태의 결정이 없습니다.</p> : <ul className="divide-y divide-zinc-100">{result.items.map(d => <li key={d.id} className="flex items-center gap-3 py-3 first:pt-0">
-      <input type="checkbox" aria-label={`${d.title} 선택`} checked={!!d.id && !!chosen[d.id]} onChange={e => onToggle(d, e.target.checked)} />
+      <input type="checkbox" aria-label={`${d.title} 선택`} disabled={selecting} checked={!!d.id && !!chosen[d.id]} onChange={e => onToggle(d, e.target.checked)} />
       <Link href={`/decisions/${d.id}`} className="min-w-0 flex-1 rounded-md py-1 hover:text-emerald-700">
         <span className="block break-words font-medium">{d.title}</span><span className="mt-1 block text-sm text-zinc-500">{categories[d.templateKey ?? ""] ?? "직접 비교"} · {labels[status]}</span>
         <span className="mt-1 block text-xs text-zinc-500">생성 {date(d.createdAt)} · 수정 {date(d.updatedAt)}</span>
@@ -201,7 +233,7 @@ function BulkDeleteDialog({ decisions, onCancel, onFinished }: { decisions: Summ
   return <dialog ref={dialog} aria-labelledby="bulk-delete-title" onCancel={e => { e.preventDefault(); if (!busy) onCancel(); }} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl p-6 shadow-xl backdrop:bg-black/40">
     <h2 id="bulk-delete-title" className="text-xl font-semibold">선택한 결정 {snapshot.length}개를 영구 삭제할까요?</h2>
     <p className="mt-3 text-sm">후보, 평가·AI 기록, 회고, 예약 알림과 각 결정에서 생성된 성향 기억도 삭제됩니다. 앱에서 복구할 수 없습니다. 이미 전송된 요청과 다른 결정에 적용된 값은 유지됩니다.</p>
-    {report && <div role="status" className="mt-4"><p>{report.success}개 삭제 또는 이미 삭제됨 · {report.failures.length}개 확인 필요</p>{report.failures.length > 0 && <ul className="mt-2 max-h-48 overflow-auto">{report.failures.map(({ item, reason }) => <li key={item.id}>{item.title}: {reason}</li>)}</ul>}<p>변경되었거나 결과를 확인할 수 없는 결정은 목록을 새로고침해 확인하세요.</p></div>}
+    {report && <div role="status" className="mt-4"><p>{report.success}개 삭제 또는 이미 삭제됨 · {report.failures.length}개 확인 필요</p>{report.failures.length > 0 && <><ul className="mt-2 max-h-48 overflow-auto">{report.failures.map(({ item, reason }) => <li key={item.id}>{item.title}: {reason}</li>)}</ul><p>변경되었거나 결과를 확인할 수 없는 결정은 목록을 새로고침해 확인하세요.</p></>}</div>}
     <div className="mt-5 flex justify-end gap-2"><button className={button} disabled={busy} onClick={onCancel}>{report ? "닫기" : "취소"}</button>{!report && <button className="rounded-lg bg-red-700 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={busy} onClick={remove}>{busy ? "삭제 중…" : "영구 삭제"}</button>}</div>
   </dialog>;
 }

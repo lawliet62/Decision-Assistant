@@ -25,6 +25,8 @@ docker compose --env-file deploy/.env.example -f deploy/compose.yaml -f deploy/c
 
 빌드는 운영 VM이 아닌 개발/CI 머신에서 수행한다. 운영 이미지는 검증한 digest로 고정하고, roll-forward에 사용할 이전 image digest도 기록한다. 로컬 smoke는 Auth0·GCP Identity·공개 HTTPS·실제 백업 저장소의 검증을 대체하지 않는다.
 
+별도 로컬 frontend를 `127.0.0.1:3101`에서 실행하고 같은 synthetic Compose backend에 연결한 경우, 검증 명령에 `DECISION_SMOKE_ORIGIN=http://127.0.0.1:3101`을 지정할 수 있다. 그 외 주소는 허용하지 않는다. smoke는 선택 API와 화면의 선택·해제도 실제 backend에서 확인한다.
+
 ## 실제 배포의 사전 조건
 
 1. [MVP 준비 보고서](../docs/mvp-readiness.md)의 비용·메모리 결과를 확인하고 유효한 크레딧/비용 승인을 받는다. 현재 추가 지출 허용액은 0원이다. 프로젝트 생성·결제 연결·유료 리소스 생성 명령은 제공된 스크립트에 포함하지 않는다.
