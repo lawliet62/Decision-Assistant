@@ -6,6 +6,8 @@
 
 `GET /api/v1/decisions/counts`는 소유자별 전체 상태 건수를 0건 상태까지 반환한다. 접힌 그룹은 목록 조회를 하지 않는다.
 
+`GET /api/v1/decisions/selection`은 소유자의 지정 `statuses`에 해당하는 결정 summary와 version을 페이지 제한 없이 단일 조회로 반환한다. 생략하면 모든 상태다. 이 응답은 선택 시점의 대상이며 이후 생성된 결정은 포함하지 않는다.
+
 `DELETE /api/v1/decisions/{id}?expectedVersion=N`은 CSRF·소유권·version을 검증한다. 성공은 204, stale version은 409, 타인/미존재/이미 삭제는 404다. 후보·평가·회고·작업·성향 기억의 실제 삭제 범위는 ADR 0018을 따른다. 새 Flyway V16으로 성향 기억 FK와 목록 index를 추가한다.
 
 Backend controller와 DTO annotation이 code-first source다. 실행된 integration test가 `/api/openapi` 결과를 `backend/build/generated/openapi.json`에 저장하며, review 가능한 계약은 `docs/api/openapi.json`에 commit한다.

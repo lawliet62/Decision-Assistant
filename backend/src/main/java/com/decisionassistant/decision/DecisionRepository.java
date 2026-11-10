@@ -21,6 +21,13 @@ public interface DecisionRepository extends JpaRepository<Decision, UUID> {
             UUID owner, java.util.Set<DecisionTypes.DecisionStatus> statuses, org.springframework.data.domain.Pageable pageable);
 
     @org.springframework.data.jpa.repository.Query("""
+            select new com.decisionassistant.decision.DecisionDtos$DecisionSummary(
+                d.id, d.version, d.title, d.templateKey, d.status, d.createdAt, d.updatedAt)
+            from Decision d where d.ownerUserId = :owner and d.status in :statuses order by d.id
+            """)
+    List<DecisionDtos.DecisionSummary> findSelection(UUID owner, java.util.Set<DecisionTypes.DecisionStatus> statuses);
+
+    @org.springframework.data.jpa.repository.Query("""
             select new com.decisionassistant.decision.DecisionDtos$StatusCount(d.status, count(d))
             from Decision d where d.ownerUserId = :owner group by d.status
             """)

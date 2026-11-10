@@ -1023,6 +1023,40 @@
         }
       }
     },
+    "/api/v1/decisions/selection" : {
+      "get" : {
+        "tags" : [ "decision-controller" ],
+        "operationId" : "selection",
+        "parameters" : [ {
+          "name" : "statuses",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED" ]
+            },
+            "uniqueItems" : true
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DecisionSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/decisions/counts" : {
       "get" : {
         "tags" : [ "decision-controller" ],

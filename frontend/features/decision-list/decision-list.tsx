@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
 
@@ -51,19 +51,40 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
   const [counts, setCounts] = useState<Count[]>();
   const [error, setError] = useState(false);
   const [deleting, setDeleting] = useState<Summary>();
+  const [chosen, setChosen] = useState<Record<string, Summary>>({});
+  const [selecting, setSelecting] = useState(false);
+  const [selectionError, setSelectionError] = useState("");
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const [visibleGroups, setVisibleGroups] = useState<Partial<Record<Status, string[]>>>({});
+  const updateVisible = useCallback((status: Status, ids: string[]) => setVisibleGroups(previous => ({ ...previous, [status]: ids })), []);
   useEffect(() => {
     const controller = new AbortController();
     api.GET("/api/v1/decisions/counts", { signal: controller.signal }).then(result => {
       if (!controller.signal.aborted) { if (result.data) setCounts(result.data); else setError(true); }
     }).catch(() => { if (!controller.signal.aborted) setError(true); });
     return () => controller.abort();
-  }, []);
+  }, [revision]);
   const selected = params.has("statuses") ? statuses.filter(s => params.get("statuses")!.split(",").includes(s)) : statuses;
   const opened = (params.get("open") ?? "").split(",");
   const rawSort = params.get("sort");
   const sort: Sort = rawSort && Object.hasOwn(sorts, rawSort) ? rawSort as Sort : "UPDATED_AT";
   const direction = params.get("direction") === "ASC" ? "ASC" : "DESC";
   function select(next: Status[]) { changeQuery(p => { p.set("statuses", next.join(",")); resetPages(p); }); }
+  function toggle(item: Summary, checked: boolean) {
+    if (!item.id) return;
+    setChosen(previous => { const next = { ...previous }; if (checked) next[item.id!] = item; else delete next[item.id!]; return next; });
+  }
+  async function selectAll() {
+    if (!selected.length) return;
+    setSelecting(true); setSelectionError("");
+    try {
+      const result = await api.GET("/api/v1/decisions/selection", { params: { query: { statuses: selected } } });
+      if (!result.data) throw new Error("selection failed");
+      setChosen(previous => { const next = { ...previous }; result.data!.forEach(item => { if (item.id) next[item.id] = item; }); return next; });
+    } catch { setSelectionError("전체 선택을 불러오지 못했습니다. 다시 시도해 주세요."); }
+    finally { setSelecting(false); }
+  }
   if (error) return <div role="alert" className="rounded-xl border border-red-200 p-5">목록을 불러오지 못했습니다. <button className={button} onClick={onRefresh}>다시 시도</button></div>;
   if (!counts) return <p role="status">결정 목록을 불러오는 중입니다.</p>;
   return <>
@@ -74,6 +95,13 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
       </label>)}</div>
       <div className="mt-4 flex gap-2"><button className={button} onClick={() => select(statuses)}>전체 선택</button><button className={button} onClick={() => select([])}>전체 해제</button></div>
     </fieldset>
+    <div className="flex flex-wrap items-center gap-2" aria-label="결정 선택">
+      <button className={button} disabled={selecting || selected.length === 0} onClick={selectAll}>{selecting ? "불러오는 중…" : "표시 상태의 결정 전체 선택"}</button>
+      <button className={button} disabled={!Object.keys(chosen).length || selecting} onClick={() => setChosen({})}>결정 선택 해제</button>
+      <button className={button + " text-red-700"} disabled={!Object.keys(chosen).length || selecting} onClick={() => setBulkOpen(true)}>선택 삭제</button>
+      <span role="status" className="text-sm">{Object.keys(chosen).length}개 선택 · 현재 화면에 없는 결정 {Object.keys(chosen).filter(id => !Object.values(visibleGroups).some(ids => ids?.includes(id))).length}개</span>
+    </div>
+    {selectionError && <p role="alert">{selectionError}</p>}
     <div className="flex flex-wrap items-center gap-3">
       <label className="text-sm">정렬 기준 <select className={button} value={sort} onChange={e => changeQuery(p => { p.set("sort", e.target.value); resetPages(p); })}>
         {Object.entries(sorts).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -93,14 +121,15 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
         <h3><button aria-expanded={open} aria-controls={`group-${s}`} className="flex w-full items-center justify-between gap-4 p-4 text-left font-semibold hover:bg-zinc-50" onClick={() => changeQuery(p => p.set("open", (open ? opened.filter(item => item !== s) : [...opened.filter(Boolean), s]).join(",")))}>
           <span>{labels[s]} <span className="ml-2 text-sm font-normal text-zinc-500">{counts.find(item => item.status === s)?.count ?? 0}건</span></span><span aria-hidden="true">{open ? "−" : "+"}</span>
         </button></h3>
-        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}`} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} />}</div>
+        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}-${revision}`} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} chosen={chosen} onToggle={toggle} updateVisible={updateVisible} />}</div>
       </section>;
     })}
     {deleting && <DeleteDialog decision={deleting} onCancel={() => setDeleting(undefined)} onDeleted={onDeleted} onRefresh={onRefresh} />}
+    {bulkOpen && <BulkDeleteDialog decisions={Object.values(chosen)} onCancel={() => setBulkOpen(false)} onFinished={remaining => { setChosen(Object.fromEntries(remaining.filter(item => item.id).map(item => [item.id!, item]))); setRevision(v => v + 1); }} />}
   </>;
 }
 
-function DecisionGroup({ status, page, sort, direction, onDelete }: { status: Status; page: number; sort: Sort; direction: "ASC" | "DESC"; onDelete: (d: Summary) => void }) {
+function DecisionGroup({ status, page, sort, direction, onDelete, chosen, onToggle, updateVisible }: { status: Status; page: number; sort: Sort; direction: "ASC" | "DESC"; onDelete: (d: Summary) => void; chosen: Record<string, Summary>; onToggle: (d: Summary, checked: boolean) => void; updateVisible: (status: Status, ids: string[]) => void }) {
   const [result, setResult] = useState<Page>();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -114,10 +143,15 @@ function DecisionGroup({ status, page, sort, direction, onDelete }: { status: St
     }).catch(() => { if (!controller.signal.aborted) setError(true); });
     return () => controller.abort();
   }, [status, page, sort, direction, attempt]);
+  useEffect(() => {
+    updateVisible(status, result?.items?.flatMap(item => item.id ? [item.id] : []) ?? []);
+    return () => updateVisible(status, []);
+  }, [status, result, updateVisible]);
   if (error) return <div role="alert" className="p-4">결정을 불러오지 못했습니다. <button className={button} onClick={() => setAttempt(v => v + 1)}>다시 시도</button></div>;
   if (!result) return <p role="status" className="p-4">결정을 불러오는 중입니다.</p>;
   return <div className="border-t border-zinc-100 p-4">
     {!result.items?.length ? <p className="text-sm text-zinc-500">이 상태의 결정이 없습니다.</p> : <ul className="divide-y divide-zinc-100">{result.items.map(d => <li key={d.id} className="flex items-center gap-3 py-3 first:pt-0">
+      <input type="checkbox" aria-label={`${d.title} 선택`} checked={!!d.id && !!chosen[d.id]} onChange={e => onToggle(d, e.target.checked)} />
       <Link href={`/decisions/${d.id}`} className="min-w-0 flex-1 rounded-md py-1 hover:text-emerald-700">
         <span className="block break-words font-medium">{d.title}</span><span className="mt-1 block text-sm text-zinc-500">{categories[d.templateKey ?? ""] ?? "직접 비교"} · {labels[status]}</span>
         <span className="mt-1 block text-xs text-zinc-500">생성 {date(d.createdAt)} · 수정 {date(d.updatedAt)}</span>
@@ -129,6 +163,40 @@ function DecisionGroup({ status, page, sort, direction, onDelete }: { status: St
       <button className={button} disabled={(result.page ?? 0) + 1 >= (result.totalPages ?? 0)} onClick={() => changeQuery(p => p.set(`page.${status}`, String((result.page ?? 0) + 1)))}>다음</button>
     </nav>}
   </div>;
+}
+
+function BulkDeleteDialog({ decisions, onCancel, onFinished }: { decisions: Summary[]; onCancel: () => void; onFinished: (remaining: Summary[]) => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [snapshot] = useState(decisions);
+  const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState<{ success: number; failures: { item: Summary; reason: string }[] }>();
+  useEffect(() => {
+    const element = dialog.current;
+    const trigger = document.activeElement;
+    element?.showModal();
+    return () => { element?.close(); if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus(); };
+  }, []);
+  async function remove() {
+    setBusy(true);
+    let success = 0;
+    const failures: { item: Summary; reason: string }[] = [];
+    for (const item of snapshot) {
+      try {
+        const result = await api.DELETE("/api/v1/decisions/{decisionId}", { params: { path: { decisionId: item.id! }, query: { expectedVersion: item.version! } } });
+        if (result.response.ok || result.response.status === 404) success++;
+        else failures.push({ item, reason: result.response.status === 409 ? "다른 곳에서 변경됨" : "삭제 실패" });
+      } catch { failures.push({ item, reason: "결과 확인 불가: 목록을 새로고침해 확인하세요" }); }
+    }
+    setReport({ success, failures });
+    onFinished(failures.map(failure => failure.item));
+    setBusy(false);
+  }
+  return <dialog ref={dialog} aria-labelledby="bulk-delete-title" onCancel={e => { e.preventDefault(); if (!busy) onCancel(); }} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl p-6 shadow-xl backdrop:bg-black/40">
+    <h2 id="bulk-delete-title" className="text-xl font-semibold">선택한 결정 {snapshot.length}개를 영구 삭제할까요?</h2>
+    <p className="mt-3 text-sm">후보, 평가·AI 기록, 회고, 예약 알림과 각 결정에서 생성된 성향 기억도 삭제됩니다. 앱에서 복구할 수 없습니다. 이미 전송된 요청과 다른 결정에 적용된 값은 유지됩니다.</p>
+    {report && <div role="status" className="mt-4"><p>{report.success}개 삭제 또는 이미 삭제됨 · {report.failures.length}개 확인 필요</p>{report.failures.length > 0 && <ul className="mt-2 max-h-48 overflow-auto">{report.failures.map(({ item, reason }) => <li key={item.id}>{item.title}: {reason}</li>)}</ul>}<p>변경되었거나 결과를 확인할 수 없는 결정은 목록을 새로고침해 확인하세요.</p></div>}
+    <div className="mt-5 flex justify-end gap-2"><button className={button} disabled={busy} onClick={onCancel}>{report ? "닫기" : "취소"}</button>{!report && <button className="rounded-lg bg-red-700 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={busy} onClick={remove}>{busy ? "삭제 중…" : "영구 삭제"}</button>}</div>
+  </dialog>;
 }
 
 function DeleteDialog({ decision, onCancel, onDeleted, onRefresh }: { decision: Summary; onCancel: () => void; onDeleted: () => void; onRefresh: () => void }) {

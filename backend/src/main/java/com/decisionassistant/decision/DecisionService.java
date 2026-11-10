@@ -212,6 +212,12 @@ public class DecisionService {
     }
 
     @Transactional(readOnly = true)
+    public List<DecisionSummary> selection(Set<DecisionTypes.DecisionStatus> statuses) {
+        var selected = statuses == null ? java.util.EnumSet.allOf(DecisionTypes.DecisionStatus.class) : statuses;
+        return selected.isEmpty() ? List.of() : decisions.findSelection(currentUser.current().id(), selected);
+    }
+
+    @Transactional(readOnly = true)
     public List<StatusCount> counts() {
         var counts = decisions.countStatuses(currentUser.current().id()).stream()
                 .collect(Collectors.toMap(StatusCount::status, StatusCount::count));
