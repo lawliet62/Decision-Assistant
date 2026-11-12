@@ -37,8 +37,8 @@ class CatalogRequirementCoverageTest {
                 }
                 if (CompatibilityMatcher.check(EARBUDS, "멀티포인트", facts, null, true).status() == RequirementStatus.MEETS) multipoint++;
             }
-            assertThat(active).isEqualTo(22);
-            assertThat(anc).isEqualTo(15);
+            assertThat(active).isEqualTo(23);
+            assertThat(anc).isEqualTo(16);
             assertThat(compatibility).isEqualTo(2);
             assertThat(multipoint).isEqualTo(1);
         }
