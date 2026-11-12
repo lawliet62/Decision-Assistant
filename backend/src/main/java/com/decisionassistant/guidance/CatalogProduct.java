@@ -10,6 +10,7 @@ import static com.decisionassistant.guidance.DiscoveryContracts.*;
 @Entity
 @Table(name = "catalog_products")
 public class CatalogProduct {
+    public enum BrandStatus { KNOWN, UNBRANDED, UNVERIFIED }
     public enum ReviewCycle { HARDWARE, SOFTWARE }
     public record Fact(ProductFact evidence, ReviewCycle cycle) {
         public Instant reviewDueAt() { return evidence.fetchedAt().plus(Duration.ofDays(cycle == ReviewCycle.HARDWARE ? 90 : 30)); }
@@ -17,7 +18,8 @@ public class CatalogProduct {
     @Id @Column(length = 100) private String id;
     private int revision;
     @Column(nullable = false, length = 300) private String name;
-    @Column(name = "brand_name", nullable = false, length = 100) private String brandName;
+    @Column(name = "brand_name", length = 100) private String brandName;
+    @Enumerated(EnumType.STRING) @Column(name = "brand_status", nullable = false, length = 20) private BrandStatus brandStatus;
     @Column(name = "purchase_url", nullable = false, length = 2048) private String purchaseUrl;
     @Column(name = "expected_identity", nullable = false, length = 500) private String expectedIdentity;
     @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false, columnDefinition = "jsonb") private List<Fact> facts;
@@ -32,11 +34,11 @@ public class CatalogProduct {
     @Version private long version;
     protected CatalogProduct() {}
     public CatalogProduct(String id) { this.id = id; priceStatus = "UNVERIFIED"; nextAttemptAt = Instant.EPOCH; facts = List.of(); }
-    public void register(int revision, String name, String url, String identity, List<Fact> facts, boolean active, String brandName) {
+    public void register(int revision, String name, String url, String identity, List<Fact> facts, boolean active, String brandName, BrandStatus brandStatus) {
         if (this.revision > revision) return;
-        brandName = CatalogBrand.validate(brandName, id, name, identity);
+        brandName = CatalogBrand.validate(brandName, brandStatus, id, name, identity);
         if (this.revision == revision) {
-            if (!Objects.equals(this.brandName, brandName) || !Objects.equals(this.name, name) || !Objects.equals(purchaseUrl, url)
+            if (this.brandStatus != brandStatus || !Objects.equals(this.brandName, brandName) || !Objects.equals(this.name, name) || !Objects.equals(purchaseUrl, url)
                     || !Objects.equals(expectedIdentity, identity) || !Objects.equals(this.facts, facts) || this.active != active)
                 throw new IllegalArgumentException("카탈로그 수정 시 revision을 올려야 합니다.");
             return;
@@ -45,7 +47,7 @@ public class CatalogProduct {
             offer = null; priceQuote = null; priceStatus = "UNVERIFIED";
         }
         factReviews = new HashMap<>();
-        this.revision = revision; this.name = name; this.brandName = brandName; purchaseUrl = url; expectedIdentity = identity;
+        this.revision = revision; this.name = name; this.brandName = brandName; this.brandStatus = brandStatus; purchaseUrl = url; expectedIdentity = identity;
         this.facts = List.copyOf(facts); this.active = active;
     }
     public void attempted(Instant now) { lastAttemptAt = now; nextAttemptAt = now.plus(Duration.ofDays(2)); }
@@ -80,6 +82,7 @@ public class CatalogProduct {
     public OfficialOffer usableOffer() { return "VERIFIED".equals(priceStatus) ? offer : null; }
     public String priceQuote() { return priceQuote; }
     public String id() { return id; }
+    public BrandStatus brandStatus() { return brandStatus; }
     public String brandName() { return brandName; }
     public String name() { return name; }
     public String purchaseUrl() { return purchaseUrl; }

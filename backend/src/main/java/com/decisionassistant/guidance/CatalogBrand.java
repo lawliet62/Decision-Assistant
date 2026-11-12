@@ -19,13 +19,17 @@ final class CatalogBrand {
             Pattern.compile("(^|[^a-z0-9])(lg|엘지)([^a-z0-9]|$)")
     };
     private CatalogBrand() {}
-    static String validate(String brand, String id, String name, String identity) {
-        if (brand == null || brand.isBlank()) throw new IllegalArgumentException("brandName을 명시하세요. 브랜드가 없음을 확인한 제품은 무브랜드로 등록합니다.");
-        var value = brand.strip();
-        if (value.length() > 100) throw new IllegalArgumentException("브랜드명은 최대 100자입니다.");
+    static String validate(String brand, CatalogProduct.BrandStatus status, String id, String name, String identity) {
+        if (status == null) throw new IllegalArgumentException("brandStatus를 명시하세요.");
+        if (status != CatalogProduct.BrandStatus.KNOWN && brand != null)
+            throw new IllegalArgumentException("브랜드 없음·미확인은 brandName을 null로 등록합니다.");
+        if (status == CatalogProduct.BrandStatus.KNOWN && (brand == null || brand.isBlank()))
+            throw new IllegalArgumentException("확인된 브랜드명이 누락되었습니다.");
+        var value = brand == null ? null : brand.strip();
+        if (value != null && value.length() > 100) throw new IllegalArgumentException("브랜드명은 최대 100자입니다.");
         var text = (Objects.toString(id, "") + " " + Objects.toString(name, "") + " "
                 + Objects.toString(identity, "")).toLowerCase(Locale.ROOT);
-        if ("무브랜드".equals(value)) for (var known : KNOWN) {
+        if (status == CatalogProduct.BrandStatus.UNBRANDED) for (var known : KNOWN) {
             if (known.matcher(text).find()) throw new IllegalArgumentException("브랜드가 확인되는 제품은 무브랜드로 등록할 수 없습니다.");
         }
         return value;

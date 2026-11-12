@@ -24,8 +24,8 @@ class QcyDirectPriceIntegrationTest {
  @BeforeEach void reset(){jdbc.update("delete from catalog_observations");jdbc.update("delete from catalog_products");jdbc.update("delete from catalog_monthly_usage");}
  @Test void failureReservesOnceWithoutFirecrawlOrUnapprovedProductRequests() throws Exception {
   var direct=mock(QcyCatalogPriceSource.class); var firecrawl=mock(FirecrawlWebEvidenceProvider.class);
-  var other=new CatalogProduct("other"); other.register(1,"Other","https://qcystore.co.kr/product/detail.html?product_no=990","qcy:other",List.of(),true, "Test");products.saveAndFlush(other);
-  var ct06=new CatalogProduct("qcy-ct06");ct06.register(1,"CT06",QcyCatalogPriceSource.URL,"qcy:ct06",List.of(),true, "Test");products.saveAndFlush(ct06);
+  var other=new CatalogProduct("other"); other.register(1,"Other","https://qcystore.co.kr/product/detail.html?product_no=990","qcy:other",List.of(),true, "Test", CatalogProduct.BrandStatus.KNOWN);products.saveAndFlush(other);
+  var ct06=new CatalogProduct("qcy-ct06");ct06.register(1,"CT06",QcyCatalogPriceSource.URL,"qcy:ct06",List.of(),true, "Test", CatalogProduct.BrandStatus.KNOWN);products.saveAndFlush(ct06);
   when(direct.fetch(QcyCatalogPriceSource.URL)).thenThrow(new IllegalStateException("SOURCE_UNAVAILABLE"));
   var off=new CatalogRefreshWorker(new CatalogProperties(true,true,"",700),new WebProperties(false,"","",Duration.ofSeconds(15)),firecrawl,products,jdbc,manager,direct,false);
   off.refreshNext();verifyNoInteractions(direct,firecrawl);
@@ -44,7 +44,7 @@ class QcyDirectPriceIntegrationTest {
  }
  @Test void invalidPageCannotRefreshPriceAndZeroBudgetMakesNoRequest() throws Exception {
   var direct=mock(QcyCatalogPriceSource.class);var firecrawl=mock(FirecrawlWebEvidenceProvider.class);
-  var ct06=new CatalogProduct("qcy-ct06");ct06.register(1,"CT06",QcyCatalogPriceSource.URL,"qcy:ct06",List.of(),true, "Test");products.saveAndFlush(ct06);
+  var ct06=new CatalogProduct("qcy-ct06");ct06.register(1,"CT06",QcyCatalogPriceSource.URL,"qcy:ct06",List.of(),true, "Test", CatalogProduct.BrandStatus.KNOWN);products.saveAndFlush(ct06);
   var settings=new WebProperties(false,"","",Duration.ofSeconds(15));
   new CatalogRefreshWorker(new CatalogProperties(true,true,"",0),settings,firecrawl,products,jdbc,manager,direct,true).refreshNext();
   verifyNoInteractions(direct,firecrawl);

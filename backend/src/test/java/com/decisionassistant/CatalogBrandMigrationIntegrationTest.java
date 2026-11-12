@@ -32,29 +32,46 @@ class CatalogBrandMigrationIntegrationTest {
                     """, e.id(), e.revision(), e.name(), e.purchaseUrl(), e.expectedIdentity(), e.active());
         }
         var before = jdbc.queryForList("SELECT to_jsonb(p) - 'version' AS data FROM catalog_products p ORDER BY id");
+        Flyway.configure().dataSource(source).target("18").load().migrate();
+        // 과거 예약값을 실제 브랜드명과 구분해 이전한다.
+        jdbc.update("""
+                INSERT INTO catalog_products (id, revision, name, purchase_url, expected_identity, facts, active,
+                    price_status, next_attempt_at, brand_name)
+                VALUES ('legacy-generic', 1, '이어폰', 'https://example.com/legacy', 'generic:0', '[]', false,
+                    'UNVERIFIED', now(), '무브랜드')
+                """);
         Flyway.configure().dataSource(source).load().migrate();
-        assertThat(jdbc.queryForList("SELECT to_jsonb(p) - 'version' - 'brand_name' AS data FROM catalog_products p ORDER BY id"))
+        assertThat(jdbc.queryForObject("SELECT brand_status FROM catalog_products WHERE id='legacy-generic'", String.class)).isEqualTo("UNBRANDED");
+        assertThat(jdbc.queryForObject("SELECT brand_name FROM catalog_products WHERE id='legacy-generic'", String.class)).isNull();
+        assertThat(jdbc.queryForList("SELECT to_jsonb(p) - 'version' - 'brand_name' - 'brand_status' AS data FROM catalog_products p WHERE id<>'legacy-generic' ORDER BY id"))
                 .isEqualTo(before);
         for (var e : entries) {
             assertThat(jdbc.queryForObject("SELECT brand_name FROM catalog_products WHERE id=?", String.class, e.id()))
                     .isEqualTo(e.brandName());
-            for (var blank : new String[] {"", " \t\n", "무브랜드"}) {
+            assertThat(jdbc.queryForObject("SELECT brand_status FROM catalog_products WHERE id=?", String.class, e.id())).isEqualTo("KNOWN");
+            for (var blank : new String[] {null, "", " \t\n"}) {
                 assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET brand_name=? WHERE id=?", blank, e.id()))
                         .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
             }
         }
         jdbc.update("""
                 INSERT INTO catalog_products (id, revision, name, purchase_url, expected_identity, facts, active,
-                    price_status, next_attempt_at, brand_name)
+                    price_status, next_attempt_at, brand_name, brand_status)
                 VALUES ('generic-buds', 1, '무선 이어폰', 'https://example.com/generic', 'generic:1', '[]', false,
-                    'UNVERIFIED', now(), '무브랜드')
+                    'UNVERIFIED', now(), NULL, 'UNBRANDED')
                 """);
-        assertThat(jdbc.queryForObject("SELECT brand_name FROM catalog_products WHERE id='generic-buds'", String.class)).isEqualTo("무브랜드");
-        for (var blank : new String[] {null, "", " \t\n"}) {
+        assertThat(jdbc.queryForObject("SELECT brand_name FROM catalog_products WHERE id='generic-buds'", String.class)).isNull();
+        for (var blank : new String[] {"Anker", "", " \t\n"}) {
             assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET brand_name=? WHERE id='generic-buds'", blank))
                     .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         }
         assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET name='soundcore Buds' WHERE id='generic-buds'"))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        jdbc.update("UPDATE catalog_products SET brand_status='UNVERIFIED', name='soundcore Buds' WHERE id='generic-buds'");
+        assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET brand_status='KNOWN' WHERE id='generic-buds'"))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        jdbc.update("UPDATE catalog_products SET brand_status='KNOWN', brand_name='노브랜드' WHERE id='generic-buds'");
+        assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET brand_status='INVALID' WHERE id='generic-buds'"))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbc.update("""
                 INSERT INTO catalog_products (id, revision, name, purchase_url, expected_identity, facts, active,
