@@ -21,35 +21,46 @@ final class JabraEvolve2PriceVerifier {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm");
     private JabraEvolve2PriceVerifier() {}
 
+    enum Stage { INPUT, CANONICAL, PRODUCT_GROUP, VARIANT, REGULAR_PRICE, PRICE_DISPLAY, SALE_PERIOD, OPTIONS, PURCHASE_AREA, STOCK, VERIFIED }
+    record Inspection(BigDecimal price, Stage stage) {}
+
     static Optional<BigDecimal> price(String html, Instant now) {
-        if (html == null || now == null || html.length() > 2_000_000) return Optional.empty();
+        return Optional.ofNullable(inspect(html, now).price());
+    }
+
+    static Inspection inspect(String html, Instant now) {
+        var stage = Stage.INPUT;
+        if (html == null || now == null || html.length() > 2_000_000) return new Inspection(null, stage);
         var doc = Jsoup.parse(html, URL);
+        stage = Stage.CANONICAL;
         var canonical = doc.select("link[rel=canonical]");
-        if (canonical.size() != 1 || !productUrl(canonical.first().absUrl("href"), false)) return Optional.empty();
+        if (canonical.size() != 1 || !productUrl(canonical.first().absUrl("href"), false)) return new Inspection(null, stage);
+        stage = Stage.PRODUCT_GROUP;
         var groups = new ArrayList<JsonNode>();
         for (var script : doc.select("script[type=application/ld+json]")) {
             try { var value = JSON.readTree(script.data()); if ("ProductGroup".equals(value.path("@type").asText(""))) groups.add(value); }
-            catch (RuntimeException e) { return Optional.empty(); }
+            catch (RuntimeException e) { return new Inspection(null, stage); }
         }
-        if (groups.size() != 1) return Optional.empty();
+        if (groups.size() != 1) return new Inspection(null, stage);
         var group = groups.getFirst();
         if (!"[핫딜] Jabra Evolve2 Buds".equals(Jsoup.parse(group.path("name").asText("")).text())
                 || !"cafe24_dnyint_6_2162".equals(group.path("productGroupID").asText(""))
                 || !productUrl(group.path("@id").asText(""), false) || !group.path("variesBy").isArray() || group.path("variesBy").size() != 3
                 || !"USB타입".equals(group.path("variesBy").get(0).asText("")) || !"플랫폼".equals(group.path("variesBy").get(1).asText(""))
                 || !"Qi 무선충전패드".equals(group.path("variesBy").get(2).asText("")) || !group.path("hasVariant").isArray()
-                || group.path("hasVariant").size() != 1) return Optional.empty();
+                || group.path("hasVariant").size() != 1) return new Inspection(null, stage);
+        stage = Stage.VARIANT;
         var variant = group.path("hasVariant").get(0); var offer = variant.path("offers");
         var properties = variant.path("additionalProperty");
-        if (!properties.isArray() || properties.size() != 3) return Optional.empty();
+        if (!properties.isArray() || properties.size() != 3) return new Inspection(null, stage);
         var expected = Map.of("USB타입", "USB-A타입", "플랫폼", "UC", "Qi 무선충전패드", "미포함");
         var seen = new HashSet<String>();
         for (var property : properties) {
             var name = property.path("name").asText("");
             if (!"PropertyValue".equals(property.path("@type").asText("")) || !seen.add(name)
-                    || !Objects.equals(expected.get(name), property.path("value").asText(""))) return Optional.empty();
+                    || !Objects.equals(expected.get(name), property.path("value").asText(""))) return new Inspection(null, stage);
         }
-        if (!seen.equals(expected.keySet())) return Optional.empty();
+        if (!seen.equals(expected.keySet())) return new Inspection(null, stage);
         if (!"Product".equals(variant.path("@type").asText(""))
                 || !"cafe24_dnyint_6_2162_P0000DFE000H".equals(variant.path("sku").asText(""))
                 || !"[핫딜] Jabra Evolve2 Buds USB-A타입-UC-미포함".equals(Jsoup.parse(variant.path("name").asText("")).text())
@@ -57,52 +68,58 @@ final class JabraEvolve2PriceVerifier {
                 || !"https://schema.org/InStock".equals(offer.path("availability").asText("")) || !productUrl(offer.path("url").asText(""), true)
                 || offer.has("priceSpecification") || offer.has("eligibleCustomerType") || offer.has("validForMemberTier")
                 || offer.has("eligibleQuantity") || offer.has("businessFunction")
-                || offer.has("itemCondition") && !"https://schema.org/NewCondition".equals(offer.path("itemCondition").asText(""))) return Optional.empty();
+                || offer.has("itemCondition") && !"https://schema.org/NewCondition".equals(offer.path("itemCondition").asText(""))) return new Inspection(null, stage);
+        stage = Stage.REGULAR_PRICE;
         var rawRegular = offer.path("price").asText("");
-        if (!rawRegular.matches("[1-9][0-9]{0,7}")) return Optional.empty();
+        if (!rawRegular.matches("[1-9][0-9]{0,7}")) return new Inspection(null, stage);
         var regular = new BigDecimal(rawRegular);
         try {
-            if (LocalDateTime.parse(offer.path("priceValidUntil").asText(""), DATE).atZone(ZoneId.of("Asia/Seoul")).toInstant().isBefore(now.plus(Duration.ofHours(72)))) return Optional.empty();
-        } catch (RuntimeException e) { return Optional.empty(); }
-        var roots = doc.select(".xans-product-detail"); if (roots.size() != 1) return Optional.empty();
+            if (LocalDateTime.parse(offer.path("priceValidUntil").asText(""), DATE).atZone(ZoneId.of("Asia/Seoul")).toInstant().isBefore(now.plus(Duration.ofHours(72)))) return new Inspection(null, stage);
+        } catch (RuntimeException e) { return new Inspection(null, stage); }
+        stage = Stage.PRICE_DISPLAY;
+        var roots = doc.select(".xans-product-detail"); if (roots.size() != 1) return new Inspection(null, stage);
         var root = roots.first();
         var reg = root.select("#span_product_price_text"); var sale = root.select("#span_product_price_sale");
         var periods = root.select("tr[rel='할인 기간'] .period");
-        if (reg.size() != 1 || sale.size() != 1 || periods.size() != 1 || !visible(reg.first()) || !visible(sale.first())) return Optional.empty();
+        if (reg.size() != 1 || sale.size() != 1 || periods.size() != 1 || !visible(reg.first()) || !visible(sale.first())) return new Inspection(null, stage);
         var row = sale.first().closest("tr");
-        if (row == null || !"할인가".equals(row.attr("rel")) || row.text().matches("(?is).*(회원|쿠폰|카드|구독|월\\s*납|member|coupon).*")) return Optional.empty();
+        if (row == null || !"할인가".equals(row.attr("rel")) || row.text().matches("(?is).*(회원|쿠폰|카드|구독|월\\s*납|member|coupon).*")) return new Inspection(null, stage);
         BigDecimal discounted;
         try {
             var regText = reg.first().text().replace("￦", "").replace(",", "").strip();
             var saleText = sale.first().text().replace("￦", "").replace(",", "").strip();
-            if (!regText.matches("[1-9][0-9]{0,7}") || !saleText.matches("[1-9][0-9]{0,7}") || regular.compareTo(new BigDecimal(regText)) != 0) return Optional.empty();
+            if (!regText.matches("[1-9][0-9]{0,7}") || !saleText.matches("[1-9][0-9]{0,7}") || regular.compareTo(new BigDecimal(regText)) != 0) return new Inspection(null, stage);
             discounted = new BigDecimal(saleText);
+            stage = Stage.SALE_PERIOD;
             var range = periods.first().text().split("\\s*~\\s*", -1);
-            if (range.length != 2 || discounted.signum() <= 0 || discounted.compareTo(regular) > 0) return Optional.empty();
+            if (range.length != 2 || discounted.signum() <= 0 || discounted.compareTo(regular) > 0) return new Inspection(null, stage);
             var start = LocalDateTime.parse(range[0], DATE).atZone(ZoneId.of("Asia/Seoul")).toInstant();
             var end = LocalDateTime.parse(range[1], DATE).atZone(ZoneId.of("Asia/Seoul")).toInstant();
-            if (start.isAfter(now) || end.isBefore(now.plus(Duration.ofHours(72)))) return Optional.empty();
-        } catch (RuntimeException e) { return Optional.empty(); }
+            if (start.isAfter(now) || end.isBefore(now.plus(Duration.ofHours(72)))) return new Inspection(null, stage);
+        } catch (RuntimeException e) { return new Inspection(null, stage); }
+        stage = Stage.OPTIONS;
         var selects = root.select("select[product_type=product_option]");
         if (selects.size() != 3 || !selects.stream().map(e -> e.attr("option_title")).toList().equals(List.of("USB타입", "플랫폼", "Qi 무선충전패드"))
-                || selects.stream().anyMatch(e -> !"2162".equals(e.attr("option_product_no")))) return Optional.empty();
+                || selects.stream().anyMatch(e -> !"2162".equals(e.attr("option_product_no")))) return new Inspection(null, stage);
         if (selects.get(0).select("option[value='USB-A타입']:not([disabled])").size() != 1
                 || selects.get(1).select("option[value=UC]").size() != 1
-                || selects.get(2).select("option[value=미포함]").size() != 1) return Optional.empty();
+                || selects.get(2).select("option[value=미포함]").size() != 1) return new Inspection(null, stage);
+        stage = Stage.PURCHASE_AREA;
         var buys = root.select("#actionBuy").stream().filter(JabraEvolve2PriceVerifier::visible).toList();
         if (buys.isEmpty() || buys.size() > 2 || buys.stream().anyMatch(e -> !"바로구매".equals(e.text()) || e.closest("a.btnSubmit") == null
-                || !"#none".equals(e.closest("a.btnSubmit").attr("href")))) return Optional.empty();
+                || !"#none".equals(e.closest("a.btnSubmit").attr("href")))) return new Inspection(null, stage);
+        stage = Stage.STOCK;
         String stock = null; var prices = new ArrayList<String>();
         for (var script : doc.select("script:not([src])")) {
             var text = script.data(); var prefix = "var option_stock_data = '"; int index = text.indexOf(prefix);
             if (index >= 0) {
-                if (stock != null || text.indexOf(prefix, index + prefix.length()) >= 0) return Optional.empty();
+                if (stock != null || text.indexOf(prefix, index + prefix.length()) >= 0) return new Inspection(null, stage);
                 int from = index + prefix.length(); int end = text.indexOf("';", from);
-                if (end < 0 || end - from > 100_000) return Optional.empty(); stock = text.substring(from, end);
+                if (end < 0 || end - from > 100_000) return new Inspection(null, stage); stock = text.substring(from, end);
             }
             var m = SALE.matcher(text); while (m.find()) prices.add(m.group(1));
         }
-        if (stock == null || prices.isEmpty() || prices.stream().anyMatch(p -> p.length() > 8 || discounted.compareTo(new BigDecimal(p)) != 0)) return Optional.empty();
+        if (stock == null || prices.isEmpty() || prices.stream().anyMatch(p -> p.length() > 8 || discounted.compareTo(new BigDecimal(p)) != 0)) return new Inspection(null, stage);
         try {
             var item = JSON.readTree(stock.replace("\\\\", "\\").replace("\\\"", "\"").replace("\\/", "/")).path(CODE);
             if (!"USB-A타입-UC-미포함".equals(item.path("option_value").asText("")) || !"T".equals(item.path("is_selling").asText(""))
@@ -110,9 +127,9 @@ final class JabraEvolve2PriceVerifier {
                     || !"N".equals(item.path("is_reserve_stat").asText("")) || !item.path("use_stock").asBoolean(false)
                     || new BigDecimal(item.path("option_price").asText("-1")).compareTo(regular) != 0
                     || new BigDecimal(item.path("stock_price").asText("-1")).signum() != 0
-                    || new BigDecimal(item.path("origin_option_added_price").asText("-1")).signum() != 0) return Optional.empty();
-        } catch (RuntimeException e) { return Optional.empty(); }
-        return Optional.of(discounted);
+                    || new BigDecimal(item.path("origin_option_added_price").asText("-1")).signum() != 0) return new Inspection(null, stage);
+        } catch (RuntimeException e) { return new Inspection(null, stage); }
+        return new Inspection(discounted, Stage.VERIFIED);
     }
 
     private static boolean productUrl(String value, boolean offer) {

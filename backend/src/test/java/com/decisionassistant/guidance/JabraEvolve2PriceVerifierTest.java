@@ -7,6 +7,25 @@ import static org.assertj.core.api.Assertions.*;
 
 public class JabraEvolve2PriceVerifierTest {
     private static final Instant NOW = Instant.parse("2026-11-03T00:00:00Z");
+
+    @Test void reportsTheRejectedStageWithoutAcceptingAnIncompletePrice() {
+        assertThat(JabraEvolve2PriceVerifier.inspect(HTML, NOW).stage()).isEqualTo(JabraEvolve2PriceVerifier.Stage.VERIFIED);
+        assertThat(JabraEvolve2PriceVerifier.inspect(null, NOW).stage()).isEqualTo(JabraEvolve2PriceVerifier.Stage.INPUT);
+        var cases = java.util.Map.of(
+                "link rel='canonical'", JabraEvolve2PriceVerifier.Stage.CANONICAL,
+                "ProductGroup", JabraEvolve2PriceVerifier.Stage.PRODUCT_GROUP,
+                "span_product_price_sale", JabraEvolve2PriceVerifier.Stage.PRICE_DISPLAY,
+                "option_title", JabraEvolve2PriceVerifier.Stage.OPTIONS,
+                "actionBuy", JabraEvolve2PriceVerifier.Stage.PURCHASE_AREA,
+                "option_stock_data", JabraEvolve2PriceVerifier.Stage.STOCK);
+        for (var item : cases.entrySet()) {
+            var modified = HTML.replace(item.getKey(), "missing_" + item.getKey());
+            var result = JabraEvolve2PriceVerifier.inspect(modified, NOW);
+            assertThat(result.stage()).as(item.getKey()).isEqualTo(item.getValue());
+            assertThat(result.price()).isNull();
+            assertThat(JabraEvolve2PriceVerifier.price(modified, NOW)).isEmpty();
+        }
+    }
     public static final String HTML = """
             <link rel='canonical' href='https://jabramall.com/product/핫딜-jabra-evolve2-buds/2162/'>
             <script type='application/ld+json'>
