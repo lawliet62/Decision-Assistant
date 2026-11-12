@@ -60,9 +60,13 @@ public final class MinimumRequirementMatcher {
     private static Value parse(Rule rule, ProductFact fact) {
         if (fact.value() == null || "DISPUTED".equals(fact.verificationStatus())) return null;
         var raw = fact.value().strip();
+        var ambiguityQuote = Objects.toString(fact.quote(), "");
+        // ANC 감쇠량의 최대치는 지원 여부의 옵션·불확실성과 구분한다. 수치 성능은 판정하지 않는다.
+        if (rule == Rule.SUPPORT && "ANC 지원".equals(fact.name()))
+            ambiguityQuote = ambiguityQuote.replaceAll("(?i)(?:최대|up\\s+to)\\s*[0-9]+(?:\\.[0-9]+)?\\s*dB\\b", "");
         // 사람이 확인한 수치는 자유 형식의 메모 대신 입력한 수치 자체를 사용한다.
         if (!"CONFIRMED".equals(fact.verificationStatus()) && !SpecNormalizer.VERSION.equals(fact.normalizationVersion())
-                && AMBIGUOUS.matcher(Objects.toString(fact.quote(), "")).find()) return null;
+                && AMBIGUOUS.matcher(ambiguityQuote).find()) return null;
         if (rule == Rule.SUPPORT) return support(raw, fact);
         if (rule == Rule.RESOLUTION) return resolution(raw);
         var matcher = (rule == Rule.CAPACITY ? CAPACITY : REFRESH).matcher(raw);

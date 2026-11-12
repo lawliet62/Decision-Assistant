@@ -111,6 +111,52 @@ class CatalogApiIntegrationTest {
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return json.readTree(result).path("id").asText();
     }
+    @Test void realRegisteredEvidenceSupportsRequiredAncAndEachBasicPlatformWithoutProviders() throws Exception {
+        try (var stream = new org.springframework.core.io.ClassPathResource("catalog/earbuds.json").getInputStream()) {
+            var entry = Arrays.stream(json.readValue(stream, CatalogImporter.Entry[].class))
+                    .filter(e -> e.id().equals("qcy-t13-pro")).findFirst().orElseThrow();
+            var p = new CatalogProduct(entry.id());
+            p.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), true);
+            // 판매가 수집과 사양 판정을 분리한다. 실제 판매가를 조회한 시험은 아니다.
+            p.observed(new OfficialProduct(p.name(), p.expectedIdentity(), new OfficialOffer(p.purchaseUrl(), "QCY", BigDecimal.valueOf(30000),
+                    "KRW", null, Instant.now(), "판매가", CatalogProperties.VERSION), "", "판매가 30,000원"));
+            products.saveAndFlush(p);
+            // 시험 실행 날짜에 따라 등록된 SOFTWARE 근거가 만료되지 않도록 재확인 시각만 fixture로 제공한다.
+            jdbc.update("update catalog_products set fact_reviews = cast(? as jsonb) where id = ?",
+                    json.writeValueAsString(Map.of("호환성", Instant.now().toString())), p.id());
+            for (var platform : List.of("Android", "iOS")) {
+                var response = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                                .content(BODY.replace("Android", platform)))
+                        .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+                var id = json.readTree(response).path("id").asText();
+                mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                        .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                        .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"))
+                        .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck.status").value("MEETS"))
+                        .andExpect(jsonPath("$.guidance.candidateSuggestions[0].reason").value(org.hamcrest.Matchers.not(
+                                org.hamcrest.Matchers.containsString("확인하지 못했습니다"))));
+            }
+            verifyNoInteractions(search, web, ai);
+        }
+    }
+    @Test void separatePlatformSourcesRemainIndependentInCatalogResponses() throws Exception {
+        var p = product(1, Instant.now());
+        var facts = new ArrayList<>(p.facts());
+        facts.add(new CatalogProduct.Fact(new ProductFact("호환성", "iOS", "https://example.com/ios",
+                "iOS 기본 연결 지원", Instant.now(), "UNREVIEWED"), CatalogProduct.ReviewCycle.SOFTWARE));
+        facts.add(new CatalogProduct.Fact(new ProductFact("호환성", "멀티포인트", "https://example.com/multipoint",
+                "멀티포인트 지원", Instant.now(), "UNREVIEWED"), CatalogProduct.ReviewCycle.SOFTWARE));
+        p.register(2, p.name(), p.purchaseUrl(), p.expectedIdentity(), facts, true);
+        products.saveAndFlush(p);
+        var id = create();
+        mvc.perform(get("/api/v1/decisions/" + id).with(owner))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck.status").value("MEETS"))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck.facts.length()").value(1))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].facts.length()").value(5));
+        assertThat(products.findById(p.id()).orElseThrow().facts()).hasSize(4);
+        verifyNoInteractions(search, web, ai);
+    }
     @Test void catalogWorksWithoutExternalConsentAndPreservesOwnershipAndHistoricalFacts() throws Exception {
         var p = product(1, Instant.now()); product(2, Instant.now().minus(Duration.ofDays(4))); product(3, null);
         var id = create();
@@ -450,13 +496,14 @@ class CatalogApiIntegrationTest {
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
     }
-    @Test void libertyRefreshStoresDiscountAndAnc() throws Exception {
+    @Test void libertyRefreshStoresDiscountAncAndMultipointWithOneSpecificationFetch() throws Exception {
         var id = "anker-liberty5-a3957"; var url = "https://ankerkorea.co.kr/product/detail.html?product_no=40";
         var source = "https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds"; var old = Instant.now().minus(Duration.ofDays(91));
         var name = "앤커 사운드코어 리버티5 노이즈캔슬링 블루투스 이어폰 A3957";
         var p = new CatalogProduct(id);
         p.register(1, name, url, "anker-kr:40", List.of(new CatalogProduct.Fact(
-                new ProductFact("ANC 지원", "지원", source, "Real-Time Adaptive ANC 3.0", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE)), true);
+                new ProductFact("ANC 지원", "지원", source, "Real-Time Adaptive ANC 3.0", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.HARDWARE),
+                new CatalogProduct.Fact(new ProductFact("호환성", "멀티포인트", source, "Multipoint Connection Yes", old, "UNREVIEWED"), CatalogProduct.ReviewCycle.SOFTWARE)), true);
         products.saveAndFlush(p);
         var colors = new String[]{"블랙", "화이트"};
         var variants = new ArrayList<Map<String, Object>>(); var stocks = new LinkedHashMap<String, Object>();
@@ -486,17 +533,20 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableOffer().price()).isEqualByComparingTo("99900");
         when(ankerLibertySpecificationSource.fetch()).thenReturn("<title>soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby 3D Audio</title>"
                 + "<link rel='canonical' href='" + source + "'><h1>soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio</h1>"
-                + "<meta name='description' content='Buy soundcore Liberty 5 earbuds with Dolby 3D Audio, adaptive ANC, and premium sound.'><strong>Real-Time Adaptive ANC 3.0:</strong>");
+                + "<meta name='description' content='Buy soundcore Liberty 5 earbuds with Dolby 3D Audio, adaptive ANC, and premium sound.'><strong>Real-Time Adaptive ANC 3.0:</strong>"
+                + "<div><h2>Specs</h2><table><tr><td>Multipoint Connection</td><td>Yes</td></tr></table></div>");
         var spec = new AnkerLibertySpecificationRefreshWorker(true, catalogProperties, products, jdbc, ankerLibertySpecificationSource, transactionManager);
         spec.refresh(); spec.refresh();
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
+        assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now())).hasSize(2).allMatch(f -> f.fetchedAt().isAfter(old));
         verify(ankerLibertySpecificationSource, times(1)).fetch();
-        var body = BODY.replace("\"maxBudget\":50000", "\"maxBudget\":100000").replace("\"compatibility\":\"Android\",", "");
+        var body = BODY.replace("\"maxBudget\":50000", "\"maxBudget\":100000").replace("Android", "멀티포인트");
         var result = mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         var decision = json.readTree(result).path("id").asText();
         mvc.perform(get("/api/v1/decisions/" + decision).with(owner)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer.price").value(99900))
+                .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck.status").value("MEETS"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
                 .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
     }

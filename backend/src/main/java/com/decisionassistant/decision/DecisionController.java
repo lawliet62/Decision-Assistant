@@ -36,8 +36,29 @@ public class DecisionController {
     }
 
     @GetMapping
-    public List<DecisionSummary> list() {
-        return service.list();
+    public DecisionPage list(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) java.util.Set<DecisionTypes.DecisionStatus> statuses,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") @jakarta.validation.constraints.Min(0) @jakarta.validation.constraints.Max(1000000) int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "10") @jakarta.validation.constraints.Min(1) @jakarta.validation.constraints.Max(50) int size,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "UPDATED_AT") ListSort sort,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "DESC") ListDirection direction) {
+        return service.list(statuses, page, size, sort, direction);
+    }
+
+    @GetMapping("/counts")
+    public List<StatusCount> counts() { return service.counts(); }
+
+    @GetMapping("/selection")
+    public List<DecisionSummary> selection(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) java.util.Set<DecisionTypes.DecisionStatus> statuses) {
+        return service.selection(statuses);
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{decisionId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable UUID decisionId,
+                       @org.springframework.web.bind.annotation.RequestParam @jakarta.validation.constraints.Min(0) long expectedVersion) {
+        service.delete(decisionId, expectedVersion);
     }
 
     @GetMapping("/{decisionId}")
@@ -95,6 +116,16 @@ public class DecisionController {
     public ResolutionData resolve(@PathVariable UUID decisionId,
                                   @Valid @RequestBody CreateResolutionRequest request) {
         return service.resolve(decisionId, request);
+    }
+
+    @PutMapping("/{decisionId}/comparison")
+    public DecisionResponse comparison(@PathVariable UUID decisionId, @Valid @RequestBody Comparison.UpdateRequest request) {
+        return service.updateComparison(decisionId, request);
+    }
+
+    @PutMapping("/{decisionId}/comparison/confirmation")
+    public DecisionResponse confirmation(@PathVariable UUID decisionId, @Valid @RequestBody Comparison.ConfirmRequest request) {
+        return service.confirmFeature(decisionId, request);
     }
 
     @PostMapping("/{decisionId}/outcome-check-ins")

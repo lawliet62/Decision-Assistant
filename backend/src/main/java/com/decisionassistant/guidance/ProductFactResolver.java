@@ -19,6 +19,7 @@ public final class ProductFactResolver {
                     && item.criterionId().equals(criterion.id()) && item.numericValue() != null).findFirst().orElse(null);
             if (value == null) continue;
             if (value.verificationStatus() != DecisionTypes.VerificationStatus.CONFIRMED
+                    && value.verificationStatus() != DecisionTypes.VerificationStatus.DISPUTED
                     && facts.stream().anyMatch(item -> name.equals(item.name()))) continue;
             facts.removeIf(item -> name.equals(item.name()));
             facts.add(new ProductFact(name, value.numericValue().stripTrailingZeros().toPlainString() + " "

@@ -50,9 +50,15 @@ public final class DecisionDtos {
             String title,
             DecisionTypes.TemplateKey templateKey,
             DecisionTypes.DecisionStatus status,
+            Instant createdAt,
             Instant updatedAt
     ) {
     }
+
+    public record DecisionPage(List<DecisionSummary> items, int page, int size, long totalElements, int totalPages) {}
+    public record StatusCount(DecisionTypes.DecisionStatus status, long count) {}
+    public enum ListSort { UPDATED_AT, CREATED_AT, TITLE, TEMPLATE_KEY }
+    public enum ListDirection { ASC, DESC }
 
     public record DecisionResponse(
             UUID id,
@@ -73,7 +79,8 @@ public final class DecisionDtos {
             Instant createdAt,
             Instant updatedAt,
             DiscoveryData discovery,
-            List<ProductFactsData> productFacts
+            List<ProductFactsData> productFacts,
+            Comparison.Data comparison
     ) {
     }
 
@@ -157,7 +164,8 @@ public final class DecisionDtos {
     public record CreateResolutionRequest(
             @NotNull DecisionTypes.ResolutionKind kind,
             UUID selectedOptionId,
-            String rationale
+            String rationale,
+            Long expectedVersion
     ) {
     }
 
@@ -166,7 +174,8 @@ public final class DecisionDtos {
             DecisionTypes.ResolutionKind kind,
             UUID selectedOptionId,
             String rationale,
-            Instant createdAt
+            Instant createdAt,
+            Comparison.Snapshot comparisonSnapshot
     ) {
     }
 

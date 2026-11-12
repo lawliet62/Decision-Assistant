@@ -1,5 +1,15 @@
 # API contract
 
+## 결정 목록·삭제
+
+`GET /api/v1/decisions`는 배열 대신 `items/page/size/totalElements/totalPages`를 반환한다. frontend와 backend를 같은 release로 갱신한다. `statuses`는 복수 enum(생략 시 전체), `page`는 0부터 1,000,000까지, `size`는 1~50(기본 10), `sort`는 `UPDATED_AT/CREATED_AT/TITLE/TEMPLATE_KEY`, `direction`은 `ASC/DESC`다. 정렬은 소유자·상태로 제한한 전체 결과에 적용하며 ID 오름차순을 보조키로 쓴다. 제품군은 enum 코드 순서, 제목은 DB collation 순서다. 범위를 벗어난 페이지는 마지막 유효 페이지로 보정한다.
+
+`GET /api/v1/decisions/counts`는 소유자별 전체 상태 건수를 0건 상태까지 반환한다. 접힌 그룹은 목록 조회를 하지 않는다.
+
+`GET /api/v1/decisions/selection`은 소유자의 지정 `statuses`에 해당하는 결정 summary와 version을 페이지 제한 없이 단일 조회로 반환한다. 생략하면 모든 상태다. 이 응답은 선택 시점의 대상이며 이후 생성된 결정은 포함하지 않는다.
+
+`DELETE /api/v1/decisions/{id}?expectedVersion=N`은 CSRF·소유권·version을 검증한다. 성공은 204, stale version은 409, 타인/미존재/이미 삭제는 404다. 후보·평가·회고·작업·성향 기억의 실제 삭제 범위는 ADR 0018을 따른다. 새 Flyway V16으로 성향 기억 FK와 목록 index를 추가한다.
+
 Backend controller와 DTO annotation이 code-first source다. 실행된 integration test가 `/api/openapi` 결과를 `backend/build/generated/openapi.json`에 저장하며, review 가능한 계약은 `docs/api/openapi.json`에 commit한다.
 
 사용자 API는 `DECISION_ASSISTANT_SESSION` same-origin cookie 인증을 사용한다. `GET /api/v1/me`가 현재 사용자 정보와 readable `XSRF-TOKEN` cookie를 준비하며 browser는 변경 요청에 `X-XSRF-TOKEN` header를 보낸다. 인증되지 않은 API는 `401`, 유효한 사용자가 소유하지 않은 resource는 `404`다. OpenAPI endpoint는 local/test 검증에서만 노출한다.
@@ -13,6 +23,14 @@ Backend controller와 DTO annotation이 code-first source다. 실행된 integrat
 5. `npm run check`으로 drift와 소비자 build를 확인한다.
 
 `openapi-fetch`는 browser client의 request/response type을 제공한다. frontend가 DTO interface를 수기로 복제하지 않는다. breaking change 자동 분류와 API version 추가는 외부 소비자가 생길 때 검토한다.
+
+## 같은 후보의 비교 조건과 직접 확인
+
+- `DecisionResponse.comparison`은 이어폰에서 현재 settings·confirmations·후보별 price/priceOrigin/checks를 반환한다. 최초 추천의 `discovery.conditions`와 기존 `productFacts.requirementChecks`는 최초 추천 기준을 유지한다. 다른 제품군의 comparison은 null이다.
+- `PUT /decisions/{id}/comparison`은 `{expectedVersion, settings: {maxBudget?, ancRequired, compatibility?, focus, deferredOptionIds}}`를 받는다. compatibility는 Android/iOS/멀티포인트 또는 null, focus는 가격/ANC 지원/호환성/배터리/무게다. 빈 예산은 제한 없음이며 양수 1억원 이하만 허용한다. 보류 ID는 현재 후보여야 한다.
+- `PUT /decisions/{id}/comparison/confirmation`은 `{expectedVersion, optionId, feature, supported?, note?, sourceUrl?}`를 받는다. feature는 anc/Android/iOS/멀티포인트다. supported true/false는 직접 확인한 지원/미지원이며 null·생략은 해당 확인값 해제다. URL은 공개 URL 검증 후 참조로만 저장한다. 기록 시각은 서버가 정한다.
+- 두 PUT은 소유권·CSRF·편집 가능 상태·Decision version을 확인하고 갱신된 DecisionResponse를 반환한다. 외부 호출이나 최초 추천 재실행은 없다.
+- `CreateResolutionRequest.expectedVersion`은 additive optional 필드다. 새 화면은 반드시 전송하고 불일치는 409다. `ResolutionData.comparisonSnapshot`은 서버가 생성한 당시의 고정본이며 과거 기록에는 null이다.
 
 ## 제품명 lookup (additive MVP contract)
 

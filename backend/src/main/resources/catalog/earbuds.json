@@ -489,7 +489,7 @@
   },
   {
     "id": "anker-liberty5-a3957",
-    "revision": 1,
+    "revision": 2,
     "name": "앤커 사운드코어 리버티5 노이즈캔슬링 블루투스 이어폰 A3957",
     "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=40",
     "expectedIdentity": "anker-kr:40",
@@ -505,6 +505,18 @@
           "normalizationVersion": null
         },
         "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "멀티포인트",
+          "sourceUrl": "https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds",
+          "quote": "Multipoint Connection Yes",
+          "fetchedAt": "2026-11-04T22:51:00Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
       }
     ],
     "active": true

@@ -20,6 +20,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/comparison": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["comparison"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/{decisionId}/comparison/confirmation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["confirmation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/product-lookups": {
         parameters: {
             query?: never;
@@ -367,7 +399,7 @@ export interface paths {
         get: operations["get"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["delete_1"];
         options?: never;
         head?: never;
         patch?: never;
@@ -381,6 +413,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/selection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["selection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["counts"];
         put?: never;
         post?: never;
         delete?: never;
@@ -511,6 +575,21 @@ export interface components {
             compatibilityCheck?: components["schemas"]["RequirementCheck"];
             priceStatus?: string;
         };
+        Confirmation: {
+            /** Format: uuid */
+            optionId?: string;
+            feature?: string;
+            supported?: boolean;
+            note?: string;
+            sourceUrl?: string;
+            /** Format: date-time */
+            confirmedAt?: string;
+        };
+        Data: {
+            settings?: components["schemas"]["Settings"];
+            confirmations?: components["schemas"]["Confirmation"][];
+            options?: components["schemas"]["OptionComparison"][];
+        };
         DecisionResponse: {
             /** Format: uuid */
             id?: string;
@@ -537,6 +616,7 @@ export interface components {
             updatedAt?: string;
             discovery?: components["schemas"]["DiscoveryData"];
             productFacts?: components["schemas"]["ProductFactsData"][];
+            comparison?: components["schemas"]["Data"];
         };
         DiscoveryData: {
             /** Format: int64 */
@@ -624,6 +704,13 @@ export interface components {
             fetchedAt?: string;
             priceBasis?: string;
             policyVersion?: string;
+        };
+        OptionComparison: {
+            /** Format: uuid */
+            optionId?: string;
+            price?: number;
+            priceOrigin?: string;
+            checks?: components["schemas"]["RequirementCheck"][];
         };
         OutcomeData: {
             /** Format: uuid */
@@ -715,6 +802,42 @@ export interface components {
             rationale?: string;
             /** Format: date-time */
             createdAt?: string;
+            comparisonSnapshot?: components["schemas"]["Snapshot"];
+        };
+        Settings: {
+            maxBudget?: number;
+            ancRequired?: boolean;
+            compatibility?: string;
+            focus: string;
+            deferredOptionIds: string[];
+        };
+        Snapshot: {
+            schemaVersion?: string;
+            /** Format: date-time */
+            capturedAt?: string;
+            context?: components["schemas"]["ContextData"];
+            options?: components["schemas"]["OptionData"][];
+            criteria?: components["schemas"]["CriterionData"][];
+            values?: components["schemas"]["OptionValueData"][];
+            constraints?: components["schemas"]["ConstraintData"][];
+            constraintResults?: components["schemas"]["ConstraintResultData"][];
+            productFacts?: components["schemas"]["ProductFactsData"][];
+            comparison?: components["schemas"]["Data"];
+        };
+        UpdateRequest: {
+            /** Format: int64 */
+            expectedVersion?: number;
+            settings: components["schemas"]["Settings"];
+        };
+        ConfirmRequest: {
+            /** Format: int64 */
+            expectedVersion?: number;
+            /** Format: uuid */
+            optionId: string;
+            feature: string;
+            supported?: boolean;
+            note?: string;
+            sourceUrl?: string;
         };
         LookupRequest: {
             query: string;
@@ -813,6 +936,8 @@ export interface components {
             /** Format: uuid */
             selectedOptionId?: string;
             rationale?: string;
+            /** Format: int64 */
+            expectedVersion?: number;
         };
         AnswerQuestionRequest: {
             answer: string;
@@ -989,6 +1114,17 @@ export interface components {
             /** Format: int32 */
             height?: number;
         };
+        DecisionPage: {
+            items?: components["schemas"]["DecisionSummary"][];
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int64 */
+            totalElements?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
         DecisionSummary: {
             /** Format: uuid */
             id?: string;
@@ -1000,7 +1136,15 @@ export interface components {
             /** @enum {string} */
             status?: "DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED";
             /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
             updatedAt?: string;
+        };
+        StatusCount: {
+            /** @enum {string} */
+            status?: "DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED";
+            /** Format: int64 */
+            count?: number;
         };
         AiCapabilitiesResponse: {
             enabled?: boolean;
@@ -1044,6 +1188,58 @@ export interface operations {
             };
         };
     };
+    comparison: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    confirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
     lookup: {
         parameters: {
             query?: never;
@@ -1070,7 +1266,13 @@ export interface operations {
     };
     list: {
         parameters: {
-            query?: never;
+            query?: {
+                statuses?: ("DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED")[];
+                page?: number;
+                size?: number;
+                sort?: "UPDATED_AT" | "CREATED_AT" | "TITLE" | "TEMPLATE_KEY";
+                direction?: "ASC" | "DESC";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1083,7 +1285,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["DecisionSummary"][];
+                    "*/*": components["schemas"]["DecisionPage"];
                 };
             };
         };
@@ -1642,6 +1844,28 @@ export interface operations {
             };
         };
     };
+    delete_1: {
+        parameters: {
+            query: {
+                expectedVersion: number;
+            };
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_1: {
         parameters: {
             query?: never;
@@ -1661,6 +1885,48 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["EvaluationResponse"];
+                };
+            };
+        };
+    };
+    selection: {
+        parameters: {
+            query?: {
+                statuses?: ("DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED")[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionSummary"][];
+                };
+            };
+        };
+    };
+    counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["StatusCount"][];
                 };
             };
         };

@@ -1,0 +1,10 @@
+{
+  "measuredAt": "2026-11-09T07:26:18.790Z",
+  "origin": "http://127.0.0.1:3180",
+  "externalProviders": false,
+  "listRequests": 100,
+  "concurrency": 5,
+  "listP95Ms": 77,
+  "catalogCandidates": 5,
+  "backupRestoreAndDeletionReplay": true
+}

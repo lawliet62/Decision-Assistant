@@ -41,11 +41,19 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 
 ## 요청 흐름
 
+같은 후보의 비교 조건과 직접 확인은 Decision의 JSONB `comparison_state`에 저장한다. Resolution 생성 시 현재 조건·판정·근거를 JSONB `comparison_snapshot`에 복사한다. 조회는 과거 snapshot을 현재 카탈로그나 matcher로 재계산하지 않는다. 최초 추천 이력·평가 snapshot과의 경계는 [ADR 0017](decisions/0017-comparison-and-resolution-context.md)에 기록한다.
+
 1. 사용자가 versioned template로 Decision을 만든다.
 2. draft 저장은 expected version을 검사한다.
 3. 평가 시 완전성과 constraint 상태를 검증하고 immutable snapshot을 만든다.
 4. algorithm은 동기적으로 항상 먼저 실행한다.
 5. 동의한 경우에만 LLM이 같은 snapshot을 독립 평가한다. 장애 시 algorithm result는 남는다.
+
+## 배포 준비와 데이터 삭제
+
+단일 GCP VM의 HTTPS proxy·Next.js·Spring Boot·PostgreSQL 구성과 VM attached Identity를 준비한다. 컨테이너는 별도 IAM identity 경계가 아니며 actual provisioning은 수행하지 않았다. [ADR 0019](decisions/0019-portfolio-deployment-preparation.md)를 따른다.
+
+목록은 DTO projection과 DB pagination으로 소유자별 상태 결과만 조회한다. 삭제는 결정 부모 행 잠금·version 확인 뒤 DB cascade를 사용한다. 성향 기억의 source FK도 cascade이며, 외부 작업 완료는 부모 존재를 다시 확인한다. 알림·evidence worker는 삭제와 동일한 부모 잠금 순서로 직렬화한다. commit 후 최소 삭제 audit를 남겨 백업 복원 시 재적용한다. [ADR 0018](decisions/0018-decision-management-and-deletion.md)를 따른다.
 
 ## Security/operations baseline
 

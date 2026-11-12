@@ -35,7 +35,8 @@ Decision draft ──evaluate──> Evaluation(snapshot + results)
 - RequirementCheck: 선택 조건과 표시 사양으로 계산한 MEETS/BELOW/UNKNOWN 및 근거다. 검증 완료나 평가 탈락을 뜻하지 않으며, 사용자가 확인 수치를 변경하면 화면과 함께 다시 계산한다.
 - Product lookup result: 제품명에 대한 일시적인 웹 검색 결과. 저장된 CandidateSuggestion이나 제품 catalog가 아니며 선택한 이름·URL만 기존 Option으로 연결한다. 검색 발췌는 확인된 OptionValue가 아니다.
 - Evaluation: 특정 Decision version의 재현 가능한 run. 현재 draft를 참조해 재계산하지 않는다.
-- Resolution: 사용자가 선택·보류·포기한 사실과 이유.
+- Comparison.State: 최초 추천과 독립적인 현재 비교 조건, 비교 보류 후보, 직접 확인한 ANC·플랫폼별 호환성이다. 추천 조건·점수·공용 카탈로그를 변경하지 않는다.
+- Resolution: 사용자가 선택·보류·포기한 사실과 이유. 신규 기록은 당시 조건·후보·입력·근거·판정의 immutable comparison snapshot을 함께 가진다. 이전 기록의 snapshot은 없을 수 있다.
 - OutcomeCheckIn: 시간이 지난 뒤 만족도와 기대 충족 여부를 여러 번 기록한다.
 - PreferenceMemory: resolution/outcome에서 제안된 category별 성향 projection이다. `PROPOSED`는 평가에 쓰지 않고 사용자가 확인한 `CONFIRMED`만 다음 Decision의 명시적 기본값이 된다.
 - OutcomeReminder: 선택 후 14일·60일 회고를 앱 또는 이메일로 요청하는 일정이다.
@@ -55,4 +56,5 @@ Decision draft ──evaluate──> Evaluation(snapshot + results)
 - 불완전한 draft는 score range와 `PROVISIONAL` 조언을 제공할 수 있지만 immutable Evaluation으로 저장하지 않는다.
 - `USER/CONFIRMED` 값은 background import나 AI proposal이 덮어쓰지 않는다.
 - Resolution의 selected Option은 해당 Decision에 존재해야 한다.
+- 직접 확인한 기능은 해당 후보·기능의 비교 판정에만 우선 적용하며 background import가 덮어쓰지 않는다. 조건 변경은 이미 저장된 Resolution snapshot을 재계산하지 않는다.
 - 사용자 resource는 소유한 ApplicationUser만 읽고 변경할 수 있다.

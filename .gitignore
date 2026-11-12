@@ -43,6 +43,7 @@ frontend/playwright-report/
 !**/.env.example
 *.pem
 .DS_Store
+**/__pycache__/
 
 # Logs
 **/npm-debug.log*

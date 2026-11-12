@@ -111,6 +111,46 @@ class DiscoveryVerificationTest {
         assertThat(result.reason()).doesNotContain("만족");
     }
     private ProductFact fact(String name, String value, String quote) { return new ProductFact(name, value, URL, quote, NOW, "UNREVIEWED"); }
+    @Test void independentPlatformEvidenceDoesNotInvalidateRequestedCompatibility() {
+        var android = fact("호환성", "Android", "Android 기본 연결 지원");
+        var ios = new ProductFact("호환성", "iOS", "https://example.com/ios", "iOS 기본 연결 지원", NOW, "UNREVIEWED");
+        var all = List.of(android, ios, fact("호환성", "멀티포인트", "멀티포인트 지원"));
+        for (var target : List.of("Android", "iOS", "멀티포인트")) {
+            var check = CompatibilityMatcher.check(EARBUDS, target, all, null, true);
+            assertThat(check.status()).isEqualTo(RequirementStatus.MEETS);
+            assertThat(check.facts()).hasSize(1);
+            assertThat(check.facts().getFirst().value()).isEqualTo(target);
+        }
+        assertThat(all).hasSize(3);
+        assertThat(CompatibilityMatcher.check(EARBUDS, "Android", List.of(ios), null, true).unknownReason()).isEqualTo(UnknownReason.MISSING);
+        var denied = fact("호환성", "Android", "Android 미지원");
+        assertThat(CompatibilityMatcher.check(EARBUDS, "Android", List.of(ios, denied), null, true).status()).isEqualTo(RequirementStatus.BELOW);
+        assertThat(CompatibilityMatcher.check(EARBUDS, "Android", List.of(android, ios, denied), null, true).unknownReason()).isEqualTo(UnknownReason.CONFLICT);
+        var unknown = fact("호환성", "미확인", "호환성 미확인");
+        assertThat(CompatibilityMatcher.check(EARBUDS, "Android", List.of(android, unknown), null, true).status()).isEqualTo(RequirementStatus.UNKNOWN);
+    }
+    @Test void multipointSpecificationRowHasAnExplicitBooleanMeaning() {
+        for (var pair : Map.of("Yes", RequirementStatus.MEETS, "No", RequirementStatus.BELOW).entrySet()) {
+            var facts = List.of(fact("호환성", "멀티포인트", "Multipoint Connection " + pair.getKey()));
+            assertThat(CompatibilityMatcher.check(EARBUDS, "멀티포인트", facts, null, true).status()).isEqualTo(pair.getValue());
+            assertThat(CompatibilityMatcher.check(EARBUDS, "Android", facts, null, true).status()).isEqualTo(RequirementStatus.UNKNOWN);
+        }
+    }
+    @Test void basicPlatformEvidenceIsIndependentOfSeparateAppClauses() {
+        var facts = List.of(fact("호환성", "Android, iOS", "Android 기본 연결 지원, iOS 기본 연결 지원; 전용 앱 iOS 16 이상 지원"));
+        for (var platform : List.of("Android", "iOS"))
+            assertThat(CompatibilityMatcher.check(EARBUDS, platform, facts, offer(OfficialStorePolicy.VERSION)).status())
+                    .isEqualTo(RequirementStatus.MEETS);
+        var appOnly = List.of(fact("호환성", "iOS", "전용 앱 iOS 지원; Bluetooth 5.4"));
+        assertThat(CompatibilityMatcher.check(EARBUDS, "iOS", appOnly, offer(OfficialStorePolicy.VERSION)).status()).isEqualTo(RequirementStatus.UNKNOWN);
+        for (var quote : List.of("전용 앱: iOS, Android 지원", "App compatible with iOS, Android supported",
+                "호환성: 앱 iOS, Android 지원", "App compatibility:\nAndroid supported")) {
+            var appList = List.of(fact("호환성", "Android", quote));
+            assertThat(CompatibilityMatcher.check(EARBUDS, "Android", appList, offer(OfficialStorePolicy.VERSION)).status()).isEqualTo(RequirementStatus.UNKNOWN);
+        }
+        var conflict = List.of(fact("호환성", "iOS", "iOS 기본 연결 지원; iOS 미지원; 전용 앱 지원"));
+        assertThat(CompatibilityMatcher.check(EARBUDS, "iOS", conflict, offer(OfficialStorePolicy.VERSION)).status()).isEqualTo(RequirementStatus.UNKNOWN);
+    }
     @Test void basicCompatibilityRequiresEvidenceAndDoesNotUseAppSupportOrBluetoothAlone() {
         for (var facts : List.of(List.<ProductFact>of(), List.of(fact("전용 앱", "iOS 12 이상", "전용 앱: iOS 12 이상")),
                 List.of(fact("호환성", "iOS 12 이상", "전용 앱 iOS 12 이상 지원")), List.of(fact("호환성", "Bluetooth 5.3", "Bluetooth 5.3 지원")))) {

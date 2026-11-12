@@ -2,7 +2,7 @@
 
 기본 추천의 제품 등록·가격 갱신 활성화·월 호출 한도·2주 관측은 [카탈로그 운영](catalog-operations.md)을 따른다. 카탈로그 조회와 가격 worker 활성화는 별도 설정이다. 초기 가격이 없는 상태를 최신 가격 추천이 준비된 배포로 취급하지 않는다.
 
-단일 backend + Next.js + PostgreSQL 배포를 전제로 한다. 이 문서는 자동 배포나 외부 유료 구매 권한을 의미하지 않는다. 실제 배포 대상은 아직 미정이다. Secret은 GCP Secret Manager에서 backend가 직접 조회하며 리소스·IAM·운영 Identity 준비는 운영자가 수행한다.
+단일 backend + Next.js + PostgreSQL 배포를 전제로 한다. 이 문서는 자동 배포나 외부 유료 구매 권한을 의미하지 않는다. 준비 대상은 단일 GCP VM이며 [배포 자산](../deploy/README.md)과 [ADR 0019](decisions/0019-portfolio-deployment-preparation.md)를 따른다. 추가 유료 지출 승인액은 0원이며 실제 배포·자원 생성은 별도 절차다. Secret은 GCP Secret Manager에서 backend가 직접 조회하며 리소스·IAM·운영 Identity 준비는 운영자가 수행한다.
 
 ## 출시 전 확인
 

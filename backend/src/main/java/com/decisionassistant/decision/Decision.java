@@ -73,6 +73,16 @@ public class Decision {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "comparison_state", columnDefinition = "jsonb")
+    private Comparison.State comparisonState;
+
+    public Comparison.State comparisonState() { return comparisonState; }
+    public void comparisonState(Comparison.State state, Instant now) {
+        this.comparisonState = state;
+        this.updatedAt = now;
+    }
+
     @OneToMany(mappedBy = "decision", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("name asc")
     private final List<DecisionOption> options = new ArrayList<>();
