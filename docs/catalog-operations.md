@@ -44,6 +44,32 @@ QCY CT06의 오픈형은 국내 공식 상품명·상품 번호와 구조화 상
 
 오디오테크니카 ATH-AC5TW는 국내 공식 판매 페이지의 모델과 오픈이어 설명이 일치하면 형태 확인 시각을 주간 갱신하고, GitHub Actions 출처 점검에도 포함한다. ANC는 미확인이다.
 
+## 관리용 대표 브랜드
+
+`catalog_products.brand_name`은 실제 관리용 대표 이름만 저장하고 `brand_status`는 확인 상태를 저장한다. manifest에도 `brandName`·`brandStatus`를 명시한다. soundcore는 `Anker`로 통일하며 모기업 소유 관계를 자동 추론하지 않는다.
+
+| brand_status | brand_name | 의미·표시 |
+|---|---|---|
+| KNOWN | 공백 아닌 실제 이름 | 이름 확인, 실제 이름 표시 |
+| UNBRANDED | NULL | 브랜드 없음 확인, `브랜드 없음` 표시 |
+| UNVERIFIED | NULL | 존재 여부 또는 이름 조사 중, `브랜드 미확인` 표시 |
+
+KNOWN의 NULL·빈 문자열·공백은 브랜드명 누락 오류다. 다른 상태는 NULL만 허용하며 빈 문자열을 대체 표기로 사용하지 않는다. 상태 누락과 정의되지 않은 값도 오류다. Java 등록 검증과 DB CHECK에서 동일한 조합을 검사한다. `노브랜드` 같은 실제 이름은 KNOWN으로 등록할 수 있다. 상태를 나타내는 이름 예약값은 사용하지 않는다.
+
+제품 ID·이름·expectedIdentity에 알려진 브랜드 표식이 있으면 UNBRANDED 선언을 차단한다. 브랜드 존재를 알아도 이름 조사 중일 수 있으므로 UNVERIFIED는 허용한다. 알려진 표식은 QCY, Anker/soundcore, Apple/AirPods, Audio-Technica, BOSE, Marshall, Sennheiser, Sony, Samsung, LG와 대응 한글 표기다. 이것은 모든 브랜드를 판별하는 사전이 아니며 표식 부재가 브랜드 없음의 증거는 아니다. 새 브랜드·브랜드 없음 선언은 등록 검토에서 확인한다. 다른 브랜드 호환성을 설명하는 이름도 표식에 걸릴 수 있으므로 해당 제품을 직접 검토한다.
+
+V17은 ID·이름·expectedIdentity로 기존 대표 이름을 채웠고 V18은 과거 예약값 정책을 적용했다. 이미 적용된 migration은 유지한다. V19는 기존 이름을 KNOWN으로, 과거 예약값 `무브랜드`만 UNBRANDED·NULL로 이전한다. 가격·사양·검토 시각·revision은 보존하고 동시성 version은 증가시킨다. manifest도 동일한 상태를 명시하므로 최초 도입 때 revision을 올리지 않는다. 이후 이름·상태 변경에는 revision 증가가 필요하다.
+
+```sql
+SELECT brand_status, brand_name, count(*) AS product_count
+FROM catalog_products
+WHERE active = true
+GROUP BY brand_status, brand_name
+ORDER BY product_count DESC, brand_status, brand_name;
+```
+
+`active = true`는 운영상 활성 제품 기준으로 추천 가능 수와는 다르다. UNBRANDED와 UNVERIFIED는 이름이 모두 NULL이므로 상태까지 묶어 집계한다. 현재 후보 카드·비교 표에는 별도 브랜드 표시가 없고 API에도 전달하지 않는다. 위 표시 문구는 브랜드 표시를 추가할 때의 기준이며, 확인 상태는 가격 유효성·사양 검증·사용자 확인 상태와 독립적이다. 가격·사양 갱신은 브랜드 상태를 자동으로 변경하지 않는다.
+
 ## 첫 실행과 가격 갱신
 
 기본 `CATALOG_ENABLED=true`, `CATALOG_REFRESH_ENABLED=false`다. offline에서도 등록 사양을 볼 수 있지만 초기 가격은 없으므로 예산 충족 추천은 없다. 과거 가격을 seed에 넣어 최신 판매가처럼 제공하지 않는다.

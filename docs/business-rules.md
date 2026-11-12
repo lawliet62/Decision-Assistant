@@ -195,6 +195,11 @@
 - **이유:** 카탈로그에서 확인 가능한 근거가 없는 경우의 UNKNOWN은 MVP의 정상 동작이다. 제조사의 정보 제공 여부를 별도로 조사하거나 확인할 수 없는 기능 지원을 추론하지 않는다. 사용자가 직접 확인해야 하는 불편을 감수한다.
 - **이유:** 후보 없는 클릭 진입을 유지하면서 검색 실패·외부 호출 비용을 제한한다.
 
+### BR-CAT-04: 브랜드명과 브랜드 확인 상태를 분리한다
+
+- **동작:** 관리용 대표 브랜드는 이름과 KNOWN/UNBRANDED/UNVERIFIED 상태를 manifest와 DB에 명시한다. soundcore는 Anker로 통일한다. KNOWN은 공백 아닌 실제 이름이 필수이며, 브랜드 없음 확인과 조사 중 상태는 이름을 NULL로 저장한다. 누락·모순된 조합은 오류다. 알려진 브랜드의 UNBRANDED 선언은 차단하되 조사 중인 UNVERIFIED는 허용한다. DB 직접 쓰기에도 같은 제약을 적용한다. 상세 경계와 표시 기준은 [카탈로그 운영](catalog-operations.md#관리용-대표-브랜드)을 따른다.
+- **이유:** 실제 브랜드 없음과 미확인을 구분하고 브랜드명에 상태 문자열을 섞지 않는다. 등록 상태는 사용자 확인·추천 판정과 독립적이다.
+
 ### BR-CAT-02: 가격과 고정 사양의 수명을 분리한다
 
 - 개발 검증에서 선택하는 CT06 고정 URL 직접 HTTP 수집에도 같은 가격 수명·48시간 간격·월 사전 예약을 적용한다. 직접 실패를 같은 시도의 Firecrawl 재호출로 대체하지 않는다. 활성화 범위는 ADR 0016을 따른다.
@@ -252,6 +257,7 @@
 | BR-CMP-01~02 | `ComparisonTest`, `DecisionApiIntegrationTest.comparisonConditionsConfirmationAndResolutionSnapshotSurviveReopening`, `frontend/e2e/comparison-flow.spec.ts` |
 | BR-AUTH-01 | `UserProvisioningServiceTest` |
 | BR-CAT-01~03 | `CatalogPolicyTest`, `CatalogApiIntegrationTest`, `frontend/e2e/catalog.spec.ts`, `scripts/catalog/report.test.mjs` |
+| BR-CAT-04 | `CatalogBrandTest`, `CatalogBrandMigrationIntegrationTest` |
 | BR-OWN-01 | `DecisionApiIntegrationTest.isolatesEveryDecisionOperationByOwner`, `DecisionApiIntegrationTest.requiresAuthenticationAndCsrf` |
 | BR-EVAL-01 | `SnapshotFactoryTest.blocksEvaluationWhenAnActiveValueIsMissing` |
 | BR-EVAL-02, BR-EVAL-03 | `AlgorithmEvaluatorTest.appliesConstraintsAnchorsWeightsAndEstimatedFlag`, `AlgorithmEvaluatorTest.clampsNumericUtilityOutsideAnchors` |
