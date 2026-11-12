@@ -60,7 +60,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
     finally { inFlight.current = false; setPending(false); }
   }
 
-  return <div className="mt-8 space-y-6">
+  return <div className="intake-panel mt-8 space-y-6">
     <div className="flex flex-wrap gap-2" aria-label="시작 방법">
       <button className={chip + (!manual ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-zinc-200")} aria-pressed={!manual} onClick={() => setManual(false)}>조건으로 추천받기</button>
       <button className={chip + (manual ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-zinc-200")} aria-pressed={manual} onClick={() => setManual(true)}>제품 직접 추가</button>

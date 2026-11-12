@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f7f2;
+  --foreground: #243a38;
 }
 
 @theme inline {
@@ -10,17 +10,48 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --color-zinc-50: #f8f7f2;
+  --color-zinc-100: #efefe7;
+  --color-zinc-200: #dcE3dc;
+  --color-zinc-300: #becbc3;
+  --color-zinc-400: #7b9188;
+  --color-zinc-500: #61776e;
+  --color-zinc-600: #4f655d;
+  --color-zinc-700: #3d554d;
+  --color-zinc-800: #254b43;
+  --color-zinc-900: #1d4038;
+  --color-zinc-950: #163e35;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html { color-scheme: light; }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), "Malgun Gothic", sans-serif;
+    line-height: 1.65;
+  }
+  ::selection { background: #cce8da; color: #163e35; }
+  :focus-visible { outline: 3px solid #0f766e; outline-offset: 4px; }
+  button, a, input, select, textarea { transition: background-color 160ms, border-color 160ms, box-shadow 160ms; }
+  button:not(:disabled), summary { cursor: pointer; }
+  input, select, textarea { accent-color: #047857; }
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea { background-color: white; }
+  h1, h2, h3 { text-wrap: balance; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+.home-hero {
+  background: radial-gradient(ellipse at 95% 10%, #e4edca 0, transparent 55%), #eaf2e9;
+  border: 1px solid #d9e5d5;
+}
+.category-card { box-shadow: 0 4px 18px #193e3505; }
+.category-card:hover { box-shadow: 0 8px 24px #193e3512; }
+.decision-workspace { background: #fff; border: 1px solid #dce3dc; border-radius: 1.5rem; padding: clamp(1rem, 3vw, 2rem); }
+.intake-panel { background: white; border: 1px solid #dce3dc; border-radius: 1.5rem; padding: clamp(1.25rem, 4vw, 2.5rem); box-shadow: 0 8px 32px #193e3506; }
+
+@media (max-width: 640px) {
+  .home-hero { border-radius: 1.5rem; }
 }
