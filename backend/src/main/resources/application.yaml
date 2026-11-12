@@ -36,6 +36,7 @@ decision-assistant:
   catalog:
     enabled: ${DECISION_ASSISTANT_CATALOG_ENABLED:true}
     refresh-enabled: ${DECISION_ASSISTANT_CATALOG_REFRESH_ENABLED:false}
+    qcy-direct-enabled: ${DECISION_ASSISTANT_CATALOG_QCY_DIRECT_ENABLED:false}
     spec-refresh-enabled: ${DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED:false}
     manifest: ${DECISION_ASSISTANT_CATALOG_MANIFEST:classpath:catalog/earbuds.json}
     monthly-limit: ${DECISION_ASSISTANT_CATALOG_MONTHLY_LIMIT:700}
