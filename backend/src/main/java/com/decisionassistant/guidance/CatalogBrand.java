@@ -20,13 +20,13 @@ final class CatalogBrand {
     };
     private CatalogBrand() {}
     static String validate(String brand, String id, String name, String identity) {
-        if (brand == null) throw new IllegalArgumentException("brandName을 명시하세요. 노브랜드는 빈 문자열로 등록합니다.");
+        if (brand == null || brand.isBlank()) throw new IllegalArgumentException("brandName을 명시하세요. 브랜드가 없음을 확인한 제품은 무브랜드로 등록합니다.");
         var value = brand.strip();
         if (value.length() > 100) throw new IllegalArgumentException("브랜드명은 최대 100자입니다.");
         var text = (Objects.toString(id, "") + " " + Objects.toString(name, "") + " "
                 + Objects.toString(identity, "")).toLowerCase(Locale.ROOT);
-        if (value.isEmpty()) for (var known : KNOWN) {
-            if (known.matcher(text).find()) throw new IllegalArgumentException("브랜드가 확인되는 제품의 brandName은 비워 둘 수 없습니다.");
+        if ("무브랜드".equals(value)) for (var known : KNOWN) {
+            if (known.matcher(text).find()) throw new IllegalArgumentException("브랜드가 확인되는 제품은 무브랜드로 등록할 수 없습니다.");
         }
         return value;
     }

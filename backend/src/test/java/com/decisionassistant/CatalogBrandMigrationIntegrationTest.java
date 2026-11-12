@@ -38,7 +38,7 @@ class CatalogBrandMigrationIntegrationTest {
         for (var e : entries) {
             assertThat(jdbc.queryForObject("SELECT brand_name FROM catalog_products WHERE id=?", String.class, e.id()))
                     .isEqualTo(e.brandName());
-            for (var blank : new String[] {"", " \t\n"}) {
+            for (var blank : new String[] {"", " \t\n", "무브랜드"}) {
                 assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET brand_name=? WHERE id=?", blank, e.id()))
                         .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
             }
@@ -47,10 +47,20 @@ class CatalogBrandMigrationIntegrationTest {
                 INSERT INTO catalog_products (id, revision, name, purchase_url, expected_identity, facts, active,
                     price_status, next_attempt_at, brand_name)
                 VALUES ('generic-buds', 1, '무선 이어폰', 'https://example.com/generic', 'generic:1', '[]', false,
-                    'UNVERIFIED', now(), '')
+                    'UNVERIFIED', now(), '무브랜드')
                 """);
-        assertThat(jdbc.queryForObject("SELECT brand_name FROM catalog_products WHERE id='generic-buds'", String.class)).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT brand_name FROM catalog_products WHERE id='generic-buds'", String.class)).isEqualTo("무브랜드");
+        for (var blank : new String[] {null, "", " \t\n"}) {
+            assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET brand_name=? WHERE id='generic-buds'", blank))
+                    .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        }
         assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET name='soundcore Buds' WHERE id='generic-buds'"))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update("""
+                INSERT INTO catalog_products (id, revision, name, purchase_url, expected_identity, facts, active,
+                    price_status, next_attempt_at)
+                VALUES ('missing-brand', 1, '무선 이어폰', 'https://example.com/missing', 'generic:2', '[]', false,
+                    'UNVERIFIED', now())
+                """)).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 }
