@@ -19,7 +19,7 @@ class CatalogRequirementCoverageTest {
                 if (!entry.active()) continue;
                 active++;
                 var product = new CatalogProduct(entry.id());
-                product.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), true);
+                product.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), true, entry.brandName());
                 // 등록 시각 직후로 고정하여 만료와 문구 해석을 분리한다.
                 var at = entry.facts().stream().map(f -> f.evidence().fetchedAt()).max(Instant::compareTo).orElseThrow();
                 var facts = product.usableFacts(at);

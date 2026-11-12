@@ -195,6 +195,11 @@
 - **이유:** 카탈로그에서 확인 가능한 근거가 없는 경우의 UNKNOWN은 MVP의 정상 동작이다. 제조사의 정보 제공 여부를 별도로 조사하거나 확인할 수 없는 기능 지원을 추론하지 않는다. 사용자가 직접 확인해야 하는 불편을 감수한다.
 - **이유:** 후보 없는 클릭 진입을 유지하면서 검색 실패·외부 호출 비용을 제한한다.
 
+### BR-CAT-04: 관리용 브랜드는 노브랜드와 확인된 브랜드 누락을 구분한다
+
+- **동작:** 제품의 관리용 대표 브랜드를 manifest와 DB에 명시한다. soundcore는 Anker로 통일한다. 노브랜드는 빈 문자열을 허용하지만 필드 누락과 알려진 브랜드 표식이 있는 제품의 공백은 등록 오류다. 알려진 표식의 범위와 신규 브랜드 검토는 [카탈로그 운영](catalog-operations.md#관리용-대표-브랜드)을 따른다. DB 직접 쓰기에도 알려진 브랜드의 공백 금지를 적용한다.
+- **이유:** 제품명 파싱에 의존하지 않고 분포를 집계하면서 향후 노브랜드 제품도 수용한다.
+
 ### BR-CAT-02: 가격과 고정 사양의 수명을 분리한다
 
 - 개발 검증에서 선택하는 CT06 고정 URL 직접 HTTP 수집에도 같은 가격 수명·48시간 간격·월 사전 예약을 적용한다. 직접 실패를 같은 시도의 Firecrawl 재호출로 대체하지 않는다. 활성화 범위는 ADR 0016을 따른다.
@@ -252,6 +257,7 @@
 | BR-CMP-01~02 | `ComparisonTest`, `DecisionApiIntegrationTest.comparisonConditionsConfirmationAndResolutionSnapshotSurviveReopening`, `frontend/e2e/comparison-flow.spec.ts` |
 | BR-AUTH-01 | `UserProvisioningServiceTest` |
 | BR-CAT-01~03 | `CatalogPolicyTest`, `CatalogApiIntegrationTest`, `frontend/e2e/catalog.spec.ts`, `scripts/catalog/report.test.mjs` |
+| BR-CAT-04 | `CatalogBrandTest`, `CatalogBrandMigrationIntegrationTest` |
 | BR-OWN-01 | `DecisionApiIntegrationTest.isolatesEveryDecisionOperationByOwner`, `DecisionApiIntegrationTest.requiresAuthenticationAndCsrf` |
 | BR-EVAL-01 | `SnapshotFactoryTest.blocksEvaluationWhenAnActiveValueIsMissing` |
 | BR-EVAL-02, BR-EVAL-03 | `AlgorithmEvaluatorTest.appliesConstraintsAnchorsWeightsAndEstimatedFlag`, `AlgorithmEvaluatorTest.clampsNumericUtilityOutsideAnchors` |

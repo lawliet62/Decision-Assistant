@@ -44,6 +44,24 @@ QCY CT06의 오픈형은 국내 공식 상품명·상품 번호와 구조화 상
 
 오디오테크니카 ATH-AC5TW는 국내 공식 판매 페이지의 모델과 오픈이어 설명이 일치하면 형태 확인 시각을 주간 갱신하고, GitHub Actions 출처 점검에도 포함한다. ANC는 미확인이다.
 
+## 관리용 대표 브랜드
+
+`catalog_products.brand_name`은 분포 조회를 위한 관리용 대표 브랜드다. `earbuds.json`의 `brandName`에도 같은 값을 명시한다. soundcore는 `Anker`로 통일하며, 기업 소유 관계를 추론해 다른 브랜드까지 합치지 않는다. 별도 브랜드 테이블이나 추천 API 변경은 없다.
+
+노브랜드는 빈 문자열로 등록할 수 있다. 필드 누락(`null`)은 노브랜드 확인과 구분해 등록 오류로 처리하고, 앞뒤 공백은 제거한다. 제품 ID·이름·expectedIdentity에 알려진 브랜드 표식이 있으면 공백 브랜드를 등록 오류로 처리하며 DB CHECK도 직접 SQL 입력의 누락을 차단한다. 현재 인식 범위는 QCY, Anker/soundcore, Apple/AirPods, Audio-Technica, BOSE, Marshall, Sennheiser, Sony, Samsung, LG와 대응 한글 표기다. 이 규칙은 모든 브랜드를 판별하는 사전이 아니므로 새 브랜드는 등록 검토에서 대표 이름을 확인하고 누락 검증과 테스트를 함께 확장한다. 이름에 다른 브랜드의 호환성 표현이 포함돼도 표식을 감지할 수 있으므로 공백이 차단되면 제품 자체의 브랜드를 확인한다.
+
+V17은 기존 제품의 ID·이름·expectedIdentity만으로 브랜드를 채우며 가격·사양·검토 시각·revision을 보존한다. 기존 manifest도 같은 대표 값을 사용하므로 최초 도입 시 revision은 올리지 않는다. 이후 브랜드 변경에는 기존 등록과 동일하게 revision 증가가 필요하다. 직접 SQL 수정 대신 manifest 원본도 함께 갱신한다.
+
+```sql
+SELECT brand_name, count(*) AS product_count
+FROM catalog_products
+WHERE active = true
+GROUP BY brand_name
+ORDER BY product_count DESC, brand_name;
+```
+
+`active = true`는 운영상 활성 제품 기준이다. 가격 유효성·조건 충족까지 반영한 추천 가능 제품 수와 구분한다.
+
 ## 첫 실행과 가격 갱신
 
 기본 `CATALOG_ENABLED=true`, `CATALOG_REFRESH_ENABLED=false`다. offline에서도 등록 사양을 볼 수 있지만 초기 가격은 없으므로 예산 충족 추천은 없다. 과거 가격을 seed에 넣어 최신 판매가처럼 제공하지 않는다.

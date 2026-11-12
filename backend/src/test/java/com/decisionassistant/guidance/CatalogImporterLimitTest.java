@@ -21,7 +21,7 @@ class CatalogImporterLimitTest {
         for (int i = 0; i < activeEntries + inactiveEntries; i++) {
             entries.add(new CatalogImporter.Entry("product-" + i, 1, "Product " + i,
                     "https://qcystore.co.kr/product/buds/" + (1000 + i) + "/", "qcy:test-" + i,
-                    List.of(), i < activeEntries));
+                    List.of(), i < activeEntries, "QCY"));
         }
         var manifest = directory.resolve("catalog.json");
         new ObjectMapper().writeValue(manifest.toFile(), entries);

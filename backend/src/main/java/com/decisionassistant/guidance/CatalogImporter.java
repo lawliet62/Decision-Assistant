@@ -14,7 +14,7 @@ import java.util.*;
 @Component
 public class CatalogImporter implements ApplicationRunner {
     public record Entry(String id, int revision, String name, String purchaseUrl, String expectedIdentity,
-                        List<CatalogProduct.Fact> facts, boolean active) {}
+                        List<CatalogProduct.Fact> facts, boolean active, String brandName) {}
     private final CatalogProperties config;
     private final CatalogProductRepository products;
     private final ResourceLoader resources;
@@ -32,7 +32,7 @@ public class CatalogImporter implements ApplicationRunner {
                 validate(entry, Instant.now());
                 if (!ids.add(entry.id()) || !urls.add(entry.purchaseUrl()) || !identities.add(entry.expectedIdentity())) throw new IllegalArgumentException("중복 카탈로그 항목입니다.");
                 var product = products.findById(entry.id()).orElseGet(() -> new CatalogProduct(entry.id()));
-                product.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), entry.active());
+                product.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), entry.active(), entry.brandName());
                 products.save(product);
             }
             if (products.findByActiveTrueOrderByIdAsc().size() > 30) throw new IllegalArgumentException("활성 카탈로그는 최대 30개입니다.");
@@ -43,6 +43,7 @@ public class CatalogImporter implements ApplicationRunner {
                 || e.name().length() > 300 || e.expectedIdentity() == null || e.expectedIdentity().isBlank() || e.expectedIdentity().length() > 500
                 || OfficialStorePolicy.store(e.purchaseUrl()).isEmpty() || e.facts() == null || e.facts().size() > 20)
             throw new IllegalArgumentException("카탈로그 제품과 공식 판매 URL을 확인하세요.");
+        CatalogBrand.validate(e.brandName(), e.id(), e.name(), e.expectedIdentity());
         for (var item : e.facts()) {
             var f = item.evidence();
             if (item.cycle() == null || f == null || f.name() == null || "가격".equals(f.name()) || f.value() == null || f.value().isBlank()
