@@ -27,7 +27,7 @@ final class SpecificationPageFetcher {
         var client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build();
         var request = HttpRequest.newBuilder(url).timeout(timeout).GET().build();
         var pending = client.sendAsync(request, info -> {
-            if (info.statusCode() != 200) throw new IllegalStateException("SOURCE_UNAVAILABLE");
+            if (info.statusCode() != 200) throw new IllegalStateException("SOURCE_UNAVAILABLE_HTTP_" + info.statusCode());
             return new LimitedBody(maxBytes);
         });
         try {

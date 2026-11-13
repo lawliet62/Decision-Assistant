@@ -288,3 +288,7 @@
 - `ARCHIVED` 상태로 전이하는 조건과 그 이후 허용 동작
 
 이 항목은 현재 구현 세부 동작에 의존하지 않는다. 제품 또는 API에서 의미 있는 차이를 만들게 되면 먼저 규칙을 결정하고 이 문서를 갱신한다.
+
+### Sony WF-C710N 근거 적용 범위
+
+BR-DISC-04의 카탈로그 판매가는 고정 글래스 블루 구성의 선택 후 HTML에만 적용한다. ANC는 모델명이 포함된 Sony의 정확한 노이즈 캔슬링 인용만 지원 근거로 인정하며 일반적인 노이즈 제거 문구를 모든 제품의 ANC로 해석하지 않는다. 호환성은 공식 펌웨어의 Android/iPhone 근거이며 현재 iPhone을 iOS 별칭으로 확장하지 않아 iOS는 UNKNOWN이다. 사양 점검은 같은 값·출처·인용을 확인했을 때만 시각을 연장한다. 검증은 SonyC710nVerifierTest, ProviderResponseConversionTest, CatalogApiIntegrationTest.sonyRegisteredFactsReachAncAndroidRecommendationWithoutAi와 [실측](evaluations/sony-c710n-2026-11-13/README.md)을 따른다.

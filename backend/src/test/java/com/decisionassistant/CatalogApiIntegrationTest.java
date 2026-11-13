@@ -150,6 +150,29 @@ class CatalogApiIntegrationTest {
             verifyNoInteractions(search, web, ai);
         }
     }
+    @Test void sonyRegisteredFactsReachAncAndroidRecommendationWithoutAi() throws Exception {
+        try (var stream = new org.springframework.core.io.ClassPathResource("catalog/earbuds.json").getInputStream()) {
+            var entry = Arrays.stream(json.readValue(stream, CatalogImporter.Entry[].class))
+                    .filter(e -> e.id().equals("sony-wf-c710n-glass-blue")).findFirst().orElseThrow();
+            var p = new CatalogProduct(entry.id());
+            p.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), true, entry.brandName(), entry.brandStatus());
+            // API 시험의 가격은 fixture다. 실제 공급자 저장 결과는 평가 문서에서 구분한다.
+            p.observed(new OfficialProduct(p.name(), p.expectedIdentity(), new OfficialOffer(p.purchaseUrl(), "소니 공식 스토어",
+                    BigDecimal.valueOf(139000), "KRW", null, Instant.now(), "판매가", CatalogProperties.VERSION), "", "판매가 139,000원"));
+            products.saveAndFlush(p);
+            jdbc.update("update catalog_products set fact_reviews=cast(? as jsonb) where id=?",
+                    json.writeValueAsString(Map.of("호환성",Instant.now().toString(),"ANC 지원",Instant.now().toString())),p.id());
+            var response=mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content(BODY.replace("50000","150000"))).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+            var id=json.readTree(response).path("id").asText();
+            mvc.perform(get("/api/v1/decisions/"+id).with(owner))
+                    .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                    .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck.status").value("MEETS"))
+                    .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
+            verifyNoInteractions(search,web,ai);
+        }
+    }
+
     @Test void separatePlatformSourcesRemainIndependentInCatalogResponses() throws Exception {
         var p = product(1, Instant.now());
         var facts = new ArrayList<>(p.facts());

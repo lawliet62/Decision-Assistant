@@ -18,7 +18,7 @@ public final class OfficialStorePolicy {
             new Store("samsung-kr", "삼성닷컴", "www.samsung.com", "/sec/(buds|smartphones|tablets|galaxybook|monitors)/[^/]+/[^/]+/?", Set.of("images.samsung.com")),
             new Store("apple-kr", "Apple 공식 스토어", "www.apple.com", "/kr/shop/(buy-[^/]+|product)/.+", Set.of("store.storeimages.cdn-apple.com", "www.apple.com")),
             new Store("lg-kr", "LG전자", "www.lge.co.kr", "/(?:product/)?(?:monitors|notebook)/[^/]+/?", Set.of("www.lge.co.kr")),
-            new Store("sony-kr", "소니 공식 스토어", "store.sony.co.kr", "/product-view/109871591/?", Set.of("store.sony.co.kr")),
+            new Store("sony-kr", "소니 공식 스토어", "store.sony.co.kr", "/product-view/(109871591|128838586)/?", Set.of("store.sony.co.kr")),
             new Store("bose-kr", "BOSE 공식 온라인 스토어", "www.bose.co.kr", "/357/?", Set.of()),
             new Store("anker-kr", "앤커코리아 공식 스토어", "ankerkorea.co.kr", "/product/(?:detail\\.html|[^/]+/(?:40|43|45|91|154)/?)", Set.of()),
             new Store("marshall-kr", "Marshall 공식 스토어", "www.marshall.com", "/kr/ko/product/(?:motif-ii-anc|minor-iv)/?", Set.of()),

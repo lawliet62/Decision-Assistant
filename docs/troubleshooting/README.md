@@ -4,6 +4,8 @@
 
 ## 사례와 진단 방법
 
+- [Sony의 선택 후 가격과 HTTP client 차이](sony-selected-option-and-source-client.md): snapshot·공식 링크 정규화·Java 403과 Node 검증
+
 - [웹 검색 조사 실패와 가격 검증 실패의 구분](catalog-research-incomplete.md): 미완성 응답, 실패 시 사용량 보존과 중복 호출 방지
 
 - [결정 전체 선택에서 403이 반환되는 경우](stale-decision-selection-api.md): 구버전 backend와 최신 frontend의 실행 버전 불일치

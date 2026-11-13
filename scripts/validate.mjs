@@ -13,6 +13,7 @@ const npm = isWindows ? "npm.cmd" : "npm";
 
 const commands = [
   [process.execPath, ["--test", "scripts/backend-env.test.mjs", "scripts/restack/restack.test.mjs", "scripts/discovery-evaluation/summarize.test.mjs", "scripts/discovery-evaluation/plan.test.mjs", "scripts/catalog/report.test.mjs", "scripts/catalog/check-sources.test.mjs", "scripts/worktree-guard.test.mjs"]],
+  [process.execPath, ["--test", "scripts/catalog/sony-facts.test.mjs"]],
   [gradle, ["-p", "backend", "test"]],
   [npm, ["--prefix", "frontend", "run", "lint"]],
   [npm, ["--prefix", "frontend", "run", "typecheck"]],

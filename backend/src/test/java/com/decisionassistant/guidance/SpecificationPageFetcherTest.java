@@ -46,7 +46,7 @@ class SpecificationPageFetcherTest {
             assertThatThrownBy(() -> SpecificationPageFetcher.fetch(URI.create(base + "/large"), Duration.ofSeconds(3), 16))
                     .hasRootCauseMessage("SOURCE_TOO_LARGE");
             assertThatThrownBy(() -> SpecificationPageFetcher.fetch(URI.create(base + "/redirect"), Duration.ofSeconds(3), 16))
-                    .hasRootCauseMessage("SOURCE_UNAVAILABLE");
+                    .hasRootCauseMessage("SOURCE_UNAVAILABLE_HTTP_302");
             assertTimeoutPreemptively(Duration.ofSeconds(4), () -> assertThatThrownBy(
                     () -> SpecificationPageFetcher.fetch(URI.create(base + "/slow"), Duration.ofSeconds(1), 16))
                     .isInstanceOf(java.util.concurrent.TimeoutException.class));

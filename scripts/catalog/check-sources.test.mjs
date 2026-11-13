@@ -1,6 +1,29 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { inspect, requiresAttention, summary } from "./check-sources.mjs";
+
+test("소니의 두 출처를 각각 한 번 점검하고 미등록 출처는 조회하지 않는다", async () => {
+  const manifest = JSON.parse(fs.readFileSync(new URL("../../backend/src/main/resources/catalog/earbuds.json", import.meta.url), "utf8"));
+  const entry = manifest.find(item => item.id === "sony-wf-c710n-glass-blue");
+  const titles = ["WF-C710N 무선 노이즈 캔슬링 이어폰 | 30시간 배터리 | 소니코리아", "펌웨어 업데이트 버전 1.0.5 | Sony KR"];
+  const calls = [];
+  const fetchPage = async url => {
+    calls.push(url);
+    const i = entry.facts.findIndex(item => item.evidence.sourceUrl === url);
+    return new Response(`<title>${titles[i]}</title><p>${entry.facts[i].evidence.quote}</p>`);
+  };
+  const result = await inspect([entry], fetchPage, new Date("2026-11-13T12:00:00Z"));
+  assert.equal(calls.length, 2);
+  assert.equal(new Set(calls).size, 2);
+  assert.deepEqual(result.map(item => [item.observation, item.titleCheck]), [["QUOTE_PRESENT", "MATCH"], ["QUOTE_PRESENT", "MATCH"]]);
+  const unknown = structuredClone(entry);
+  unknown.facts[1].evidence.sourceUrl = "https://unapproved.example/spec";
+  calls.length = 0;
+  const partial = await inspect([unknown], fetchPage, new Date("2026-11-13T12:00:00Z"));
+  assert.equal(calls.length, 1);
+  assert.equal(partial.filter(item => item.observation === "UNSUPPORTED_SOURCE").length, 1);
+});
 
 test("점검 대상에 등록되지 않은 활성 상품 사양은 누락하지 않고 미지원으로 보고한다", async () => {
   const item = { id: "new-product", active: true, facts: [{ cycle: "HARDWARE", evidence: {

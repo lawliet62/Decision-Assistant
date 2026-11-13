@@ -1,5 +1,7 @@
 # 문서 색인
 
+- [Sony WF-C710N 실제 검증](evaluations/sony-c710n-2026-11-13/README.md): 선택 후 판매가·사양 시각 갱신·개발 DB/API 검증과 남은 범위
+
 - [이어폰 데이터 확대와 혼합 수집](catalog-expansion.md): 주류 브랜드·가격대 확대 완료 기준과 제한된 OpenAI 공식 출처 조사
 
 - [MVP 배포 준비 보고서](mvp-readiness.md): 승인된 범위·검증 결과·무료 VM 가능성·배포 전 남은 작업
