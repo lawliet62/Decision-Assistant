@@ -78,6 +78,10 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 
 ### Codex worktree 점유
 
+탐색·검증·개발 명령은 task의 worktree에서 실행한다. 커밋된 다른 branch의 내용은 이 worktree에서 `git show <ref>:<path>`로 확인한다. 원본 checkout에만 있는 파일이 필요하면 작업 디렉터리를 옮기지 않고 `Get-Content -LiteralPath <절대경로>` 등으로 필요한 범위만 읽는다. 점유 보호는 다른 worktree의 변경·개발 실행 충돌을 방지하기 위한 것이며, 필요한 파일 읽기를 금지하는 정책이 아니다. 읽는 도중 다른 세션이 파일을 바꿀 수 있으므로 검증 근거는 가능하면 고정된 commit을 사용한다. 원본의 의존성·설정·실행 결과를 현재 worktree의 검증 결과로 간주하지 않는다.
+
+현재 Hook은 호출의 작업 디렉터리를 기준으로 점유를 확인하므로 읽기 명령이어도 점유된 checkout을 `workdir`로 지정하면 차단된다. shell 명령 문자열을 읽기 전용으로 추측해 통과시키지 않으며, 자기 worktree에서 읽는다. OS 읽기 권한과 Hook 점유는 별개다. [Windows worktree 명령 진단](troubleshooting/windows-worktree-permissions.md)을 참조한다.
+
 독립 Codex 세션은 worktree를 독점한다. 하위 agent는 부모의 세션 ID와 worktree를 공유하므로 부모가 작업 충돌을 조정한다. Node.js와 Git을 준비한 뒤 저장소 루트에서 `node scripts/install-worktree-guard.mjs`를 실행하고, 새 Codex CLI 세션의 `/hooks`에서 Hook 정의를 검토·신뢰한다. 이미 실행 중인 세션은 종료하고 다시 시작해야 보호된다. 정의가 바뀌면 다시 검토한다.
 
 설치기는 사용자 홈의 `.codex/hooks.json`, `.codex/worktree-guard-runtime/`, `.codex/worktree-guard-repos.json`을 사용한다. 다른 사용자 Hook 설정은 덮어쓰지 않는다. 연결 worktree에서 프로젝트 Hook을 발견하지 못하는 Codex 환경을 고려해 사용자 Hook을 사용하고, 등록된 Git 공통 디렉터리에 속한 저장소만 점유를 확인한다. 다른 저장소는 통과시킨다. 공통 설정 파일이 손상되면 적용 대상을 판단할 수 없어 다른 저장소의 작업도 차단될 수 있다. 다른 저장소에 적용할 때도 해당 저장소에서 설치기를 실행한다. 시작·재개, 사용자 입력, 지원되는 도구 호출에서 점유를 확인하며 종료 시 소유 기록을 해제한다. 설정이 적용되지 않은 세션은 보호되지 않는다.
