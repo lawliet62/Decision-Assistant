@@ -2,6 +2,8 @@
 
 ## Prerequisites
 
+`scripts/gradle.mjs`와 `npm run dev`는 소유한 하위 프로세스의 종료를 기다린다. Gradle wrapper 실행은 `--no-daemon`으로 격리하며 SIGINT·SIGTERM을 하위 트리에 전달한다. POSIX에서는 5초 후 강제 종료하고 Windows에서는 `taskkill /T /F`를 사용한다. 자세한 재현과 검증 범위는 [종료 신호 troubleshooting](troubleshooting/dev-server-process-shutdown.md)을 따른다.
+
 - Java 21
 - Node.js 22 이상과 npm
 - Docker (full validation과 local PostgreSQL)
