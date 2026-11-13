@@ -23,3 +23,4 @@ Liberty 5의 확인된 두 제목만 정확히 허용한다. Java는 canonical·
 
 Sony 차단은 새 provider나 우회 수집으로 자동 전환하지 않는다. 에이전트도 같은 접근 제한을 만날 수 있으므로 403만으로 도입 효과를 주장하지 않는다. 코드 유지·진단 비용이 에이전트 검토 비용보다 커지는 근거가 생기면 기존 운영 기준에 따라 전환을 권고한다. 전체 자동 운영·장기 반복 검증은 미완료다.
 `npm run check` 전체(단위·PostgreSQL 통합·계약·lint·typecheck·production build)를 통과했다.
+`n최종 branch의 [실제 GitHub 점검](https://github.com/lawliet62/Decision-Assistant/actions/runs/43470207628)에서는 Samsung·Anker 네 사양 모두 문구·제목이 일치했다. [후속 요약](github-after.json)에 결과를 보존했다. 36개 중 문구 33개·그 33개 제목이 일치하며, Sony HTTP 403 두 항목과 HT10 HTTP 404 한 항목은 그대로 실패다. 따라서 workflow의 최종 failure는 코드 CI 실패가 아닌 남은 접근·출처 문제를 알리는 결과다. 위의 후속 확인 계획은 이 관측으로 수행했다.
