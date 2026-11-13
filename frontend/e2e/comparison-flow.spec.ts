@@ -17,12 +17,12 @@ test("같은 후보에서 조건 복원·직접 확인·보류·결정 기록을
   await expect(beta).toContainText("근거 없음");
   await expect(page.getByRole("region", { name: "추가 비용과 차이" })).toContainText("40,000원 추가");
   await expect(page.getByRole("region", { name: "추가 비용과 차이" })).toContainText("ANC 지원");
-  await page.getByLabel("비교 예산 상한", { exact: true }).fill("70000");
+  await page.getByLabel("비교 예산 상한", { exact: true }).fill("7");
   await expect(page.getByRole("button", { name: "3. 선택 기록", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("가상 Beta · 최대 예산: 충족 → 미달 (70000원)");
   await page.getByRole("button", { name: "이전 조건으로 복원", exact: true }).click();
-  await expect(page.getByLabel("비교 예산 상한", { exact: true })).toHaveValue("100000");
+  await expect(page.getByLabel("비교 예산 상한", { exact: true })).toHaveValue("10");
   await page.getByLabel("먼저 볼 정보", { exact: true }).selectOption("배터리");
   await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(beta).toContainText("최대 8시간 (ANC 끔)");
@@ -58,10 +58,10 @@ test("같은 후보에서 조건 복원·직접 확인·보류·결정 기록을
 
 test("저장 장애에서 입력을 지키고 모든 후보 보류를 복원할 수 있다", async ({ page }) => {
   await page.route("**/api/v1/decisions/*/comparison", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ detail: "시험 장애: 저장 실패" }) }));
-  await page.getByLabel("비교 예산 상한", { exact: true }).fill("60000");
+  await page.getByLabel("비교 예산 상한", { exact: true }).fill("6");
   await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(page.getByRole("alert").filter({ hasText: "시험 장애" })).toContainText("시험 장애");
-  await expect(page.getByLabel("비교 예산 상한", { exact: true })).toHaveValue("60000");
+  await expect(page.getByLabel("비교 예산 상한", { exact: true })).toHaveValue("6");
   await expect(page.getByText("저장 조건:", { exact: false })).toContainText("100,000원");
   await page.getByRole("button", { name: "조건 편집 취소" }).click();
   await page.unroute("**/api/v1/decisions/*/comparison");
