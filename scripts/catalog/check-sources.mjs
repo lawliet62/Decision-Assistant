@@ -35,7 +35,9 @@ const MAX_BYTES = 2_000_000;
 const normalize = value => value.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ")
   .replace(/&amp;/gi, "&").replace(/\s+/g, " ").trim().toLowerCase();
 const observedTitle = html => {
-  const titles = [...html.matchAll(/<title(?:\s[^>]*)?>([\s\S]*?)<\/title\s*>/gi)];
+  // script 문자열의 팝업 HTML과 주석은 현재 문서의 title 요소가 아니다.
+  const document = html.replace(/<!--[^]*?-->/g, "").replace(/<script\b[^>]*>[^]*?<\/script\s*>/gi, "");
+  const titles = [...document.matchAll(/<title(?:\s[^>]*)?>([\s\S]*?)<\/title\s*>/gi)];
   if (titles.length !== 1 || titles[0][1].length > 500 || /[<>\u0000-\u001f]/.test(titles[0][1].replace(/[\r\n\t]/g, ""))) return null;
   const title = titles[0][1].replace(/&(?:ndash|#8211|#x2013);/gi, "–").replace(/\s+/g, " ").trim();
   return title;

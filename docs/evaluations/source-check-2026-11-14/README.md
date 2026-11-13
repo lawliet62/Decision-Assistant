@@ -19,5 +19,7 @@ Liberty 5의 확인된 두 제목만 정확히 허용한다. Java는 canonical·
 
 ## 남는 경계
 
-Samsung 실제 GitHub 제목과 수정 branch의 클라우드 점검을 추가 확인한다. Sony 차단은 새 provider나 우회 수집으로 자동 전환하지 않는다. 에이전트도 같은 접근 제한을 만날 수 있으므로 403만으로 도입 효과를 주장하지 않는다. 코드 유지·진단 비용이 에이전트 검토 비용보다 커지는 근거가 생기면 기존 운영 기준에 따라 전환을 권고한다. 전체 자동 운영·장기 반복 검증은 미완료다.
+첫 수정 branch의 [GitHub 점검](https://github.com/lawliet62/Decision-Assistant/actions/runs/43469831975)에서는 Anker 두 사양이 MATCH로 바뀌었다. Samsung은 여전히 MISMATCH였고, 로컬 실제 응답에서 문서 제목 외에 JavaScript 문자열의 팝업 HTML 제목까지 정규식이 센 것을 확인했다. 제목 추출에서 script·주석을 제외하도록 수정했다. 실제 복수 title은 계속 거절하며 회귀 테스트로 구분한다. 이 추가 수정의 클라우드 결과는 후속 실행에서 확인한다.
+
+Sony 차단은 새 provider나 우회 수집으로 자동 전환하지 않는다. 에이전트도 같은 접근 제한을 만날 수 있으므로 403만으로 도입 효과를 주장하지 않는다. 코드 유지·진단 비용이 에이전트 검토 비용보다 커지는 근거가 생기면 기존 운영 기준에 따라 전환을 권고한다. 전체 자동 운영·장기 반복 검증은 미완료다.
 `npm run check` 전체(단위·PostgreSQL 통합·계약·lint·typecheck·production build)를 통과했다.
