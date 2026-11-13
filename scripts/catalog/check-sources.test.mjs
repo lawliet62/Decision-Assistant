@@ -34,6 +34,31 @@ test("점검 대상에 등록되지 않은 활성 상품 사양은 누락하지 
 });
 
 const source = "https://www.qcy.com/products/qcy-t13-anc";
+test("Liberty 5는 확인한 두 제목만 허용하고 문구 누락은 계속 보고한다", async () => {
+  const entries = JSON.parse(fs.readFileSync(new URL("../../backend/src/main/resources/catalog/earbuds.json", import.meta.url), "utf8"));
+  const product = entries.find(e => e.id === "anker-liberty5-a3957");
+  const before = JSON.stringify(product);
+  for (const suffix of ["Dolby 3D Audio", "Dolby Audio", "Dolby Other"]) {
+    let calls = 0;
+    const rows = await inspect([product], async () => { calls++; return new Response(`<title>soundcore Liberty 5 | Noise-Cancelling Earbuds with ${suffix}</title>` + product.facts.map(f=>f.evidence.quote).join(" ")); }, new Date("2026-11-14T00:00:00Z"));
+    assert.equal(calls, 1);
+    assert.ok(rows.every(r => r.titleCheck === (suffix === "Dolby Other" ? "MISMATCH" : "MATCH")));
+  }
+  const missing = await inspect([product], async () => new Response("<title>soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio</title>"));
+  assert.ok(missing.every(r=>r.observation === "QUOTE_MISSING"));
+  assert.equal(JSON.stringify(product), before);
+});
+
+test("불일치 제목은 길이를 제한하고 summary에서 코드로 표시한다", async () => {
+  const product = { id:"qcy-t13-pro",active:true,facts:[{cycle:"HARDWARE",evidence:{name:"ANC",sourceUrl:"https://www.qcy.com/products/qcy-t13-pro",quote:"ANC",fetchedAt:"2026-11-01T00:00:00Z"}}] };
+  const rows=await inspect([product],async()=>new Response("<title>Other `title` & [link]</title>ANC"));
+  assert.equal(rows[0].observedTitle,"Other `title` & [link]");
+  assert.ok(summary(rows).includes("\\u0060title\\u0060"));
+  assert.ok(summary(rows).includes("\\u0026"));
+  const large=await inspect([product],async()=>new Response("<title>"+"x".repeat(501)+"</title>ANC"));
+  assert.equal(large[0].observedTitle,null);
+  assert.equal(large[0].titleCheck,"MISMATCH");
+});
 const entry = { id: "qcy-t13-anc", active: true, facts: [
   { cycle: "SOFTWARE", evidence: { name: "호환성", sourceUrl: source, quote: "Compatible system: iOS/Android", fetchedAt: "2026-10-01T00:00:00Z" } },
   { cycle: "HARDWARE", evidence: { name: "ANC 지원", sourceUrl: source, quote: "Active Noise Cancellation", fetchedAt: "2026-10-01T00:00:00Z" } },

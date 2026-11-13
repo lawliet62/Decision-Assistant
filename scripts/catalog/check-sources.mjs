@@ -19,7 +19,7 @@ const sources = [
   ["qcy-ct06", ["https://qcystore.co.kr/product/detail.html?product_no=994", "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프 - QCY스토어"]],
   ["anker-p31i-d1202", ["https://www.ankerjapan.com/products/d1202", "Soundcore P31i | 完全ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア"]],
   ["anker-aeroclip-a3388", ["https://ankerkorea.co.kr/product/detail.html?product_no=45", "에어로클립 오픈형 러닝 블루투스이어폰 A3388"]],
-  ["anker-liberty5-a3957", ["https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds", "soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby 3D Audio"]],
+  ["anker-liberty5-a3957", ["https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds", ["soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby 3D Audio", "soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio"]]],
   ["anker-liberty5-pro-d1203", ["https://www.ankerjapan.com/products/d1203", "Soundcore Liberty 5 Pro | ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア"]],
   ["anker-p41i-a3937", ["https://www.ankerjapan.com/products/a3937", "Soundcore P41i | 完全ワイヤレスイヤホンの製品情報 | Anker Japan 公式オンラインストア"]],
   ["qcy-t29-app", ["https://qcystore.co.kr/product/detail.html?product_no=709", "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버 - QCY스토어"]],
@@ -34,11 +34,11 @@ const sources = [
 const MAX_BYTES = 2_000_000;
 const normalize = value => value.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ")
   .replace(/&amp;/gi, "&").replace(/\s+/g, " ").trim().toLowerCase();
-const titleMatches = (html, expected) => {
+const observedTitle = html => {
   const titles = [...html.matchAll(/<title(?:\s[^>]*)?>([\s\S]*?)<\/title\s*>/gi)];
-  if (titles.length !== 1 || /[<>]/.test(titles[0][1])) return false;
+  if (titles.length !== 1 || titles[0][1].length > 500 || /[<>\u0000-\u001f]/.test(titles[0][1].replace(/[\r\n\t]/g, ""))) return null;
   const title = titles[0][1].replace(/&(?:ndash|#8211|#x2013);/gi, "–").replace(/\s+/g, " ").trim();
-  return title === expected;
+  return title;
 };
 
 export async function inspect(entries, fetchPage = fetch, now = new Date()) {
@@ -59,7 +59,7 @@ export async function inspect(entries, fetchPage = fetch, now = new Date()) {
     if (!entry) continue;
     const facts = entry.facts.filter(item => item.evidence.sourceUrl === url);
     if (!facts.length) continue;
-    let page, titleCheck, failure;
+    let page, titleCheck, failure, title = null;
     try {
       if (!facts.some(item => item.evidence.sourceUrl === url)) throw new Error("NO_APPROVED_SOURCE");
       const response = await fetchPage(url, { redirect: "manual", signal: AbortSignal.timeout(15000) });
@@ -78,7 +78,8 @@ export async function inspect(entries, fetchPage = fetch, now = new Date()) {
       const bytes = new Uint8Array(size); let offset = 0;
       for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
       const html = new TextDecoder().decode(bytes);
-      titleCheck = titleMatches(html, expectedTitle) ? "MATCH" : "MISMATCH";
+      title = observedTitle(html);
+      titleCheck = (Array.isArray(expectedTitle) ? expectedTitle : [expectedTitle]).includes(title) ? "MATCH" : "MISMATCH";
       page = normalize(html);
     } catch (error) { page = null; titleCheck = "UNAVAILABLE"; failure = /^HTTP_\d{3}$|^TOO_LARGE$/.test(error.message) ? error.message : "NETWORK_OR_TIMEOUT"; }
     for (const item of facts) {
@@ -87,7 +88,7 @@ export async function inspect(entries, fetchPage = fetch, now = new Date()) {
       results.push({ productId: id, field: fact.name, source: fact.sourceUrl, reviewedAt: fact.fetchedAt,
         dueAt: dueAt.toISOString(), due: dueAt <= now, dueSoon: now.getTime() >= dueAt.getTime() - 7 * 86400000,
         observation: fact.sourceUrl !== url ? "UNSUPPORTED_SOURCE" : page === null ? "UNAVAILABLE" : page.includes(normalize(fact.quote)) ? "QUOTE_PRESENT" : "QUOTE_MISSING",
-        titleCheck: fact.sourceUrl === url ? titleCheck : "UNAVAILABLE", failure: fact.sourceUrl === url && page === null ? failure : null });
+        titleCheck: fact.sourceUrl === url ? titleCheck : "UNAVAILABLE", observedTitle: title, failure: fact.sourceUrl === url && page === null ? failure : null });
     }
   }
   return results;
@@ -97,6 +98,10 @@ export function summary(results) {
   const lines = ["## 카탈로그 사양 출처 점검", "", "제목과 문구 일치는 모델 동일성·사양 정확성의 검증이 아닙니다. 확인 시각은 갱신하지 않습니다.", ""];
   if (!results.length) lines.push("점검할 등록 사양이 없습니다.");
   for (const row of results) lines.push(`- ${row.productId} / ${row.field}: ${row.observation}${row.failure ? ` (${row.failure})` : ""}, 제목 ${row.titleCheck}, 점검 기한 ${row.dueAt}${row.due ? " (점검 기한 초과)" : row.dueSoon ? " (7일 이내 점검 필요)" : ""} · ${row.source}`);
+  for (const row of results.filter(row => row.titleCheck === "MISMATCH" && row.observedTitle != null)) {
+    const safe = JSON.stringify(row.observedTitle).replace(/[<>&`]/g, c => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+    lines.push(`- ${row.productId} / ${row.field} 관측 제목: \`${safe}\``);
+  }
   return lines.join("\n") + "\n";
 }
 

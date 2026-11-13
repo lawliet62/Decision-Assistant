@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-11-13T17:05:41.080Z",
+  "url": "https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds",
+  "status": 200,
+  "htmlSha256": "e4925793bb4280bfc4fd0b886bbe48a9a7a10f3cdf005fd46e367278b1278727",
+  "result": "ANKER_SPEC_INSPECTION={\"anc\":true,\"multipoint\":true}",
+  "rows": [
+    {
+      "productId": "anker-liberty5-a3957",
+      "field": "ANC 지원",
+      "source": "https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds",
+      "reviewedAt": "2026-10-30T19:40:00Z",
+      "dueAt": "2027-01-28T19:40:00.000Z",
+      "due": false,
+      "dueSoon": false,
+      "observation": "QUOTE_PRESENT",
+      "titleCheck": "MATCH",
+      "observedTitle": "soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio",
+      "failure": null
+    },
+    {
+      "productId": "anker-liberty5-a3957",
+      "field": "호환성",
+      "source": "https://www.soundcore.com/products/a3957-liberty-5-tws-earbuds",
+      "reviewedAt": "2026-11-04T22:51:00Z",
+      "dueAt": "2026-12-04T22:51:00.000Z",
+      "due": false,
+      "dueSoon": false,
+      "observation": "QUOTE_PRESENT",
+      "titleCheck": "MATCH",
+      "observedTitle": "soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio",
+      "failure": null
+    }
+  ],
+  "databaseUpdated": false,
+  "paidCalls": 0
+}

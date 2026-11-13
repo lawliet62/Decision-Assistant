@@ -32,7 +32,9 @@ final class AnkerLibertySpecificationVerifier {
         var canonical = doc.select("link[rel=canonical]"); var headings = doc.select("h1"); var descriptions = doc.select("meta[name=description]");
         if (canonical.size() != 1 || !URL.equals(canonical.first().absUrl("href")) || headings.size() != 1
                 || !"soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio".equals(headings.first().text())
-                || descriptions.size() != 1 || !"soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby 3D Audio".equals(doc.title())) return null;
+                || descriptions.size() != 1 || doc.select("title").size() != 1
+                || !java.util.Set.of("soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby 3D Audio",
+                        "soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio").contains(doc.title())) return null;
         return doc;
     }
 }

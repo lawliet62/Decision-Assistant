@@ -1,5 +1,7 @@
 # 문서 색인
 
+- [GitHub 출처 점검 실패 분리](evaluations/source-check-2026-11-14/README.md): 제목 변경·환경별 403·출처 404와 관측 제목 진단
+
 - [젠하이저 행사명 변경 검증](evaluations/sennheiser-event-2026-11-14/README.md): 고정 상품의 canonical·제품명 변경과 가격·사양 실제 입력 검증
 
 - [주류 이어폰 3개 브랜드 통합 검증](evaluations/catalog-mainstream-2026-11-13/README.md): 25개 카탈로그 조합·실측 근거·비용과 미완료 항목
