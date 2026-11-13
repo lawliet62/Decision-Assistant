@@ -7,7 +7,6 @@ import tools.jackson.databind.json.JsonMapper;
 final class SennheiserSpecificationVerifier {
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final String URL = "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731";
-    private static final String NAME = "모멘텀 트루 와이어리스 5";
     private SennheiserSpecificationVerifier() {}
 
     static boolean matches(String html, String field) {
@@ -15,14 +14,15 @@ final class SennheiserSpecificationVerifier {
         var doc = Jsoup.parse(html, URL);
         var canonical = doc.select("link[rel=canonical]");
         var headings = doc.select("h1");
-        if (canonical.size() != 1 || !OfficialProductParser.samePage(URL, canonical.first().absUrl("href"))
-                || headings.size() != 1 || !NAME.equals(headings.first().text())) return false;
+        if (canonical.size() != 1 || !OfficialProductParser.samePage(URL, canonical.first().absUrl("href"))) return false;
+        var name = SennheiserProductVerifier.nameForCanonical(canonical.first().absUrl("href")).orElse(null);
+        if (name == null || headings.size() != 1 || !name.equals(headings.first().text())) return false;
         int groups = 0;
         for (var script : doc.select("script[type=application/ld+json]")) {
             try {
                 var item = JSON.readTree(script.data());
                 if ("ProductGroup".equals(item.path("@type").asText(""))) {
-                    if (!NAME.equals(item.path("name").asText("")) || !"cafe24_bnispace_1_731".equals(item.path("productGroupID").asText(""))) return false;
+                    if (!name.equals(item.path("name").asText("")) || !"cafe24_bnispace_1_731".equals(item.path("productGroupID").asText(""))) return false;
                     groups++;
                 }
             } catch (RuntimeException e) { return false; }

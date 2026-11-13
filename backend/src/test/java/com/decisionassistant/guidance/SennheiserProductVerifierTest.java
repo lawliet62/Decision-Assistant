@@ -29,6 +29,25 @@ class SennheiserProductVerifierTest {
     private static OfficialProductParser.Result inspect(String html) {
         return OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", html, URL), Instant.now(), true);
     }
+    @Test void acceptsOnlyTheObservedEventNameWithMatchingCanonicalAndVariantUrls() {
+        var event = fixture().replace("/product/모멘텀-", "/product/젠사페-모멘텀-")
+                .replace("모멘텀 트루 와이어리스 5", "[젠사페] 모멘텀 트루 와이어리스 5");
+        assertThat(inspect(event).product().offer().price()).isEqualByComparingTo("429000");
+        assertThat(inspect(event.replace("/product/젠사페-", "/product/%EC%A0%A0%EC%82%AC%ED%8E%98-")).product()).isNotNull();
+        for (var bad : java.util.List.of(
+                event.replaceFirst("/product/젠사페-", "/product/"),
+                event.replaceFirst("\\[젠사페\\] ", ""),
+                event.replace("[젠사페]", "[다른 행사]"),
+                event.replaceFirst("731/\\?item_code", "732/?item_code"),
+                event.replaceFirst("731/\\?item_code", "731/?extra=1&item_code"),
+                event.replaceFirst("429000", "399000"),
+                event.replaceFirst("InStock", "OutOfStock"),
+                event.replace("₩429,000", "₩399,000"))) assertThat(inspect(bad).product()).isNull();
+        assertThat(OfficialStorePolicy.store(CANONICAL.replace("/product/", "/product/젠사페-"))).isPresent();
+        assertThat(OfficialStorePolicy.store(CANONICAL.replace("/product/", "/product/임의행사-"))).isEmpty();
+        assertThat(SennheiserProductVerifier.nameForCanonical(CANONICAL + "#other")).isEmpty();
+        assertThat(OfficialProductParser.inspect(URL, new WebEvidenceProvider.Page("", "", event, URL), Instant.now()).product()).isNull();
+    }
     @Test void requiresSameModelColorOptionsStockAndUnconditionalPrice() {
         var html = fixture();
         assertThat(inspect(html).product().offer().price()).isEqualByComparingTo("429000");
