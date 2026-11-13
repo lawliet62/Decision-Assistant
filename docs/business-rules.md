@@ -187,6 +187,8 @@
 - **동작:** 홈·조건 입력·결과에 공식 판매처 기준과 다른 판매·할인 경로가 더 저렴할 수 있음을 본문으로 표시한다. 실행의 정책 버전과 개별 공식 offer를 저장하며 기존 추천·직접 추가를 공식 추천으로 소급하지 않는다.
 - **이유:** 추천 범위와 가격 정렬의 의미를 명확히 하되 제품 안전성·품질·정품·최저가를 인증하지 않는다.
 
+- **Sony WF-C710N 적용 범위:** BR-DISC-04의 카탈로그 판매가는 고정 글래스 블루 구성의 선택 후 HTML에만 적용한다. ANC는 모델명이 포함된 Sony의 정확한 노이즈 캔슬링 인용만 지원 근거로 인정하며 일반적인 노이즈 제거 문구를 모든 제품의 ANC로 해석하지 않는다. 호환성은 공식 펌웨어의 Android/iPhone 근거이며 현재 iPhone을 iOS 별칭으로 확장하지 않아 iOS는 UNKNOWN이다. 사양 점검은 같은 값·출처·인용을 확인했을 때만 시각을 연장한다. 검증은 SonyC710nVerifierTest, ProviderResponseConversionTest, CatalogApiIntegrationTest.sonyRegisteredFactsReachAncAndroidRecommendationWithoutAi와 [실측](evaluations/sony-c710n-2026-11-13/README.md)을 따른다.
+
 ### BR-DISC-05: 같은 조건의 추가 탐색은 비교와 추천 이력을 보존한다
 
 - **동작:** 명시적 refresh는 최초 저장한 조건과 동의로 새 generation을 만든다. 승인·제외·미선택을 포함한 이전 추천 전체를 모델 식별자·정규화한 이름·공식 상품 URL로 누적 제외한다. 최근 공개 모델명 최대 5개만 검색 보조 조건으로 보내고 전체 제외는 서버에서 적용한다. 직접 편집한 제품명·메모는 검색 조건에 추가하지 않는다.
@@ -288,7 +290,3 @@
 - `ARCHIVED` 상태로 전이하는 조건과 그 이후 허용 동작
 
 이 항목은 현재 구현 세부 동작에 의존하지 않는다. 제품 또는 API에서 의미 있는 차이를 만들게 되면 먼저 규칙을 결정하고 이 문서를 갱신한다.
-
-### Sony WF-C710N 근거 적용 범위
-
-BR-DISC-04의 카탈로그 판매가는 고정 글래스 블루 구성의 선택 후 HTML에만 적용한다. ANC는 모델명이 포함된 Sony의 정확한 노이즈 캔슬링 인용만 지원 근거로 인정하며 일반적인 노이즈 제거 문구를 모든 제품의 ANC로 해석하지 않는다. 호환성은 공식 펌웨어의 Android/iPhone 근거이며 현재 iPhone을 iOS 별칭으로 확장하지 않아 iOS는 UNKNOWN이다. 사양 점검은 같은 값·출처·인용을 확인했을 때만 시각을 연장한다. 검증은 SonyC710nVerifierTest, ProviderResponseConversionTest, CatalogApiIntegrationTest.sonyRegisteredFactsReachAncAndroidRecommendationWithoutAi와 [실측](evaluations/sony-c710n-2026-11-13/README.md)을 따른다.
