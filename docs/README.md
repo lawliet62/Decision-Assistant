@@ -1,5 +1,8 @@
 # 문서 색인
 
+- [주류 이어폰 3개 브랜드 통합 검증](evaluations/catalog-mainstream-2026-11-13/README.md): 25개 카탈로그 조합·실측 근거·비용과 미완료 항목
+- [Samsung 버즈4 실제 검증](evaluations/samsung-buds4-2026-11-13/README.md): 선택 SKU·즉시 할인·Android/iOS 기본 연결
+
 - [Sony WF-C710N 실제 검증](evaluations/sony-c710n-2026-11-13/README.md): 선택 후 판매가·사양 시각 갱신·개발 DB/API 검증과 남은 범위
 
 - [JBL TUNE BEAM 2 국내 공식 판매 검증](evaluations/jbl-tune-beam2-2026-11-13/README.md): 실제 가격·Java 사양 갱신·DB/API 결과와 남은 범위

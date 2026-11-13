@@ -1,0 +1,108 @@
+{
+  "evaluatedAt": "2026-11-13T13:34:09.021Z",
+  "database": "isolated PostgreSQL with original Dev catalog snapshot",
+  "schemaVersion": 24,
+  "activeProducts": 25,
+  "brands": 10,
+  "externalFeaturesEnabled": false,
+  "priceAndSpecificationRefreshEnabled": false,
+  "temporaryDecisionsDeleted": 2,
+  "results": [
+    {
+      "platform": "Android",
+      "budget": 250000,
+      "ancRequired": true,
+      "externalConsents": false,
+      "candidates": [
+        {
+          "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
+          "group": "RECOMMENDED",
+          "price": 22900,
+          "fetchedAt": "2026-11-13T12:13:09.083798700Z",
+          "basicCompatibility": "MEETS",
+          "anc": "MEETS"
+        },
+        {
+          "name": "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍",
+          "group": "UNKNOWN",
+          "price": 25900,
+          "fetchedAt": "2026-11-13T12:13:02.662163400Z",
+          "basicCompatibility": "UNKNOWN",
+          "anc": "UNKNOWN"
+        },
+        {
+          "name": "JBL TUNE BEAM 2 블랙",
+          "group": "RECOMMENDED",
+          "price": 99000,
+          "fetchedAt": "2026-11-13T12:34:44.670325900Z",
+          "basicCompatibility": "MEETS",
+          "anc": "MEETS"
+        },
+        {
+          "name": "소니 WF-C710N 글래스 블루",
+          "group": "RECOMMENDED",
+          "price": 139000,
+          "fetchedAt": "2026-11-13T11:12:12.504216700Z",
+          "basicCompatibility": "MEETS",
+          "anc": "MEETS"
+        },
+        {
+          "name": "삼성 갤럭시 버즈4 화이트",
+          "group": "RECOMMENDED",
+          "price": 220200,
+          "fetchedAt": "2026-11-13T13:13:20.087221400Z",
+          "basicCompatibility": "MEETS",
+          "anc": "MEETS"
+        }
+      ]
+    },
+    {
+      "platform": "iOS",
+      "budget": 250000,
+      "ancRequired": true,
+      "externalConsents": false,
+      "candidates": [
+        {
+          "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
+          "group": "RECOMMENDED",
+          "price": 22900,
+          "fetchedAt": "2026-11-13T12:13:09.083798700Z",
+          "basicCompatibility": "MEETS",
+          "anc": "MEETS"
+        },
+        {
+          "name": "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍",
+          "group": "UNKNOWN",
+          "price": 25900,
+          "fetchedAt": "2026-11-13T12:13:02.662163400Z",
+          "basicCompatibility": "UNKNOWN",
+          "anc": "UNKNOWN"
+        },
+        {
+          "name": "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버",
+          "group": "UNKNOWN",
+          "price": 28900,
+          "fetchedAt": "2026-11-13T12:13:14.888385900Z",
+          "basicCompatibility": "UNKNOWN",
+          "anc": "UNKNOWN"
+        },
+        {
+          "name": "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전",
+          "group": "UNKNOWN",
+          "price": 29900,
+          "fetchedAt": "2026-11-13T12:13:26.934497900Z",
+          "basicCompatibility": "UNKNOWN",
+          "anc": "UNKNOWN"
+        },
+        {
+          "name": "삼성 갤럭시 버즈4 화이트",
+          "group": "RECOMMENDED",
+          "price": 220200,
+          "fetchedAt": "2026-11-13T13:13:20.087221400Z",
+          "basicCompatibility": "MEETS",
+          "anc": "MEETS"
+        }
+      ]
+    }
+  ]
+}

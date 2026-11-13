@@ -1,5 +1,8 @@
 # Samsung 버즈4 화이트 실제 검증
 
+이 문서는 개별 검증 단계의 기록이다. 이후 세 브랜드를 합친 현재 상태는 [통합 평가](../catalog-mainstream-2026-11-13/README.md)를 따른다.
+
+
 2026-11-13 국내 공식 구매 페이지의 `SM-R540NZWAKOO`를 확인했다. [고정 구매 URL](https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO)의 선택 모델·색상·수량과 공개 할인 내역을 대조했다. [관측 메타데이터](observations.json)는 실제 worker와 격리 PostgreSQL/API 결과다.
 
 | 항목 | 결과 |

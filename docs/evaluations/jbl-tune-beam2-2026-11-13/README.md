@@ -1,5 +1,8 @@
 # JBL TUNE BEAM 2 국내 공식 판매 검증
 
+이 문서는 개별 검증 단계의 기록이다. 이후 세 브랜드를 합친 현재 상태는 [통합 평가](../catalog-mainstream-2026-11-13/README.md)를 따른다.
+
+
 2026-11-13 JBL 한국 공식 제품 페이지의 판매처 링크를 따라 삼성닷컴의 블랙 SKU `JBLTBEAM2BLKAS`를 확인했다. [공식 제품·판매처 연결](https://kr.jbl.com/TUNE-BEAM-2.html?dwvar_TUNE-BEAM-2_color=Black-APAC-Current)과 [국내 구매 페이지](https://www.samsung.com/sec/harman-life-style-audio/jbl-earphone-tunebeam2-d2c/JBLTBEAM2BLKAS/)를 연결한 검증이다. 출처가 공식이라는 사실과 실제 판매 가능 여부는 구분했다.
 
 ## 실제 결과
@@ -17,7 +20,7 @@
 
 [관측 메타데이터](observations.json)에 첫 실패와 교정 성공, 실제 시각·API 결과·비용을 남겼다. 가격과 사양은 서로 다른 격리 DB 검증 결과를 동일 revision·identity·근거 대조 후 결합했다. 성공 제품·관측 한 건과 사양 예약을 개발 DB에 추가하면서 기존 제품·관측을 덮어쓰지 않았고 활성 30개 상한을 확인했다. 월 quota는 중복 복사하지 않았다. 가격 JSON의 확인 시각은 원래 정밀도를 보존했다. API 확인용 임시 결정은 DELETE 204로 삭제했다.
 
-이 PR의 main 기반 manifest는 활성 23개다. 개발 DB의 24개와 차이는 미병합 Sony 등록이며, 두 PR의 코드가 이미 main에 반영됐다는 의미가 아니다.
+개별 JBL PR #60의 main 기반 manifest는 당시 활성 23개였다. 개발 DB의 24개와 차이는 미병합 Sony 등록이며, 두 PR의 코드가 이미 main에 반영됐다는 의미가 아니다.
 
 ## 가격 검증과 실패 진단
 

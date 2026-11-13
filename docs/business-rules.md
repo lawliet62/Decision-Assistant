@@ -191,6 +191,8 @@
 
 - **JBL TUNE BEAM 2 적용 범위:** BR-DISC-04의 카탈로그 검증은 공식 제조사가 연결한 삼성닷컴 블랙 단일 SKU에 한정한다. 조건부 최대 혜택가를 단독 사용하지 않고 구조화 가격·명시 기준가·선택 총액·수량·재고·구매 버튼을 교차 대조한다. 제조사 페이지의 ANC 및 Android 페어링 근거를 등록하며 iOS는 UNKNOWN이다. 검증은 `JblTuneBeam2VerifierTest`, `ProviderResponseConversionTest`, `CatalogApiIntegrationTest.jblReviewsPersistOncePerWeekAndReachAndroidAncRecommendation`과 [실측](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 따른다.
 
+- **Samsung 버즈4 적용 범위:** BR-DISC-04의 등록 화이트 SKU에서 즉시 할인·카드 미적용 상태·선택 수량·총액을 대조한다. 알려진 행사 기간이 관측 후 72시간을 포함하지 않으면 새 할인 가격을 보류한다. OS 독립 근거의 Android/iOS 대응은 기본 블루투스 연결에 한하며 앱·고급 설정과 일반 실시간 탐색으로 확대하지 않는다. `SamsungBuds4VerifierTest`, `ProviderResponseConversionTest`, `CatalogApiIntegrationTest.samsungBasicAudioAndAncReachBothPlatformsWithOneWeeklyReview`와 [실측](evaluations/samsung-buds4-2026-11-13/README.md)이 검증한다.
+
 ### BR-DISC-05: 같은 조건의 추가 탐색은 비교와 추천 이력을 보존한다
 
 - **동작:** 명시적 refresh는 최초 저장한 조건과 동의로 새 generation을 만든다. 승인·제외·미선택을 포함한 이전 추천 전체를 모델 식별자·정규화한 이름·공식 상품 URL로 누적 제외한다. 최근 공개 모델명 최대 5개만 검색 보조 조건으로 보내고 전체 제외는 서버에서 적용한다. 직접 편집한 제품명·메모는 검색 조건에 추가하지 않는다.

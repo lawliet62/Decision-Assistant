@@ -137,7 +137,7 @@ node scripts/catalog/report.mjs observations.json products.json
 ## 성능과 장애 대응
 
 - 가격 worker는 관측의 성공 또는 실패를 `catalog_refresh` 로그에 제품 ID와 결과 코드로 남긴다. 마지막으로 사용할 수 있는 가격 대비 2배 이상 또는 절반 이하인 새 가격은 `catalog_price_change` 경고를 추가하지만 자동으로 거절하지 않는다. 할인 등 정상 변동도 포함될 수 있어 경고는 원인 확인 신호다. DB 관측 기록이 최종 결과의 기준이며 로그는 별도 알림 시스템이 아니다.
-- `DECISION_ASSISTANT_CATALOG_MONTHLY_LIMIT=700`은 승인된 월 시도 상한이다. 20개 제품의 31일 일간 시도에는 약 620회가 필요하다. 실패도 한도를 소비하며 Firecrawl 계정의 다른 사용량은 별도로 확인한다.
+- `DECISION_ASSISTANT_CATALOG_MONTHLY_LIMIT=700`은 승인된 월 시도 상한이다. 48시간 간격의 정상 주기만 계산하면 31일에 제품당 최대 16회다. 활성 25개는 최대 400회, 상한 30개는 최대 480회이며 수동 진단·신규 등록에 따른 추가 시도는 별도다. 실패도 한도를 소비하며 Firecrawl 계정의 다른 사용량은 별도로 확인한다.
 
 - `CatalogApiIntegrationTest.measureDatabaseBaselineAtFiveAndThirtyProductsWithoutCache`는 제품 5/30개, 동시 요청 1/5개에서 비교 생성 API를 측정하고 `backend/build/reports/catalog-benchmark.json`을 만든다. 운영 트래픽·브라우저 지연을 포함하지 않는다.
 - `catalog.db.read`, `catalog.discovery` Micrometer timer로 DB 조회와 전체 후보 생성을 구분한다. 외부에 metrics endpoint를 새로 노출하지 않는다. 운영 지연이 관찰되면 DB 시간과 요청 전체 시간부터 확인하고 캐시 효과를 별도 비교한다.
@@ -148,7 +148,7 @@ node scripts/catalog/report.mjs observations.json products.json
 
 Apple 한국 스토어의 AirPods Pro 3는 JSON-LD Offer의 단일 SKU와 현재 상품 구매 선택 링크의 `product` 값을 대조하고, 해당 링크 안의 단일 원화 표시 가격이 같은 경우만 수용한다. 비교 추천 영역의 가격, 서로 다른 세대 리다이렉트, 복수 구매 링크·SKU, 회원 등 조건부 문구는 확인 가격으로 사용하지 않는다. 사양은 모델이 명시된 공식 사양 페이지의 ANC·IP57만 등록했다. 기본 연결 호환성은 현재 추출 규칙이 판정할 명시 근거를 등록하지 않아 선택한 플랫폼에 대해 UNKNOWN일 수 있다.
 
-[실제 Dev 갱신 검증](evaluations/catalog-2026-10-29/README.md)은 Firecrawl과 PostgreSQL 저장을 포함한다. 개발 PC의 smoke는 상시 클라우드 운영 검증을 대신하지 않는다. 신규 상품을 늘릴 때 활성 수 × 월 일수를 기존 호출 상한과 대조하고, 실패도 호출을 소비한다는 점을 유지한다.
+[실제 Dev 갱신 검증](evaluations/catalog-2026-10-29/README.md)은 Firecrawl과 PostgreSQL 저장을 포함한다. 개발 PC의 smoke는 상시 클라우드 운영 검증을 대신하지 않는다. 신규 상품을 늘릴 때 활성 수 × 월 일수의 절반을 올림한 횟수를 기존 호출 상한과 대조하고, 실패도 호출을 소비한다는 점을 유지한다.
 
 ## Sony WF-C710N 개발 환경 자동 점검
 
@@ -167,3 +167,11 @@ npm run catalog:sony:check는 두 공식 페이지의 읽기 전용 실시간 �
 사양은 고정 JBL 제조사 페이지의 모델·canonical·제목·기능 문단을 Java 코드로 검증한다. 기존 spec-refresh-enabled 플래그와 7일 사전 예약을 공유하며 실패도 예약을 소비한다. ANC와 Android 기본 연결 근거가 같은 경우에만 fact_reviews를 갱신하고 가격·값은 변경하지 않는다. GitHub Actions에도 이 공식 페이지의 제목·문구 점검을 추가했으며 workflow는 DB 확인 시각을 갱신하지 않는다. iOS 근거는 확보하지 않아 UNKNOWN이다.
 
 기존 코드 경로를 선택한 이유는 동일 SKU의 반복 검증에 LLM 판단이나 토큰을 추가할 필요가 없고, 웹 검색 제안만으로 렌더링된 구매 금액을 검증할 수 없기 때문이다. 최초 통합에는 수집 표현 차이 진단이 필요했다. 이후 DOM 변경 대응이 반복되면 그 유지 비용을 에이전트 비용과 비교한다. [실제 결과·비용](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 기준으로 하며 상시 운영·production 활성화는 별개다.
+
+## Samsung 버즈4 운영 범위
+
+화이트 SKU SM-R540NZWAKOO는 대기 후 단일 Firecrawl snapshot을 검증한다. 초기 rawHtml로 대체하거나 수량 input에 기대값을 주입하지 않는다. 수량 알림·단가·총액과 선택 모델·색상, 즉시 할인·카드 미적용 상태를 교차 대조한다. 알려진 다른 canonical은 이 SKU의 고정 별칭만 인정한다.
+
+사양은 같은 고정 페이지를 Java로 직접 조회해 모델·제목·canonical과 정확한 근거를 확인한다. 기존 7일 사전 예약·spec-refresh-enabled 플래그를 사용하며 값·가격은 바꾸지 않는다. OS 독립 문구는 등록 카탈로그의 Android/iOS 기본 블루투스 연결만 판정하고 앱·고급 설정의 지원으로 확대하지 않는다. GitHub Actions는 제목·인용의 존재만 점검한다.
+
+반복 갱신에 추가 LLM 토큰을 쓰지 않고 모델별 명시 근거를 재현할 수 있어 코드 경로를 우선했다. 초기 수집 표현 차이는 [평가](evaluations/samsung-buds4-2026-11-13/README.md)와 [진단](troubleshooting/samsung-selected-price-and-basic-audio.md)에 남겼다. DOM·사양 변경 대응 비용이 반복적으로 커지면 에이전트 경로와 다시 비교한다.
