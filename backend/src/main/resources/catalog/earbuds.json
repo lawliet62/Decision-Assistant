@@ -668,5 +668,113 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "samsung-galaxy-buds4-white",
+    "brandName": "Samsung",
+    "brandStatus": "KNOWN",
+    "revision": 1,
+    "name": "삼성 갤럭시 버즈4 화이트",
+    "purchaseUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+    "expectedIdentity": "samsung-kr:SM-R540NZWAKOO",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+          "quote": "액티브 노이즈 캔슬링(ANC) 알고리즘이 실시간으로 주변 소음을 차단하죠.",
+          "fetchedAt": "2026-11-13T13:05:28.887Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "Android/iOS",
+          "sourceUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+          "quote": "갤럭시 버즈4를 블루투스 오디오로 연결하는 것은 OS에 관계없이 가능하지만",
+          "fetchedAt": "2026-11-13T13:05:28.887Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "sony-wf-c710n-glass-blue",
+    "revision": 2,
+    "name": "소니 WF-C710N 글래스 블루",
+    "brandName": "Sony",
+    "brandStatus": "KNOWN",
+    "purchaseUrl": "https://store.sony.co.kr/product-view/128838586",
+    "expectedIdentity": "sony-kr:128838586",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.sony.co.kr/headphones/products/wf-c710n",
+          "quote": "듀얼 마이크가 주변 소리를 감지하여 WF-C710N의 노이즈 캔슬링 기능을 개선",
+          "fetchedAt": "2026-11-13T11:13:35.839Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "Android/iPhone",
+          "sourceUrl": "https://www.sony.co.kr/electronics/support/software/00369642",
+          "quote": "헤드셋이 Android 장치 또는 iPhone에 연결되어야 합니다.",
+          "fetchedAt": "2026-11-13T11:13:37.475Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "jbl-tune-beam2-black",
+    "brandName": "JBL",
+    "brandStatus": "KNOWN",
+    "revision": 1,
+    "name": "JBL TUNE BEAM 2 블랙",
+    "purchaseUrl": "https://www.samsung.com/sec/harman-life-style-audio/jbl-earphone-tunebeam2-d2c/JBLTBEAM2BLKAS/",
+    "expectedIdentity": "jbl-samsung-kr:JBLTBEAM2BLKAS",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://kr.jbl.com/TUNE-BEAM-2.html",
+          "quote": "ANC 기능을 켠 상태",
+          "fetchedAt": "2026-11-13T12:25:02.769Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "Android",
+          "sourceUrl": "https://kr.jbl.com/TUNE-BEAM-2.html",
+          "quote": "JBL Tune Beam 2는 Google의 빠른 페어링 기능을 지원하므로 한 번의 탭으로 Android 장치와 페어링할 수 있습니다.",
+          "fetchedAt": "2026-11-13T12:25:02.769Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
+      }
+    ],
+    "active": true
   }
 ]

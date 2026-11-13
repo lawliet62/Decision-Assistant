@@ -80,3 +80,25 @@ tasks.register('integrationTest', Test) {
 tasks.named('check') {
     dependsOn tasks.named('integrationTest')
 }
+
+// 운영자 진단 전용: stdin HTML을 기존 파서로 검사하고 원문을 저장하지 않는다.
+tasks.register('inspectCatalogPage', JavaExec) {
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.decisionassistant.guidance.CatalogPageInspectionMain'
+    standardInput = System.in
+}
+
+tasks.register('prepareCatalogInspection') {
+    dependsOn tasks.named('testClasses')
+    def launcher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }
+    def runtimeFile = layout.buildDirectory.file('catalog-inspection-runtime.json')
+    inputs.files(sourceSets.test.runtimeClasspath)
+    inputs.property('javaExecutable', launcher.map { it.executablePath.asFile.absolutePath })
+    outputs.file(runtimeFile)
+    doLast {
+        runtimeFile.get().asFile.text = groovy.json.JsonOutput.toJson([
+                java: launcher.get().executablePath.asFile.absolutePath,
+                classpath: sourceSets.test.runtimeClasspath.asPath])
+    }
+}

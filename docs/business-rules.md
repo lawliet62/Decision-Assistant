@@ -187,6 +187,12 @@
 - **동작:** 홈·조건 입력·결과에 공식 판매처 기준과 다른 판매·할인 경로가 더 저렴할 수 있음을 본문으로 표시한다. 실행의 정책 버전과 개별 공식 offer를 저장하며 기존 추천·직접 추가를 공식 추천으로 소급하지 않는다.
 - **이유:** 추천 범위와 가격 정렬의 의미를 명확히 하되 제품 안전성·품질·정품·최저가를 인증하지 않는다.
 
+- **Sony WF-C710N 적용 범위:** BR-DISC-04의 카탈로그 판매가는 고정 글래스 블루 구성의 선택 후 HTML에만 적용한다. ANC는 모델명이 포함된 Sony의 정확한 노이즈 캔슬링 인용만 지원 근거로 인정하며 일반적인 노이즈 제거 문구를 모든 제품의 ANC로 해석하지 않는다. 호환성은 공식 펌웨어의 Android/iPhone 근거이며 현재 iPhone을 iOS 별칭으로 확장하지 않아 iOS는 UNKNOWN이다. 사양 점검은 같은 값·출처·인용을 확인했을 때만 시각을 연장한다. 검증은 SonyC710nVerifierTest, ProviderResponseConversionTest, CatalogApiIntegrationTest.sonyRegisteredFactsReachAncAndroidRecommendationWithoutAi와 [실측](evaluations/sony-c710n-2026-11-13/README.md)을 따른다.
+
+- **JBL TUNE BEAM 2 적용 범위:** BR-DISC-04의 카탈로그 검증은 공식 제조사가 연결한 삼성닷컴 블랙 단일 SKU에 한정한다. 조건부 최대 혜택가를 단독 사용하지 않고 구조화 가격·명시 기준가·선택 총액·수량·재고·구매 버튼을 교차 대조한다. 제조사 페이지의 ANC 및 Android 페어링 근거를 등록하며 iOS는 UNKNOWN이다. 검증은 `JblTuneBeam2VerifierTest`, `ProviderResponseConversionTest`, `CatalogApiIntegrationTest.jblReviewsPersistOncePerWeekAndReachAndroidAncRecommendation`과 [실측](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 따른다.
+
+- **Samsung 버즈4 적용 범위:** BR-DISC-04의 등록 화이트 SKU에서 즉시 할인·카드 미적용 상태·선택 수량·총액을 대조한다. 알려진 행사 기간이 관측 후 72시간을 포함하지 않으면 새 할인 가격을 보류한다. OS 독립 근거의 Android/iOS 대응은 기본 블루투스 연결에 한하며 앱·고급 설정과 일반 실시간 탐색으로 확대하지 않는다. `SamsungBuds4VerifierTest`, `ProviderResponseConversionTest`, `CatalogApiIntegrationTest.samsungBasicAudioAndAncReachBothPlatformsWithOneWeeklyReview`와 [실측](evaluations/samsung-buds4-2026-11-13/README.md)이 검증한다.
+
 ### BR-DISC-05: 같은 조건의 추가 탐색은 비교와 추천 이력을 보존한다
 
 - **동작:** 명시적 refresh는 최초 저장한 조건과 동의로 새 generation을 만든다. 승인·제외·미선택을 포함한 이전 추천 전체를 모델 식별자·정규화한 이름·공식 상품 URL로 누적 제외한다. 최근 공개 모델명 최대 5개만 검색 보조 조건으로 보내고 전체 제외는 서버에서 적용한다. 직접 편집한 제품명·메모는 검색 조건에 추가하지 않는다.
