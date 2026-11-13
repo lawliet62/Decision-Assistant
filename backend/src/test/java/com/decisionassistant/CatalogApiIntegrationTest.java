@@ -354,6 +354,40 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         verify(marshallSpecificationSource, times(1)).fetch();
     }
+    @Test void samsungBasicAudioAndAncReachBothPlatformsWithOneWeeklyReview() throws Exception {
+        CatalogImporter.Entry entry;
+        try(var stream=new org.springframework.core.io.ClassPathResource("catalog/earbuds.json").getInputStream()) {
+            entry=Arrays.stream(json.readValue(stream,CatalogImporter.Entry[].class)).filter(e->e.id().equals("samsung-galaxy-buds4-white")).findFirst().orElseThrow();
+        }
+        var old=Instant.now().minus(Duration.ofDays(91));
+        var facts=entry.facts().stream().map(f->new CatalogProduct.Fact(new ProductFact(f.evidence().name(),f.evidence().value(),f.evidence().sourceUrl(),f.evidence().quote(),old,"UNREVIEWED"),f.cycle())).toList();
+        var p=new CatalogProduct(entry.id());p.register(entry.revision(),entry.name(),entry.purchaseUrl(),entry.expectedIdentity(),facts,true,"Samsung",CatalogProduct.BrandStatus.KNOWN);
+        var priceAt=Instant.now().minusSeconds(60);p.attempted(priceAt);
+        p.observed(new OfficialProduct(entry.name(),entry.expectedIdentity(),new OfficialOffer(entry.purchaseUrl(),"삼성닷컴",BigDecimal.valueOf(220200),"KRW",null,priceAt,"즉시 할인",CatalogProperties.VERSION),"","즉시 할인 적용가 220,200원"));
+        products.saveAndFlush(p);
+        var next=jdbc.queryForObject("select next_attempt_at from catalog_products where id=?",java.sql.Timestamp.class,entry.id());
+        var source=mock(SamsungBuds4SpecificationSource.class);
+        when(source.fetch()).thenReturn(com.decisionassistant.guidance.SamsungBuds4VerifierTest.SPEC_HTML);
+        var worker=new SamsungBuds4SpecificationRefreshWorker(true,catalogProperties,products,jdbc,source,transactionManager);
+        worker.refresh();worker.refresh();
+        assertThat(products.findById(entry.id()).orElseThrow().usableFacts(Instant.now())).hasSize(2).allMatch(f->f.fetchedAt().isAfter(old));
+        assertThat(products.findById(entry.id()).orElseThrow().usableOffer().fetchedAt()).isEqualTo(priceAt);
+        assertThat(jdbc.queryForObject("select next_attempt_at from catalog_products where id=?",java.sql.Timestamp.class,entry.id())).isEqualTo(next);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at>now()+interval '6 days'",Integer.class,entry.id())).isEqualTo(1);
+        verify(source,times(1)).fetch();
+        for(var platform:List.of("Android","iOS")) {
+            var body=BODY.replace("50000","250000").replace("Android",platform);
+            var response=mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+            var id=json.readTree(response).path("id").asText();
+            mvc.perform(get("/api/v1/decisions/"+id).with(owner))
+                    .andExpect(jsonPath("$.guidance.candidateSuggestions[0].officialOffer.price").value(220200))
+                    .andExpect(jsonPath("$.guidance.candidateSuggestions[0].recommendationGroup").value("RECOMMENDED"))
+                    .andExpect(jsonPath("$.guidance.candidateSuggestions[0].compatibilityCheck.status").value("MEETS"))
+                    .andExpect(jsonPath("$.guidance.candidateSuggestions[0].requirementChecks[0].status").value("MEETS"));
+        }
+        verifyNoInteractions(search,web,ai);
+    }
+
     @Test void ct06ReviewPersistsAndReservesOncePerWeek() throws Exception {
         var id = "qcy-ct06"; var old = Instant.now().minus(Duration.ofDays(91));
         var url = "https://qcystore.co.kr/product/detail.html?product_no=994";

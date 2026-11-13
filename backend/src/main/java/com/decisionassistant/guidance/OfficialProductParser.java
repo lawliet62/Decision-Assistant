@@ -39,11 +39,18 @@ final class OfficialProductParser {
         var store = OfficialStorePolicy.store(requestedUrl).orElse(null);
         if (store == null) return Result.rejected(Rejection.UNREGISTERED_STORE);
         if (page.html() == null) return Result.rejected(Rejection.HTML_MISSING);
-        if (page.html().length() > 2_000_000) return Result.rejected(Rejection.HTML_TOO_LARGE);
+        if (page.html().length() > (catalog && SamsungBuds4Verifier.URL.equals(requestedUrl) ? SamsungBuds4Verifier.MAX_PRICE_HTML : 2_000_000)) return Result.rejected(Rejection.HTML_TOO_LARGE);
         // provider가 최종 URL을 확인하지 못하거나 다른 상품으로 이동했다면 공식 상품으로 승격하지 않는다.
         if (page.resolvedUrl() == null || page.resolvedUrl().isBlank()) return Result.rejected(Rejection.RESOLVED_URL_MISSING);
         if (!samePage(requestedUrl, page.resolvedUrl())) return Result.rejected(Rejection.RESOLVED_URL_MISMATCH);
         var doc = Jsoup.parse(page.html(), requestedUrl);
+        if (SamsungBuds4Verifier.URL.equals(requestedUrl)) {
+            if (!catalog) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var price=SamsungBuds4Verifier.price(page.html(),fetchedAt).orElse(null);
+            if(price==null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct(SamsungBuds4Verifier.NAME,"samsung-kr:"+SamsungBuds4Verifier.SKU,
+                    new OfficialOffer(requestedUrl,store.name(),price,"KRW",null,fetchedAt,"공식 화이트 SKU 1개의 즉시 할인·카드 미적용 금액을 대조한 가격",OfficialStorePolicy.VERSION),"","즉시 할인 적용가 "+price+"원"),null);
+        }
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);

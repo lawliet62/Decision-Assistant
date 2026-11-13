@@ -668,5 +668,41 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "samsung-galaxy-buds4-white",
+    "brandName": "Samsung",
+    "brandStatus": "KNOWN",
+    "revision": 1,
+    "name": "삼성 갤럭시 버즈4 화이트",
+    "purchaseUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+    "expectedIdentity": "samsung-kr:SM-R540NZWAKOO",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+          "quote": "액티브 노이즈 캔슬링(ANC) 알고리즘이 실시간으로 주변 소음을 차단하죠.",
+          "fetchedAt": "2026-11-13T13:05:28.887Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "Android/iOS",
+          "sourceUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+          "quote": "갤럭시 버즈4를 블루투스 오디오로 연결하는 것은 OS에 관계없이 가능하지만",
+          "fetchedAt": "2026-11-13T13:05:28.887Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
+      }
+    ],
+    "active": true
   }
 ]

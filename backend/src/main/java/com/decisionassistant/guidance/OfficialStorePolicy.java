@@ -34,6 +34,7 @@ public final class OfficialStorePolicy {
                     || uri.getRawPath().toLowerCase(Locale.ROOT).matches(".*%(?:2f|5c|2e|25).*" )
                     || !uri.normalize().getPath().equals(uri.getPath())) return Optional.empty();
             return STORES.stream().filter(store -> store.host().equalsIgnoreCase(uri.getHost()) && uri.getPath().matches(store.productPath()))
+                    .filter(store -> !store.id().equals("samsung-kr") || !uri.getPath().equals("/sec/buds/galaxy-buds4/buy/") || SamsungBuds4Verifier.URL.equals(url))
                     .filter(store -> !store.id().equals("sony-kr") || uri.getRawQuery() == null)
                     .filter(store -> !store.id().equals("audio-technica-kr") || uri.getRawQuery() == null && uri.getFragment() == null)
                     .filter(store -> !store.id().equals("bose-kr") || "idx=307".equals(uri.getRawQuery()))

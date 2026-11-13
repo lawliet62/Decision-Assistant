@@ -41,11 +41,20 @@ public class FirecrawlWebEvidenceProvider implements WebEvidenceProvider, WebSea
                         "removeBase64Images", true,
                         "timeout", millis(properties.timeout(), Duration.ofSeconds(45))));
         if (product) request.put("maxAge", 0);
+        boolean samsungBuds4=product && SamsungBuds4Verifier.URL.equals(url);
+        if(samsungBuds4) request.put("actions",List.of(Map.of("type","wait","milliseconds",8000),Map.of("type","scrape")));
         JsonNode response = client.post().uri("/scrape").contentType(MediaType.APPLICATION_JSON).body(request)
                 .retrieve().body(JsonNode.class);
         var data = successfulData(response);
         if (!data.path("markdown").isString()) throw new WebEvidenceException(WebEvidenceException.Reason.RESPONSE_INVALID);
         var title = data.path("metadata").path("title").asText("");
+        if(samsungBuds4) {
+            var snapshots=data.path("actions").path("scrapes");
+            if(!snapshots.isArray() || snapshots.size()!=1 || !snapshots.path(0).path("html").isString()
+                    || !url.equals(snapshots.path(0).path("url").asText("")) || data.path("metadata").path("statusCode").asInt(-1)!=200)
+                throw new WebEvidenceException(WebEvidenceException.Reason.RESPONSE_INVALID);
+            return new Page(title,data.path("markdown").asText(""),snapshots.path(0).path("html").asText(),url);
+        }
         return new Page(title, data.path("markdown").asText(""), data.path("rawHtml").asText(null),
                 data.path("metadata").path("url").asText(null));
     }

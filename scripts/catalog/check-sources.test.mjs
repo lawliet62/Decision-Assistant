@@ -65,3 +65,9 @@ test("문구가 있어도 제목 누락·다른 모델·복수 제목은 점검 
     assert.equal(requiresAttention(rows), true);
   }
 });
+
+test("Samsung 모델 고정 출처에서 두 사양을 한 번 점검하고 시각을 연장하지 않는다",async()=>{
+ const fs=await import("node:fs");const entry=JSON.parse(fs.readFileSync(new URL("../../backend/src/main/resources/catalog/earbuds.json",import.meta.url),"utf8")).find(e=>e.id==="samsung-galaxy-buds4-white");const before=JSON.stringify(entry);let calls=0;
+ const rows=await inspect([entry],async()=>{calls++;return new Response("<title>갤럭시 버즈4 (화이트) | SM-R540NZWAKOO | Samsung 대한민국</title>"+entry.facts.map(f=>f.evidence.quote).join(" "));},new Date("2026-11-13T14:00:00Z"));
+ assert.equal(calls,1);assert.equal(rows.length,2);assert.ok(rows.every(r=>r.observation==="QUOTE_PRESENT"&&r.titleCheck==="MATCH"));assert.equal(JSON.stringify(entry),before);
+});

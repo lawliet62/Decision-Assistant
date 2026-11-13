@@ -1,0 +1,49 @@
+{
+  "productId": "samsung-galaxy-buds4-white",
+  "evaluatedAt": "2026-11-13T13:17:12.280Z",
+  "observation": {
+    "outcome": "VERIFIED",
+    "attempted_at": "2026-11-13T13:13:01.195629+00:00",
+    "completed_at": "2026-11-13T13:13:20.31367+00:00",
+    "price": 220200,
+    "currency": "KRW"
+  },
+  "priceFetchedAtEpochSeconds": "1794575600.087221400",
+  "nextPriceAttempt": "2026-11-15 13:13:01.195629+00",
+  "factReviewsEpochSeconds": {
+    "호환성": 1794575600.4547455,
+    "ANC 지원": 1794575600.4547455
+  },
+  "nextSpecificationAttempt": "2026-11-20 13:13:20.454746+00",
+  "api": {
+    "budget": 250000,
+    "platforms": [
+      "Android",
+      "iOS"
+    ],
+    "anc": "required",
+    "externalConsents": false,
+    "bothRecommended": true,
+    "bothBasicCompatibilityMeets": true,
+    "bothAncMeets": true,
+    "temporaryDecisionsDeleted": 2
+  },
+  "devDatabase": {
+    "activeProducts": 25,
+    "brands": 10,
+    "includesUnmergedPrs": [
+      59,
+      60
+    ]
+  },
+  "cost": {
+    "appCallsBefore": 76,
+    "appCallsAfter": 77,
+    "additionalFirecrawlRequests": 1,
+    "remainingCreditsBefore": 996,
+    "remainingCreditsAfter": 995,
+    "planCredits": 1000,
+    "additionalOpenAiRequests": 0,
+    "billingAmountVerified": false
+  }
+}

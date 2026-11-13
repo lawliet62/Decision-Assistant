@@ -61,6 +61,27 @@ class ProviderResponseConversionTest {
         assertThat(calls).hasValue(1);
     }
 
+    @Test void samsungRequiresOnePostWaitSnapshotWithoutRawFallback() {
+        var invalid=new AtomicInteger();var request=new java.util.concurrent.atomic.AtomicReference<String>();
+        server.createContext("/scrape",exchange->{
+            calls.incrementAndGet();request.set(new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8));
+            var snapshot=java.util.Map.of("url",invalid.get()==1?SamsungBuds4Verifier.URL+"0":SamsungBuds4Verifier.URL,"html",SamsungBuds4VerifierTest.HTML);
+            var data=java.util.Map.of("markdown","","rawHtml","initial page", "metadata",java.util.Map.of("statusCode",invalid.get()==3?403:200),"actions",java.util.Map.of("scrapes",invalid.get()==2?java.util.List.of():java.util.List.of(snapshot)));
+            var bytes=new tools.jackson.databind.ObjectMapper().writeValueAsBytes(java.util.Map.of("success",true,"data",data));
+            exchange.getResponseHeaders().add("Content-Type","application/json");exchange.sendResponseHeaders(200,bytes.length);
+            try(var out=exchange.getResponseBody()){out.write(bytes);}exchange.close();
+        });
+        context.run(app->{
+            var provider=provider(app.getBean(RestClient.Builder.class));
+            assertThat(provider.scrapeProduct(SamsungBuds4Verifier.URL).html()).isEqualTo(SamsungBuds4VerifierTest.HTML);
+            var actions=new tools.jackson.databind.ObjectMapper().readTree(request.get()).path("actions");
+            assertThat(actions.size()).isEqualTo(2);assertThat(actions.path(0).path("milliseconds").asInt()).isEqualTo(8000);
+            assertThat(actions.path(1).path("type").asText()).isEqualTo("scrape");
+            for(int i=1;i<=3;i++){invalid.set(i);assertThatThrownBy(()->provider.scrapeProduct(SamsungBuds4Verifier.URL)).isInstanceOf(WebEvidenceException.class);}
+        });
+        assertThat(calls).hasValue(4);
+    }
+
     @Test void productScrapeConvertsHtmlAndFinalUrlWithOneRequest() {
         var request = new java.util.concurrent.atomic.AtomicReference<String>();
         server.createContext("/scrape", exchange -> {
