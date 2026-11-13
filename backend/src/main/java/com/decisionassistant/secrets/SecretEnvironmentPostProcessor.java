@@ -92,6 +92,7 @@ public final class SecretEnvironmentPostProcessor implements EnvironmentPostProc
             required.put(Slot.DB, ""); // Optional shared development DB, never the prod project.
         }
         boolean ai = enabled(env, "ai");
+        if (local && Boolean.parseBoolean(property(env, "decision-assistant.catalog.research-enabled", "false"))) required.put(Slot.OPENAI, "");
         String chat = "none";
         if (ai) {
             String provider = property(env, "decision-assistant.ai.provider", "gemini");

@@ -4,6 +4,8 @@
 
 ## 사례와 진단 방법
 
+- [웹 검색 조사 실패와 가격 검증 실패의 구분](catalog-research-incomplete.md): 미완성 응답, 실패 시 사용량 보존과 중복 호출 방지
+
 - [결정 전체 선택에서 403이 반환되는 경우](stale-decision-selection-api.md): 구버전 backend와 최신 frontend의 실행 버전 불일치
 
 - [로컬 배포·브라우저 검증의 실패 단계 구분](mvp-local-validation.md): Compose Secret 참조 병합과 fixture 전송 오류 구분
