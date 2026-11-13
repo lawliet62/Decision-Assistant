@@ -39,7 +39,7 @@ class CatalogRequirementCoverageTest {
             }
             assertThat(active).isEqualTo(25);
             assertThat(anc).isEqualTo(18);
-            assertThat(compatibility).isEqualTo(6);
+            assertThat(compatibility).isEqualTo(8);
             assertThat(multipoint).isEqualTo(1);
         }
     }
