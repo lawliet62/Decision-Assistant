@@ -15,6 +15,7 @@ public final class OfficialStorePolicy {
     public static Description description() { return new Description(VERSION, "KOREAN_OFFICIAL_STORES", "OBSERVED_KRW_PRICE"); }
     public record Store(String id, String name, String host, String productPath, Set<String> imageHosts) {}
     private static final List<Store> STORES = List.of(
+            new Store("jbl-samsung-kr", "삼성닷컴 JBL 공식 판매", "www.samsung.com", "/sec/harman-life-style-audio/jbl-earphone-tunebeam2-d2c/JBLTBEAM2BLKAS/", Set.of()),
             new Store("samsung-kr", "삼성닷컴", "www.samsung.com", "/sec/(buds|smartphones|tablets|galaxybook|monitors)/[^/]+/[^/]+/?", Set.of("images.samsung.com")),
             new Store("apple-kr", "Apple 공식 스토어", "www.apple.com", "/kr/shop/(buy-[^/]+|product)/.+", Set.of("store.storeimages.cdn-apple.com", "www.apple.com")),
             new Store("lg-kr", "LG전자", "www.lge.co.kr", "/(?:product/)?(?:monitors|notebook)/[^/]+/?", Set.of("www.lge.co.kr")),
@@ -35,6 +36,7 @@ public final class OfficialStorePolicy {
                     || !uri.normalize().getPath().equals(uri.getPath())) return Optional.empty();
             return STORES.stream().filter(store -> store.host().equalsIgnoreCase(uri.getHost()) && uri.getPath().matches(store.productPath()))
                     .filter(store -> !store.id().equals("samsung-kr") || !uri.getPath().equals("/sec/buds/galaxy-buds4/buy/") || SamsungBuds4Verifier.URL.equals(url))
+                    .filter(store -> !store.id().equals("jbl-samsung-kr") || uri.getRawQuery() == null && uri.getFragment() == null)
                     .filter(store -> !store.id().equals("sony-kr") || uri.getRawQuery() == null)
                     .filter(store -> !store.id().equals("audio-technica-kr") || uri.getRawQuery() == null && uri.getFragment() == null)
                     .filter(store -> !store.id().equals("bose-kr") || "idx=307".equals(uri.getRawQuery()))

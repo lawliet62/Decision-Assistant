@@ -98,7 +98,7 @@ worker는 기본 1시간마다 기한이 된 제품을 최대 30개 순차 처�
 
 ## 제품·사양 관리
 
-매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 각 주소당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT16, HT10 Hi-Res, HT08, HT20, CT06, T17 APP, T29 APP, HT19, AirPods Pro 3, AirPods 5, Marshall MOTIF II A.N.C.와 MINOR IV, 젠하이저 MOMENTUM True Wireless 5, BOSE QC 이어버드, 앤커 P31i·P41i·에어로클립·리버티 5·리버티 5 프로와 오디오테크니카 ATH-SQ1TW2NC·ATH-AC5TW의 공식 페이지 스물두 곳과 Sony WF-C710N 제품·펌웨어 페이지 두 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
+매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 사양 출처 점검이 활성 제품의 각 허용된 고정 주소를 한 번 읽는다. 대상은 [manifest](../backend/src/main/resources/catalog/earbuds.json)와 [점검 허용 목록](../scripts/catalog/check-sources.mjs)에서 관리한다. 비밀·DB 권한·외부 AI 호출은 필요하지 않다. workflow_dispatch로 수동 실행할 수 있으며 예약은 기본 branch 반영 후 동작한다.
 
 작업 요약에서 `QUOTE_PRESENT`는 단순 문구 존재, `QUOTE_MISSING`은 미발견, `UNAVAILABLE`은 접근 실패, `UNSUPPORTED_SOURCE`는 허용된 고정 주소가 아닌 사양이다. 제목은 등록된 예상 제목과 비교하며 `MATCH`, `MISMATCH`, `UNAVAILABLE`로 표시한다. 문구가 다른 상품·추천 영역에 나타날 수도 있고 제목만으로 모델을 확정할 수 없으므로 **제목과 문구 일치는 동일 모델이나 사양의 정확성을 검증하지 않는다**. 점검 기한이 7일 이내이거나 제목 불일치·문구 미발견·접근 실패가 있으면 작업을 실패로 표시한다. 광고 문구 등 제목의 무해한 변경도 경고가 될 수 있으므로 실제 모델을 확인한 뒤 예상 제목을 수정한다. 수집 실패의 HTTP 상태와 크기 초과는 간단한 코드만 남긴다. GitHub 알림 수신 여부는 계정 설정에 달려 있으며 예약 자체가 누락된 경우 이 workflow가 알림을 보장하지 않는다.
 
@@ -159,3 +159,11 @@ WF-C710N 글래스 블루의 가격은 기존 48시간 worker가 색상 선택 �
 npm run dev 또는 npm run backend:dev에서 DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true를 명시하면 점검 자식 프로세스가 함께 실행되고 backend 종료 시 종료된다. local 단일 프로필, 기본 Docker PostgreSQL(localhost 또는 127.0.0.1:5432), 기본 DB 사용자, DB_SECRET_VERSION 미설정일 때만 실행한다. 시간당 기한을 확인하되 요청 전에 7일 간격을 DB에 예약하며 실패도 소비한다. 직접 IDE/Gradle로 실행하면 이 Node helper는 시작하지 않는다. 기본은 비활성이다.
 
 npm run catalog:sony:check는 두 공식 페이지의 읽기 전용 실시간 검증이며 DB를 수정하지 않는다. 원문은 stdin으로 전달하고 저장하지 않는다. GitHub Actions도 두 출처를 각각 점검하지만 DB 확인 시각을 연장하지 않는다. 운영 Node runtime·DB 쓰기 권한·스케줄은 추가하지 않았다.
+
+## JBL TUNE BEAM 2 운영 범위
+
+블랙 SKU JBLTBEAM2BLKAS의 가격은 기존 48시간 worker에서만 갱신한다. 이 URL에만 8초 렌더링 대기를 적용한다. 선택 수량·재고·구매 버튼과 구조화 가격·공개 기준가·총액을 대조하며 조건부 금액이나 다른 SKU는 거절한다.
+
+사양은 고정 JBL 제조사 페이지의 모델·canonical·제목·기능 문단을 Java 코드로 검증한다. 기존 spec-refresh-enabled 플래그와 7일 사전 예약을 공유하며 실패도 예약을 소비한다. ANC와 Android 기본 연결 근거가 같은 경우에만 fact_reviews를 갱신하고 가격·값은 변경하지 않는다. GitHub Actions에도 이 공식 페이지의 제목·문구 점검을 추가했으며 workflow는 DB 확인 시각을 갱신하지 않는다. iOS 근거는 확보하지 않아 UNKNOWN이다.
+
+기존 코드 경로를 선택한 이유는 동일 SKU의 반복 검증에 LLM 판단이나 토큰을 추가할 필요가 없고, 웹 검색 제안만으로 렌더링된 구매 금액을 검증할 수 없기 때문이다. 최초 통합에는 수집 표현 차이 진단이 필요했다. 이후 DOM 변경 대응이 반복되면 그 유지 비용을 에이전트 비용과 비교한다. [실제 결과·비용](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 기준으로 하며 상시 운영·production 활성화는 별개다.

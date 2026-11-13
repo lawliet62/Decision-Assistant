@@ -41,6 +41,7 @@ public class FirecrawlWebEvidenceProvider implements WebEvidenceProvider, WebSea
                         "removeBase64Images", true,
                         "timeout", millis(properties.timeout(), Duration.ofSeconds(45))));
         if (product) request.put("maxAge", 0);
+        if(product && JblTuneBeam2Verifier.URL.equals(url)) request.put("waitFor",8000);
         boolean samsungBuds4=product && SamsungBuds4Verifier.URL.equals(url);
         if(samsungBuds4) request.put("actions",List.of(Map.of("type","wait","milliseconds",8000),Map.of("type","scrape")));
         boolean selectedSony = product && SonyC710nVerifier.URL.equals(url);

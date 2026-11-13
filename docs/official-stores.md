@@ -9,6 +9,7 @@
 | LG전자 | `www.lge.co.kr`의 모니터·노트북 개별 상품 경로. [공식 제품 페이지](https://www.lge.co.kr/product/monitors/27gs85q) |
 | QCY 한국 공식몰 | `qcystore.co.kr/product/`의 상품 번호가 있는 경로. [QCY KOREA 공식 유통 안내](https://www.qcykorea.com/default/customer/customer17.php?com_board_basic=read_form&com_board_id=17&com_board_idx=1&com_board_page=&com_board_search_code=&com_board_search_value1=&com_board_search_value2=&sub=01)에서 연결한 판매처 |
 | QCY 공식 스마트스토어 | 위 공식 유통 안내로 확인한 `smartstore.naver.com/ylintl/products/` 경로만 허용. 다른 판매자나 네이버 전체 도메인은 허용하지 않음 |
+| 삼성닷컴 JBL 공식 판매 | [JBL 한국 제조사 제품 페이지](https://kr.jbl.com/TUNE-BEAM-2.html?dwvar_TUNE-BEAM-2_color=Black-APAC-Current)가 연결한 [TUNE BEAM 2 블랙](https://www.samsung.com/sec/harman-life-style-audio/jbl-earphone-tunebeam2-d2c/JBLTBEAM2BLKAS/) 단일 SKU만 허용. 다른 하만 경로·색상·query는 미지원 |
 | 소니 한국 공식 스토어 | [공식 이어폰 목록](https://store.sony.co.kr/products/audio/wireless_earphones)에서 연결한 `store.sony.co.kr/product-view/128838586`의 WF-C710N 글래스 블루는 실제 검증 후 활성 등록. `109871591`의 Float Run은 실제 구매 영역 검증 실패로 비활성 유지 |
 | Marshall 한국 공식 스토어 | [공식 이어폰 목록](https://www.marshall.com/kr/ko/headphones/earbuds)에서 연결한 MOTIF II A.N.C. 블랙(`pid=1006450`)과 MINOR IV 블랙(`pid=1006653`)에 한정. 실제 응답과 검증 범위는 [평가](evaluations/catalog-2026-10-29/README.md)에 기록 |
 | BOSE 한국 공식 온라인 스토어 | [QC 이어버드(New) 아이스 블루](https://www.bose.co.kr/357/?idx=307) 한 상품에 한정. 단일 색상·상품 번호·구매 가격을 검증하며 사양은 미확인 |
@@ -63,3 +64,5 @@ v2의 기본 추천에는 선택한 호환성도 충족해야 한다. 이어폰�
 2026-10-29 카탈로그 확장에서는 [AirPods Pro 3 구매 페이지](https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3)의 Offer SKU `MFHP4KH/A`, 단일 구매 선택 링크와 표시 금액을 확인했다. AirPods 5 무선 충전 케이스 모델은 두 구매 선택지 중 유일하게 선택된 항목의 URL·SKU·가격을 단일 Offer와 대조한다. Apple의 금액은 `₩`가 숫자 앞에 오므로 전용 구매 영역에서만 처리한다. 기존 AirPods 4 구매 주소가 AirPods 5로 이동하는 사례를 확인했으며 다른 세대로의 이동은 계속 거절한다. 삼성 버즈3 FE의 확인한 직접 응답은 제품 JSON-LD가 없는 공통 페이지여서 신규 카탈로그로 등록하지 않았다. 이는 모든 삼성 제품이나 Firecrawl 응답이 수집 불가능하다는 결론은 아니다.
 
 Sony WF-C710N 글래스 블루는 카탈로그 전용이다. 공식 목록에서 연결한 고정 상품 번호 128838586에만 색상 선택 actions를 적용하고 같은 모델·색상·수량 1·판매가·동일 소계·활성 구매 링크를 대조한다. 상대 URL과 같은 공식 HTTPS 절대 주문 URL만 허용한다. 옵션·canonical·조건이 바뀌면 거절한다. [실제 검증](evaluations/sony-c710n-2026-11-13/README.md)을 통과했으며 Float Run은 비활성으로 유지한다.
+
+JBL TUNE BEAM 2 블랙은 카탈로그 전용이다. 렌더링된 구매 영역에서 단일 Product/Offer·SKU·수량 1·재고 상한·활성 버튼을 대조한다. JSON 가격, 명시된 기준가, 선택 총액, 최대 혜택가의 숫자가 모두 같을 때만 기준가를 확인 가격으로 사용한다. 조건별 금액이 다르거나 초기 HTML의 빈 필드만 있으면 보류한다. 최대 혜택가 단독 숫자와 제조사 안내 사이트의 판매 가능 플래그는 국내 구매 증거로 사용하지 않는다. [실측](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 참고한다. 이미지는 새 외부 전송 범위를 추가하지 않도록 사용하지 않는다.

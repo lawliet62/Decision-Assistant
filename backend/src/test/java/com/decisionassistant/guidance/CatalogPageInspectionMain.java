@@ -12,8 +12,9 @@ public final class CatalogPageInspectionMain {
         if (args.length == 1 && "--sony-spec".equals(args[0])) { inspectSonySpecifications(); return; }
         if (args.length != 1 || OfficialStorePolicy.store(args[0]).isEmpty())
             throw new IllegalArgumentException("REGISTERED_URL_REQUIRED");
-        var bytes = System.in.readNBytes(2_000_001);
-        if (bytes.length > 2_000_000) throw new IllegalArgumentException("HTML_TOO_LARGE");
+        int maxBytes = SamsungBuds4Verifier.URL.equals(args[0]) ? SamsungBuds4Verifier.MAX_PRICE_HTML * 3 : 2_000_000;
+        var bytes = System.in.readNBytes(maxBytes + 1);
+        if (bytes.length > maxBytes) throw new IllegalArgumentException("HTML_TOO_LARGE");
         var page = new WebEvidenceProvider.Page("", "", new String(bytes, StandardCharsets.UTF_8), args[0]);
         var inspected = OfficialProductParser.inspect(args[0], page, Instant.now(), true);
         var output = new LinkedHashMap<String, Object>();

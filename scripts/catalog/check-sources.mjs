@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 
 // 운영자가 승인한 고정 사양 페이지만 점검한다. 일치는 사양의 진실성이나 모델 동일성을 증명하지 않는다.
 const sources = [
+  ["jbl-tune-beam2-black", ["https://kr.jbl.com/TUNE-BEAM-2.html", "JBL Tune Beam 2 | 트루 와이어리스 노이즈 캔슬링 이어버드"]],
   ["samsung-galaxy-buds4-white", ["https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO", "갤럭시 버즈4 (화이트) | SM-R540NZWAKOO | Samsung 대한민국"]],
   ["bose-qc-earbuds-ice-blue", ["https://www.bose.com/p/earbuds/bose-quietcomfort-headphones/QCEARB24-HEADPHONEIN.html", "QuietComfort Earbuds | Bose"]],
   ["audio-technica-ac5tw", ["https://audio-technica.co.kr/product/ath-ac5tw/921/", "ATH-AC5TW - (주)세기AT"]],
