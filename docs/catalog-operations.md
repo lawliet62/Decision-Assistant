@@ -98,6 +98,8 @@ worker는 기본 1시간마다 기한이 된 제품을 최대 30개 순차 처�
 
 ## 제품·사양 관리
 
+Apple AirPods 5·Pro 3의 iOS 기본 연결도 기존 공식 사양 URL에서 함께 점검한다. SOFTWARE 사양 30일 수명·제품별 주간 예약을 유지하며 별도 외부 요청을 추가하지 않는다. 모델·canonical·요구사항 불일치는 확인 시각을 연장하지 않는다. [실제 입력과 API 평가](evaluations/apple-ios-2026-11-14/README.md)를 따른다.
+
 매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 사양 출처 점검이 활성 제품의 각 허용된 고정 주소를 한 번 읽는다. 대상은 [manifest](../backend/src/main/resources/catalog/earbuds.json)와 [점검 허용 목록](../scripts/catalog/check-sources.mjs)에서 관리한다. 비밀·DB 권한·외부 AI 호출은 필요하지 않다. workflow_dispatch로 수동 실행할 수 있으며 예약은 기본 branch 반영 후 동작한다.
 
 작업 요약에서 `QUOTE_PRESENT`는 단순 문구 존재, `QUOTE_MISSING`은 미발견, `UNAVAILABLE`은 접근 실패, `UNSUPPORTED_SOURCE`는 허용된 고정 주소가 아닌 사양이다. 제목은 등록된 예상 제목과 비교하며 `MATCH`, `MISMATCH`, `UNAVAILABLE`로 표시한다. 문구가 다른 상품·추천 영역에 나타날 수도 있고 제목만으로 모델을 확정할 수 없으므로 **제목과 문구 일치는 동일 모델이나 사양의 정확성을 검증하지 않는다**. 점검 기한이 7일 이내이거나 제목 불일치·문구 미발견·접근 실패가 있으면 작업을 실패로 표시한다. 광고 문구 등 제목의 무해한 변경도 경고가 될 수 있으므로 실제 모델을 확인한 뒤 예상 제목을 수정한다. 수집 실패의 HTTP 상태와 크기 초과는 간단한 코드만 남긴다. GitHub 알림 수신 여부는 계정 설정에 달려 있으며 예약 자체가 누락된 경우 이 workflow가 알림을 보장하지 않는다.

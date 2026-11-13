@@ -26,6 +26,7 @@ public final class CompatibilityMatcher {
     private static Boolean value(TemplateKey category, String requested, ProductFact fact, boolean catalog) {
         if (fact.value() == null || fact.quote() == null || "DISPUTED".equals(fact.verificationStatus())) return null;
         if (catalog && category == TemplateKey.EARBUDS && SamsungBuds4Verifier.basicPlatform(fact, requested)) return true;
+        if (catalog && category == TemplateKey.EARBUDS && AppleSpecificationVerifier.basicIos(fact, requested)) return true;
         var text = fact.quote();
         if (text.matches("(?is).*(?:미확인|알 수 없|unknown).*")) return null;
         if (category == TemplateKey.EARBUDS) {

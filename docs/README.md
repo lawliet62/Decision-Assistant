@@ -1,5 +1,6 @@
 # 문서 색인
 
+- [Apple iOS 기본 연결 보강](evaluations/apple-ios-2026-11-14/README.md): 모델별 사양 검증·기존 가격 시각 보존과 실제 추천 후보 증가
 - [젠하이저 행사명 변경 검증](evaluations/sennheiser-event-2026-11-14/README.md): 고정 상품의 canonical·제품명 변경과 가격·사양 실제 입력 검증
 
 - [주류 이어폰 3개 브랜드 통합 검증](evaluations/catalog-mainstream-2026-11-13/README.md): 25개 카탈로그 조합·실측 근거·비용과 미완료 항목
