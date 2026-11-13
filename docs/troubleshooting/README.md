@@ -4,6 +4,8 @@
 
 ## 사례와 진단 방법
 
+- [Windows 임시 worktree에서 로컬 명령이 실패하는 경우](windows-worktree-permissions.md): Hook 점유, 실행기 오류 740, Git 소유권, 실제 파일 접근 실패의 구분
+
 - [개발 실행 종료 후 backend가 남는 경우](dev-server-process-shutdown.md): Node wrapper의 신호 전달·하위 서버 정리와 OS별 검증
 
 - [Samsung의 선택 SKU·할인과 기본 연결](samsung-selected-price-and-basic-audio.md): 다중 모델·행사 기간·input property와 문서 직렬화·앱 지원 구분

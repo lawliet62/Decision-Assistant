@@ -19,6 +19,7 @@
 ## Git safety and delivery
 
 - 독립 agent 세션은 각자 별도 Git worktree에서 작업한다. 다른 실행 중인 세션이 점유한 worktree에서는 작업을 거부하고 별도 worktree를 사용한다. 하위 agent는 부모 세션의 worktree를 공유할 수 있다.
+- 탐색·검증·개발 명령은 현재 task의 worktree에서 실행한다. 원본 checkout의 파일이 꼭 필요하면 현재 worktree를 작업 디렉터리로 유지한 채 필요한 파일만 읽을 수 있다. 이 읽기는 다른 worktree의 점유 획득·수정·빌드 실행을 허용하지 않는다. 권한 실패는 [Windows worktree 명령 진단](docs/troubleshooting/windows-worktree-permissions.md)에 따라 Hook 차단, 프로세스 시작 실패, Git 소유권, 파일 접근 실패를 구분한다.
 - 변경 작업은 repository의 canonical default branch가 아닌 작업별 branch에서 수행하고, default branch에 직접 commit하거나 push하지 않는다.
 - 작업 전에 current branch, upstream, working tree를 확인하고, 사용자의 미커밋·untracked·unrelated change를 임의로 discard, overwrite, stash, stage, commit하지 않는다.
 - `reset --hard`, `clean -fd`, 강제 checkout, history rewrite, force push 등 복구 위험이 큰 Git 작업은 agent가 독자적으로 실행하지 않는다.
