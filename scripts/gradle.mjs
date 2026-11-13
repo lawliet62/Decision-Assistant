@@ -1,6 +1,9 @@
 import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 import { backendEnvironment } from "./backend-env.mjs";
+import { prepareSonyFacts, shouldStartSonyFacts } from "./catalog/sony-facts.mjs";
 
 const tasks = process.argv.slice(2);
 if (tasks.length === 0) {
@@ -15,7 +18,18 @@ const args = isWindows
   ? ["/d", "/s", "/c", wrapper, "-p", "backend", ...tasks]
   : ["-p", "backend", ...tasks];
 const env = backendEnvironment(tasks);
-const result = spawnSync(executable, args, { stdio: "inherit", shell: false, env });
+let factWorker;
+if (shouldStartSonyFacts(tasks, env)) {
+  try {
+    prepareSonyFacts(env);
+    factWorker = spawn(process.execPath, [fileURLToPath(new URL("./catalog/sony-facts.mjs", import.meta.url)), "--worker", String(process.pid)],
+      { env, stdio: "inherit", windowsHide: true });
+  } catch { console.error("sony_spec_refresh outcome=VALIDATOR_PREPARATION_FAILED"); }
+}
+process.on("exit", () => factWorker?.kill());
+let result;
+try { result = spawnSync(executable, args, { stdio: "inherit", shell: false, env }); }
+finally { factWorker?.kill(); }
 
 if (result.error) {
   console.error(result.error.message);

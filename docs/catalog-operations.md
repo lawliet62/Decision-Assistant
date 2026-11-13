@@ -98,7 +98,7 @@ worker는 기본 1시간마다 기한이 된 제품을 최대 30개 순차 처�
 
 ## 제품·사양 관리
 
-매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT16, HT10 Hi-Res, HT08, HT20, CT06, T17 APP, T29 APP, HT19, AirPods Pro 3, AirPods 5, Marshall MOTIF II A.N.C.와 MINOR IV, 젠하이저 MOMENTUM True Wireless 5, BOSE QC 이어버드, 앤커 P31i·P41i·에어로클립·리버티 5·리버티 5 프로와 오디오테크니카 ATH-SQ1TW2NC·ATH-AC5TW의 공식 페이지 스물두 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
+매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 각 주소당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT16, HT10 Hi-Res, HT08, HT20, CT06, T17 APP, T29 APP, HT19, AirPods Pro 3, AirPods 5, Marshall MOTIF II A.N.C.와 MINOR IV, 젠하이저 MOMENTUM True Wireless 5, BOSE QC 이어버드, 앤커 P31i·P41i·에어로클립·리버티 5·리버티 5 프로와 오디오테크니카 ATH-SQ1TW2NC·ATH-AC5TW의 공식 페이지 스물두 곳과 Sony WF-C710N 제품·펌웨어 페이지 두 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
 
 작업 요약에서 `QUOTE_PRESENT`는 단순 문구 존재, `QUOTE_MISSING`은 미발견, `UNAVAILABLE`은 접근 실패, `UNSUPPORTED_SOURCE`는 허용된 고정 주소가 아닌 사양이다. 제목은 등록된 예상 제목과 비교하며 `MATCH`, `MISMATCH`, `UNAVAILABLE`로 표시한다. 문구가 다른 상품·추천 영역에 나타날 수도 있고 제목만으로 모델을 확정할 수 없으므로 **제목과 문구 일치는 동일 모델이나 사양의 정확성을 검증하지 않는다**. 점검 기한이 7일 이내이거나 제목 불일치·문구 미발견·접근 실패가 있으면 작업을 실패로 표시한다. 광고 문구 등 제목의 무해한 변경도 경고가 될 수 있으므로 실제 모델을 확인한 뒤 예상 제목을 수정한다. 수집 실패의 HTTP 상태와 크기 초과는 간단한 코드만 남긴다. GitHub 알림 수신 여부는 계정 설정에 달려 있으며 예약 자체가 누락된 경우 이 workflow가 알림을 보장하지 않는다.
 
@@ -149,3 +149,13 @@ node scripts/catalog/report.mjs observations.json products.json
 Apple 한국 스토어의 AirPods Pro 3는 JSON-LD Offer의 단일 SKU와 현재 상품 구매 선택 링크의 `product` 값을 대조하고, 해당 링크 안의 단일 원화 표시 가격이 같은 경우만 수용한다. 비교 추천 영역의 가격, 서로 다른 세대 리다이렉트, 복수 구매 링크·SKU, 회원 등 조건부 문구는 확인 가격으로 사용하지 않는다. 사양은 모델이 명시된 공식 사양 페이지의 ANC·IP57만 등록했다. 기본 연결 호환성은 현재 추출 규칙이 판정할 명시 근거를 등록하지 않아 선택한 플랫폼에 대해 UNKNOWN일 수 있다.
 
 [실제 Dev 갱신 검증](evaluations/catalog-2026-10-29/README.md)은 Firecrawl과 PostgreSQL 저장을 포함한다. 개발 PC의 smoke는 상시 클라우드 운영 검증을 대신하지 않는다. 신규 상품을 늘릴 때 활성 수 × 월 일수를 기존 호출 상한과 대조하고, 실패도 호출을 소비한다는 점을 유지한다.
+
+## Sony WF-C710N 개발 환경 자동 점검
+
+WF-C710N 글래스 블루의 가격은 기존 48시간 worker가 색상 선택 후 Firecrawl snapshot에서 검증한다. [실측](evaluations/sony-c710n-2026-11-13/README.md)은 개발 DB의 한 차례 성공이며 장기 안정성 검증은 아니다.
+
+사양은 고정 제품 페이지와 펌웨어 1.0.5 페이지 두 곳을 확인한다. Java HTTP 요청은 403, Node는 200으로 확인되어 기존 개발 Node로 조회하고 같은 Java 검증기로 모델·제목·canonical·인용을 대조한다. 성공 시 fact_reviews만 갱신하며 사양 값·가격·가격 확인 시각은 바꾸지 않는다. 새 사양·펌웨어 버전은 자동 승인하지 않는다.
+
+npm run dev 또는 npm run backend:dev에서 DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true를 명시하면 점검 자식 프로세스가 함께 실행되고 backend 종료 시 종료된다. local 단일 프로필, 기본 Docker PostgreSQL(localhost 또는 127.0.0.1:5432), 기본 DB 사용자, DB_SECRET_VERSION 미설정일 때만 실행한다. 시간당 기한을 확인하되 요청 전에 7일 간격을 DB에 예약하며 실패도 소비한다. 직접 IDE/Gradle로 실행하면 이 Node helper는 시작하지 않는다. 기본은 비활성이다.
+
+npm run catalog:sony:check는 두 공식 페이지의 읽기 전용 실시간 검증이며 DB를 수정하지 않는다. 원문은 stdin으로 전달하고 저장하지 않는다. GitHub Actions도 두 출처를 각각 점검하지만 DB 확인 시각을 연장하지 않는다. 운영 Node runtime·DB 쓰기 권한·스케줄은 추가하지 않았다.

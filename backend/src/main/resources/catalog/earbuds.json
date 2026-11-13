@@ -704,5 +704,41 @@
       }
     ],
     "active": true
+  },
+  {
+    "id": "sony-wf-c710n-glass-blue",
+    "revision": 2,
+    "name": "소니 WF-C710N 글래스 블루",
+    "brandName": "Sony",
+    "brandStatus": "KNOWN",
+    "purchaseUrl": "https://store.sony.co.kr/product-view/128838586",
+    "expectedIdentity": "sony-kr:128838586",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.sony.co.kr/headphones/products/wf-c710n",
+          "quote": "듀얼 마이크가 주변 소리를 감지하여 WF-C710N의 노이즈 캔슬링 기능을 개선",
+          "fetchedAt": "2026-11-13T11:13:35.839Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "Android/iPhone",
+          "sourceUrl": "https://www.sony.co.kr/electronics/support/software/00369642",
+          "quote": "헤드셋이 Android 장치 또는 iPhone에 연결되어야 합니다.",
+          "fetchedAt": "2026-11-13T11:13:37.475Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
+      }
+    ],
+    "active": true
   }
 ]

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 
 // 운영자가 승인한 고정 사양 페이지만 점검한다. 일치는 사양의 진실성이나 모델 동일성을 증명하지 않는다.
-const sources = new Map([
+const sources = [
   ["samsung-galaxy-buds4-white", ["https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO", "갤럭시 버즈4 (화이트) | SM-R540NZWAKOO | Samsung 대한민국"]],
   ["bose-qc-earbuds-ice-blue", ["https://www.bose.com/p/earbuds/bose-quietcomfort-headphones/QCEARB24-HEADPHONEIN.html", "QuietComfort Earbuds | Bose"]],
   ["audio-technica-ac5tw", ["https://audio-technica.co.kr/product/ath-ac5tw/921/", "ATH-AC5TW - (주)세기AT"]],
@@ -27,7 +27,9 @@ const sources = new Map([
   ["marshall-minor-iv-black", ["https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653", "Minor IV Black - 이어버드 | Marshall.com"]],
   ["marshall-motif-ii-anc", ["https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450", "Motif II A.N.C. Black - 노이즈 캔슬링 이어버드 | Marshall.com"]],
   ["sennheiser-momentum-tw5", ["https://kr.sennheiser-hearing.com/product/detail.html?product_no=731", "한국어 쇼핑몰 | 모멘텀 트루 와이어리스 5"]],
-]);
+  ["sony-wf-c710n-glass-blue", ["https://www.sony.co.kr/headphones/products/wf-c710n", "WF-C710N 무선 노이즈 캔슬링 이어폰 | 30시간 배터리 | 소니코리아"]],
+  ["sony-wf-c710n-glass-blue", ["https://www.sony.co.kr/electronics/support/software/00369642", "펌웨어 업데이트 버전 1.0.5 | Sony KR"]],
+];
 const MAX_BYTES = 2_000_000;
 const normalize = value => value.replace(/<[^>]*>/g, " ").replace(/&nbsp;|&#160;/gi, " ")
   .replace(/&amp;/gi, "&").replace(/\s+/g, " ").trim().toLowerCase();
@@ -41,9 +43,10 @@ const titleMatches = (html, expected) => {
 export async function inspect(entries, fetchPage = fetch, now = new Date()) {
   const results = [];
   // 등록된 사양이 점검 목록에서 빠져도 정상으로 보고하지 않는다.
-  for (const entry of entries.filter(item => item.active && !sources.has(item.id))) {
+  for (const entry of entries.filter(item => item.active)) {
     for (const item of entry.facts) {
       const fact = item.evidence;
+      if (sources.some(([id, [url]]) => id === entry.id && url === fact.sourceUrl)) continue;
       const dueAt = new Date(Date.parse(fact.fetchedAt) + (item.cycle === "HARDWARE" ? 90 : 30) * 86400000);
       results.push({ productId: entry.id, field: fact.name, source: fact.sourceUrl, reviewedAt: fact.fetchedAt,
         dueAt: dueAt.toISOString(), due: dueAt <= now, dueSoon: now.getTime() >= dueAt.getTime() - 7 * 86400000,
@@ -53,7 +56,7 @@ export async function inspect(entries, fetchPage = fetch, now = new Date()) {
   for (const [id, [url, expectedTitle]] of sources) {
     const entry = entries.find(item => item.id === id && item.active);
     if (!entry) continue;
-    const facts = entry.facts;
+    const facts = entry.facts.filter(item => item.evidence.sourceUrl === url);
     if (!facts.length) continue;
     let page, titleCheck, failure;
     try {

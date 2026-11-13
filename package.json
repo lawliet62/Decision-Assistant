@@ -13,6 +13,7 @@
     "backend:dev": "node scripts/gradle.mjs bootRun",
     "backend:test": "node scripts/gradle.mjs test",
     "backend:integration": "node scripts/gradle.mjs integrationTest",
-    "backend:build": "node scripts/gradle.mjs build"
+    "backend:build": "node scripts/gradle.mjs build",
+    "catalog:sony:check": "node scripts/catalog/sony-facts.mjs --check"
   }
 }

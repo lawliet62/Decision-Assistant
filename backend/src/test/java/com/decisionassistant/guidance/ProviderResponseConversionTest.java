@@ -61,6 +61,38 @@ class ProviderResponseConversionTest {
         assertThat(calls).hasValue(1);
     }
 
+    @Test void sonyUsesOnePostSelectionSnapshotAndNeverFallsBackToRawHtml() {
+        var invalid = new AtomicInteger();
+        var request = new java.util.concurrent.atomic.AtomicReference<String>();
+        server.createContext("/scrape", exchange -> {
+            calls.incrementAndGet();
+            request.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            var snapshot = java.util.Map.of("url", invalid.get() == 1 ? SonyC710nVerifier.URL + "0" : SonyC710nVerifier.URL,
+                    "html", SonyC710nVerifierTest.HTML);
+            var data = java.util.Map.of("markdown", "", "rawHtml", "before selection",
+                    "metadata", java.util.Map.of("title", "WF-C710N", "statusCode", invalid.get() == 3 ? 500 : 200),
+                    "actions", java.util.Map.of("scrapes", invalid.get() == 2 ? java.util.List.of() : java.util.List.of(snapshot)));
+            var body = new tools.jackson.databind.ObjectMapper().writeValueAsBytes(java.util.Map.of("success", true, "data", data));
+            exchange.getResponseHeaders().add("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            try (var stream = exchange.getResponseBody()) { stream.write(body); }
+            exchange.close();
+        });
+        context.run(app -> {
+            var provider = provider(app.getBean(RestClient.Builder.class));
+            var page = provider.scrapeProduct(SonyC710nVerifier.URL);
+            assertThat(page.html()).isEqualTo(SonyC710nVerifierTest.HTML);
+            assertThat(page.resolvedUrl()).isEqualTo(SonyC710nVerifier.URL);
+            var actions = new tools.jackson.databind.ObjectMapper().readTree(request.get()).path("actions");
+            assertThat(actions.size()).isEqualTo(5);
+            assertThat(actions.path(4).path("type").asText()).isEqualTo("scrape");
+            for (int i = 1; i <= 3; i++) {
+                invalid.set(i);
+                assertThatThrownBy(() -> provider.scrapeProduct(SonyC710nVerifier.URL)).isInstanceOf(WebEvidenceException.class);
+            }
+        });
+        assertThat(calls).hasValue(4);
+    }
+
     @Test void samsungRequiresOnePostWaitSnapshotWithoutRawFallback() {
         var invalid=new AtomicInteger();var request=new java.util.concurrent.atomic.AtomicReference<String>();
         server.createContext("/scrape",exchange->{
@@ -101,6 +133,7 @@ class ProviderResponseConversionTest {
         });
         assertThat(request.get()).contains("rawHtml", "markdown", "storeInCache");
         assertThat(new tools.jackson.databind.ObjectMapper().readTree(request.get()).path("maxAge").asInt(-1)).isZero();
+        assertThat(new tools.jackson.databind.ObjectMapper().readTree(request.get()).has("actions")).isFalse();
         assertThat(calls).hasValue(1);
     }
 

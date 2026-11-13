@@ -53,7 +53,17 @@ final class OfficialProductParser {
         }
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
-        if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
+        if (store.id().equals("sony-kr")) {
+            if (!catalog) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            if (SonyC710nVerifier.URL.equals(requestedUrl)) {
+                var price = SonyC710nVerifier.price(page.html()).orElse(null);
+                if (price == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+                return new Result(new OfficialProduct(SonyC710nVerifier.NAME, SonyC710nVerifier.IDENTITY,
+                        new OfficialOffer(requestedUrl, store.name(), price, "KRW", null, fetchedAt,
+                                "공식 상품의 선택된 글래스 블루 1개와 판매가를 대조한 가격", OfficialStorePolicy.VERSION), "", "판매가 " + price + "원"), null);
+            }
+            return inspectSony(doc, requestedUrl, store, fetchedAt);
+        }
         if (store.id().equals("audio-technica-kr")) {
             var ac5 = AudioTechnicaProductVerifier.AC5_URL.equals(requestedUrl);
             if (!catalog || !(ac5 || AudioTechnicaProductVerifier.URL.equals(requestedUrl))) return Result.rejected(Rejection.UNREGISTERED_STORE);

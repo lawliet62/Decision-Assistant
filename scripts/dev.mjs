@@ -27,13 +27,7 @@ function run(command, args, options = {}) {
 }
 
 function backendCommand() {
-  if (isWindows) {
-    return {
-      command: process.env.ComSpec ?? "cmd.exe",
-      args: ["/d", "/s", "/c", "gradlew.bat bootRun"],
-    };
-  }
-  return { command: "./gradlew", args: ["bootRun"] };
+  return { command: process.execPath, args: ["scripts/gradle.mjs", "bootRun"] };
 }
 
 function frontendCommand() {
@@ -64,7 +58,7 @@ async function main() {
   console.log("Starting backend and frontend...");
   const backend = backendCommand();
   const backendProcess = run(backend.command, backend.args, {
-    cwd: `${root}/backend`,
+    cwd: root,
     keepAlive: true,
     env: backendEnvironment(["bootRun"]),
   });

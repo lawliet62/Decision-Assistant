@@ -203,3 +203,9 @@ Serper는 제품명 검색, Firecrawl은 페이지 수집과 기존 대안 검�
 - 제품 boundary 변경은 `product.md`, 핵심 용어 변경은 `domain.md`를 같은 변경에서 갱신한다.
 - 장기간 유지할 architecture 선택과 대안은 ADR로 남긴다.
 - 완료된 일의 로그나 코드와 동일한 목록은 문서화하지 않는다.
+
+### 개발 Sony 사양 점검 실행
+
+scripts/gradle.mjs의 bootRun에서 명시적으로 활성화한 기본 local DB만 Sony helper를 시작한다. prepareCatalogInspection은 test class를 컴파일하며 JUnit은 실행하지 않는다. Java 오프라인 CLI에는 Node가 고정 공개 URL에서 읽은 원문만 stdin으로 전달한다. CLI는 네트워크·DB·Secret을 사용하지 않는다. 준비 실패는 오류를 남기고 backend 기동을 막지 않으며 확인 시각도 연장하지 않는다.
+
+helper는 사전 7일 예약과 revision·identity·근거·optimistic version을 대조한 뒤 fact_reviews와 version만 갱신한다. backend 종료 시 helper도 종료한다. 외부 DB·운영/복수 프로필·Secret 기반 DB에는 연결하지 않는다. 운영 runtime이나 인증 구조 변경은 포함하지 않는다. [운영 방법](catalog-operations.md#sony-wf-c710n-개발-환경-자동-점검)을 따른다.
