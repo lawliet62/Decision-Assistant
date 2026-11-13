@@ -4,6 +4,7 @@
 
 ## 사례와 진단 방법
 
+- [GitHub 출처 점검 실패 분리](../evaluations/source-check-2026-11-14/README.md): 로컬 성공과 클라우드 접근의 구분, 제목 변경을 제한적으로 처리한 사례
 - [Windows 임시 worktree에서 로컬 명령이 실패하는 경우](windows-worktree-permissions.md): Hook 점유, 실행기 오류 740, Git 소유권, 실제 파일 접근 실패의 구분
 
 - [개발 실행 종료 후 backend가 남는 경우](dev-server-process-shutdown.md): Node wrapper의 신호 전달·하위 서버 정리와 OS별 검증

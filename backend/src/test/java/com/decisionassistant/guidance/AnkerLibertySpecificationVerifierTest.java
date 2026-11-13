@@ -23,6 +23,11 @@ class AnkerLibertySpecificationVerifierTest {
         }
     }
     @Test void ancAndMultipointAreVerifiedIndependently() {
+        var current = PAGE.replace("<title>soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby 3D Audio</title>",
+                "<title>soundcore Liberty 5 | Noise-Cancelling Earbuds with Dolby Audio</title>");
+        assertThat(AnkerLibertySpecificationVerifier.matches(current)).isTrue();
+        assertThat(AnkerLibertySpecificationVerifier.matchesMultipoint(current)).isTrue();
+        assertThat(AnkerLibertySpecificationVerifier.matches(current + "<title>Other</title>")).isFalse();
         assertThat(AnkerLibertySpecificationVerifier.matches(PAGE.replace(">Yes<", ">No<"))).isTrue();
         assertThat(AnkerLibertySpecificationVerifier.matchesMultipoint(PAGE.replace("Real-Time Adaptive ANC 3.0:", "No ANC"))).isTrue();
     }
