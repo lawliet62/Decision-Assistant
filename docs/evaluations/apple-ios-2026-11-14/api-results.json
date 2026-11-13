@@ -1,0 +1,227 @@
+{
+  "evaluatedAt": "2026-11-13T16:31:35.277Z",
+  "copiedProducts": 25,
+  "externalPriceObservations": 0,
+  "results": [
+    {
+      "budget": 250000,
+      "suggestions": [
+        {
+          "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
+          "group": "RECOMMENDED",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "MEETS",
+            "facts": [
+              {
+                "name": "호환성",
+                "value": "iOS / Android",
+                "sourceUrl": "https://www.qcy.com/products/qcy-t13-pro",
+                "quote": "Compatible Systems: iOS / Android",
+                "fetchedAt": "2026-11-13T12:01:36.767087500Z",
+                "verificationStatus": "UNREVIEWED",
+                "normalizationVersion": null
+              }
+            ],
+            "unknownReason": null
+          },
+          "price": 22900,
+          "fetchedAt": "2026-11-13T12:13:09.083798700Z"
+        },
+        {
+          "name": "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍",
+          "group": "UNKNOWN",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "UNKNOWN",
+            "facts": [],
+            "unknownReason": "MISSING"
+          },
+          "price": 25900,
+          "fetchedAt": "2026-11-13T12:13:02.662163400Z"
+        },
+        {
+          "name": "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버",
+          "group": "UNKNOWN",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "UNKNOWN",
+            "facts": [],
+            "unknownReason": "MISSING"
+          },
+          "price": 28900,
+          "fetchedAt": "2026-11-13T12:13:14.888385900Z"
+        },
+        {
+          "name": "삼성 갤럭시 버즈4 화이트",
+          "group": "RECOMMENDED",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "MEETS",
+            "facts": [
+              {
+                "name": "호환성",
+                "value": "Android/iOS",
+                "sourceUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+                "quote": "갤럭시 버즈4를 블루투스 오디오로 연결하는 것은 OS에 관계없이 가능하지만",
+                "fetchedAt": "2026-11-13T13:13:20.454745600Z",
+                "verificationStatus": "UNREVIEWED",
+                "normalizationVersion": null
+              }
+            ],
+            "unknownReason": null
+          },
+          "price": 220200,
+          "fetchedAt": "2026-11-13T13:13:20.087221400Z"
+        },
+        {
+          "name": "AirPods 5 무선 충전 케이스 모델",
+          "group": "RECOMMENDED",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "MEETS",
+            "facts": [
+              {
+                "name": "호환성",
+                "value": "iOS",
+                "sourceUrl": "https://www.apple.com/kr/airpods-5/specs/",
+                "quote": "최신 버전 iOS가 설치된 iPhone 모델",
+                "fetchedAt": "2026-11-13T16:27:37.299Z",
+                "verificationStatus": "UNREVIEWED",
+                "normalizationVersion": null
+              }
+            ],
+            "unknownReason": null
+          },
+          "price": 229000,
+          "fetchedAt": "2026-11-13T12:14:46.793786400Z"
+        }
+      ]
+    },
+    {
+      "budget": 400000,
+      "suggestions": [
+        {
+          "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
+          "group": "RECOMMENDED",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "MEETS",
+            "facts": [
+              {
+                "name": "호환성",
+                "value": "iOS / Android",
+                "sourceUrl": "https://www.qcy.com/products/qcy-t13-pro",
+                "quote": "Compatible Systems: iOS / Android",
+                "fetchedAt": "2026-11-13T12:01:36.767087500Z",
+                "verificationStatus": "UNREVIEWED",
+                "normalizationVersion": null
+              }
+            ],
+            "unknownReason": null
+          },
+          "price": 22900,
+          "fetchedAt": "2026-11-13T12:13:09.083798700Z"
+        },
+        {
+          "name": "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍",
+          "group": "UNKNOWN",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "UNKNOWN",
+            "facts": [],
+            "unknownReason": "MISSING"
+          },
+          "price": 25900,
+          "fetchedAt": "2026-11-13T12:13:02.662163400Z"
+        },
+        {
+          "name": "삼성 갤럭시 버즈4 화이트",
+          "group": "RECOMMENDED",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "MEETS",
+            "facts": [
+              {
+                "name": "호환성",
+                "value": "Android/iOS",
+                "sourceUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+                "quote": "갤럭시 버즈4를 블루투스 오디오로 연결하는 것은 OS에 관계없이 가능하지만",
+                "fetchedAt": "2026-11-13T13:13:20.454745600Z",
+                "verificationStatus": "UNREVIEWED",
+                "normalizationVersion": null
+              }
+            ],
+            "unknownReason": null
+          },
+          "price": 220200,
+          "fetchedAt": "2026-11-13T13:13:20.087221400Z"
+        },
+        {
+          "name": "AirPods 5 무선 충전 케이스 모델",
+          "group": "RECOMMENDED",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "MEETS",
+            "facts": [
+              {
+                "name": "호환성",
+                "value": "iOS",
+                "sourceUrl": "https://www.apple.com/kr/airpods-5/specs/",
+                "quote": "최신 버전 iOS가 설치된 iPhone 모델",
+                "fetchedAt": "2026-11-13T16:27:37.299Z",
+                "verificationStatus": "UNREVIEWED",
+                "normalizationVersion": null
+              }
+            ],
+            "unknownReason": null
+          },
+          "price": 229000,
+          "fetchedAt": "2026-11-13T12:14:46.793786400Z"
+        },
+        {
+          "name": "AirPods Pro 3",
+          "group": "RECOMMENDED",
+          "compatibility": {
+            "id": "compatibility",
+            "label": "기본 연결·사용 호환성",
+            "requiredValue": "iOS",
+            "status": "MEETS",
+            "facts": [
+              {
+                "name": "호환성",
+                "value": "iOS",
+                "sourceUrl": "https://www.apple.com/kr/airpods-pro/specs/",
+                "quote": "최신 버전 iOS가 설치된 iPhone 모델",
+                "fetchedAt": "2026-11-13T16:27:36.731Z",
+                "verificationStatus": "UNREVIEWED",
+                "normalizationVersion": null
+              }
+            ],
+            "unknownReason": null
+          },
+          "price": 369000,
+          "fetchedAt": "2026-11-13T12:14:58.509768100Z"
+        }
+      ]
+    }
+  ]
+}
