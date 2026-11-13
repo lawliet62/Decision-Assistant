@@ -23,7 +23,7 @@ public final class OfficialStorePolicy {
             new Store("bose-kr", "BOSE 공식 온라인 스토어", "www.bose.co.kr", "/357/?", Set.of()),
             new Store("anker-kr", "앤커코리아 공식 스토어", "ankerkorea.co.kr", "/product/(?:detail\\.html|[^/]+/(?:40|43|45|91|154)/?)", Set.of()),
             new Store("marshall-kr", "Marshall 공식 스토어", "www.marshall.com", "/kr/ko/product/(?:motif-ii-anc|minor-iv)/?", Set.of()),
-            new Store("sennheiser-kr", "젠하이저 공식 스토어", "kr.sennheiser-hearing.com", "/product/(?:detail\\.html|모멘텀-트루-와이어리스-5/731/?)", Set.of()),
+            new Store("sennheiser-kr", "젠하이저 공식 스토어", "kr.sennheiser-hearing.com", "/product/(?:detail\\.html|(?:젠사페-)?모멘텀-트루-와이어리스-5/731/?)", Set.of()),
             new Store("audio-technica-kr", "오디오테크니카 공식 스토어", "audio-technica.co.kr", "/product/(?:ath-sq1tw2nc/955|ath-ac5tw/921)/?", Set.of()),
             new Store("qcy-kr", "QCY 공식몰", "qcystore.co.kr", "/product/(?:detail.html|[^/]+/[0-9]+(?:/.*)?)", Set.of("qcystore.co.kr")),
             new Store("qcy-naver", "QCY 공식 스마트스토어", "smartstore.naver.com", "/ylintl/products/[0-9]+/?", Set.of("shop-phinf.pstatic.net")));
