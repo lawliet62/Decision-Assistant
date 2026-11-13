@@ -6,6 +6,7 @@ import type { components } from "@/shared/api/schema";
 import type { DecisionResponse } from "@/shared/api/types";
 import { FactValue, RequirementChecks } from "./product-facts";
 import { SourceLink } from "@/features/product-lookup/source-link";
+import { BudgetInput } from "@/shared/ui/budget-input";
 
 type Data = NonNullable<DecisionResponse["comparison"]>;
 type Settings = NonNullable<Data["settings"]>;
@@ -70,8 +71,8 @@ export function ComparisonWorkspace({ decision, disabled, apply, run, onEditing 
   return <section className="space-y-5 rounded-3xl border border-emerald-200 bg-white p-5 sm:p-6" aria-label="조건을 바꾸며 비교">
     <div><h2 className="text-xl font-semibold">내 조건으로 차이 보기</h2><p className="mt-1 text-sm text-zinc-600">같은 후보에서 조건을 바꿔 보세요. 근거가 없는 정보는 미확인으로 남깁니다.</p></div>
     <fieldset disabled={disabled || !!confirmation} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-3">
-        <label className="text-sm">비교 예산 상한 (원)<input type="number" min="1" max="100000000" aria-label="비교 예산 상한" value={settings.maxBudget ?? ""} onChange={event => edit({ ...settings, maxBudget: event.target.value === "" ? undefined : Number(event.target.value) })} className={input} placeholder="제한 없음" /></label>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="max-w-md sm:col-span-2"><BudgetInput label="비교 예산 상한" value={settings.maxBudget} onChange={maxBudget => edit({ ...settings, maxBudget })} /></div>
         <label className="text-sm">기본 연결·사용 호환성<select aria-label="기본 연결·사용 호환성" value={settings.compatibility ?? ""} onChange={event => edit({ ...settings, compatibility: event.target.value || undefined })} className={input}><option value="">조건 없음</option>{["Android", "iOS", "멀티포인트"].map(value => <option key={value}>{value}</option>)}</select></label>
         <label className="text-sm">먼저 볼 정보<select aria-label="먼저 볼 정보" value={settings.focus} onChange={event => edit({ ...settings, focus: event.target.value })} className={input}>{["가격", "ANC 지원", "호환성", "배터리", "무게"].map(value => <option key={value}>{value}</option>)}</select></label>
       </div>
