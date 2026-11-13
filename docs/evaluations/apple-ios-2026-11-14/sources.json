@@ -1,0 +1,20 @@
+[
+  {
+    "id": "apple-airpods-pro-3",
+    "source": "https://www.apple.com/kr/airpods-pro/specs/",
+    "checkedAt": "2026-11-13T16:27:36.731Z",
+    "status": 200,
+    "htmlSha256": "85a461bacf23b9ebb394147856bbdaa5ab9fe00933463a2a9653642a30e7c735",
+    "result": "APPLE_IOS_VERIFIED=true",
+    "paidCalls": 0
+  },
+  {
+    "id": "apple-airpods-5-wireless",
+    "source": "https://www.apple.com/kr/airpods-5/specs/",
+    "checkedAt": "2026-11-13T16:27:37.299Z",
+    "status": 200,
+    "htmlSha256": "f9cc079cbd69983f56b97123d98a828bf3a5ec58ea44d541a5066876d86ba477",
+    "result": "APPLE_IOS_VERIFIED=true",
+    "paidCalls": 0
+  }
+]

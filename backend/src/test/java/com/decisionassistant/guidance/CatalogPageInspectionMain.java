@@ -10,6 +10,14 @@ public final class CatalogPageInspectionMain {
     public static void main(String[] args) throws Exception {
         System.setOut(new java.io.PrintStream(System.out, true, StandardCharsets.UTF_8));
         if (args.length == 1 && "--sony-spec".equals(args[0])) { inspectSonySpecifications(); return; }
+        if (args.length == 1 && java.util.Set.of("--apple5-ios", "--applepro-ios").contains(args[0])) {
+            var bytes = System.in.readNBytes(2_000_001);
+            if (bytes.length > 2_000_000) throw new IllegalArgumentException("HTML_TOO_LARGE");
+            var html = new String(bytes, StandardCharsets.UTF_8);
+            System.out.println("APPLE_IOS_VERIFIED=" + (args[0].equals("--apple5-ios")
+                    ? AppleSpecificationVerifier.matchesAirpods5(html, "호환성") : AppleSpecificationVerifier.matches(html, "호환성")));
+            return;
+        }
         if (args.length != 1 || OfficialStorePolicy.store(args[0]).isEmpty())
             throw new IllegalArgumentException("REGISTERED_URL_REQUIRED");
         int maxBytes = SamsungBuds4Verifier.URL.equals(args[0]) ? SamsungBuds4Verifier.MAX_PRICE_HTML * 3 : 2_000_000;

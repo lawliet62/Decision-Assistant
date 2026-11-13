@@ -377,6 +377,36 @@ class CatalogApiIntegrationTest {
         assertThat(products.findById(id).orElseThrow().usableFacts(Instant.now()).getFirst().fetchedAt()).isAfter(old);
         verify(marshallSpecificationSource, times(1)).fetch();
     }
+    @Test void appleIosReviewsExpireAndRefreshOnceWithoutChangingPriceOrItsReservation() throws Exception {
+        CatalogImporter.Entry[] entries;
+        try(var stream=new org.springframework.core.io.ClassPathResource("catalog/earbuds.json").getInputStream()) {
+            entries=json.readValue(stream,CatalogImporter.Entry[].class);
+        }
+        var old=Instant.now().minus(Duration.ofDays(31));
+        for(var entry:Arrays.stream(entries).filter(e->e.id().startsWith("apple-airpods")).toList()) {
+            var original=entry.facts().stream().filter(f->f.evidence().name().equals("호환성")).findFirst().orElseThrow().evidence();
+            var fact=new CatalogProduct.Fact(new ProductFact(original.name(),original.value(),original.sourceUrl(),original.quote(),old,"UNREVIEWED"),CatalogProduct.ReviewCycle.SOFTWARE);
+            var p=new CatalogProduct(entry.id());p.register(entry.revision(),entry.name(),entry.purchaseUrl(),entry.expectedIdentity(),List.of(fact),true,"Apple",CatalogProduct.BrandStatus.KNOWN);
+            var priceAt=Instant.now().minusSeconds(60);p.attempted(priceAt);
+            p.observed(new OfficialProduct(p.name(),p.expectedIdentity(),new OfficialOffer(p.purchaseUrl(),"Apple",BigDecimal.valueOf(229000),"KRW",null,priceAt,"테스트 가격",CatalogProperties.VERSION),"","테스트 가격"));
+            products.saveAndFlush(p);
+            var next=jdbc.queryForObject("select next_attempt_at from catalog_products where id=?",java.sql.Timestamp.class,p.id());
+            assertThat(p.usableFacts(Instant.now())).isEmpty();
+            var five=p.id().contains("5-wireless");
+            var page="<title>"+(five?"AirPods 5":"AirPods Pro 3")+" - 제품 사양 - Apple (KR)</title><link rel='canonical' href='"+original.sourceUrl()+"'>"
+                    +"<div class='techspecs-section section-requirements'><ul class='techspecs-list'><li>"+original.quote()+"</li>"
+                    +"<li>AirPods은 이전 버전 소프트웨어를 사용하는 Apple 기기 및 Apple 기기가 아닌 제품과도 무선 Bluetooth 헤드폰으로 페어링해 사용할 수 있지만, 기능은 제한될 수 있습니다.</li></ul></div>";
+            if(five) when(appleSpecificationSource.fetchAirpods5()).thenReturn(page); else when(appleSpecificationSource.fetch()).thenReturn(page);
+            if(five) {var w=new Apple5SpecificationRefreshWorker(true,catalogProperties,products,jdbc,appleSpecificationSource,transactionManager);w.refresh();w.refresh();}
+            else {var w=new AppleSpecificationRefreshWorker(true,catalogProperties,products,jdbc,appleSpecificationSource,transactionManager);w.refresh();w.refresh();}
+            var updated=products.findById(p.id()).orElseThrow();
+            assertThat(CompatibilityMatcher.check(com.decisionassistant.decision.DecisionTypes.TemplateKey.EARBUDS,"iOS",updated.usableFacts(Instant.now()),null,true).status()).isEqualTo(RequirementStatus.MEETS);
+            assertThat(updated.usableOffer().fetchedAt()).isEqualTo(priceAt);
+            assertThat(jdbc.queryForObject("select next_attempt_at from catalog_products where id=?",java.sql.Timestamp.class,p.id())).isEqualTo(next);
+            assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where product_id=? and next_attempt_at>now()+interval '6 days'",Integer.class,p.id())).isEqualTo(1);
+        }
+        verify(appleSpecificationSource,times(1)).fetch();verify(appleSpecificationSource,times(1)).fetchAirpods5();
+    }
     @Test void samsungBasicAudioAndAncReachBothPlatformsWithOneWeeklyReview() throws Exception {
         CatalogImporter.Entry entry;
         try(var stream=new org.springframework.core.io.ClassPathResource("catalog/earbuds.json").getInputStream()) {
