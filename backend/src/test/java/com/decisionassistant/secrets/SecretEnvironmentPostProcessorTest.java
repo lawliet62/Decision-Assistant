@@ -44,6 +44,17 @@ class SecretEnvironmentPostProcessorTest {
         assertThat(env.getProperty("spring.security.oauth2.client.registration.auth0.client-secret")).isNull();
     }
 
+    @Test void catalogResearchLoadsOnlyOpenAiWithoutEnablingChat() {
+        var env=managed("local").withProperty("decision-assistant.catalog.research-enabled","true")
+                .withProperty("decision-assistant.secrets.versions.openai-api-key","1");
+        new SecretEnvironmentPostProcessor(new DeferredLogs(),(resources,local)->{
+            assertThat(resources).containsOnlyKeys("spring.ai.openai.api-key");
+            return Map.of("spring.ai.openai.api-key","fixture-only-key");
+        }).postProcessEnvironment(env,null);
+        assertThat(env.getProperty("spring.ai.model.chat")).isEqualTo("none");
+        assertThat(env.getProperty("spring.ai.openai.api-key")).isEqualTo("fixture-only-key");
+    }
+
     @Test void offlineDoesNotSilentlyDisableRequestedFeature() {
         var env = new MockEnvironment().withProperty("decision-assistant.search.enabled", "true");
         env.setActiveProfiles("local");

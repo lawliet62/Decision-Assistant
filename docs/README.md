@@ -1,5 +1,7 @@
 # 문서 색인
 
+- [이어폰 데이터 확대와 혼합 수집](catalog-expansion.md): 주류 브랜드·가격대 확대 완료 기준과 제한된 OpenAI 공식 출처 조사
+
 - [MVP 배포 준비 보고서](mvp-readiness.md): 승인된 범위·검증 결과·무료 VM 가능성·배포 전 남은 작업
 - [단일 VM 배포 자산](../deploy/README.md): 컨테이너·로컬 smoke·백업/복원·비용 통제
 - [목록 관리·영구 삭제 결정](decisions/0018-decision-management-and-deletion.md)
