@@ -4,6 +4,8 @@
 
 ## 사례와 진단 방법
 
+- [JBL 삼성닷컴의 렌더링된 구매 근거](jbl-rendered-purchase-evidence.md): 배열형 JSON-LD·hidden input 제거·기준가와 혜택가 대조
+
 - [웹 검색 조사 실패와 가격 검증 실패의 구분](catalog-research-incomplete.md): 미완성 응답, 실패 시 사용량 보존과 중복 호출 방지
 
 - [결정 전체 선택에서 403이 반환되는 경우](stale-decision-selection-api.md): 구버전 backend와 최신 frontend의 실행 버전 불일치

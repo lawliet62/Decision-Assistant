@@ -32,3 +32,9 @@
 Samsung·Sony·JBL의 검증된 신규 등록, 가격·사양 근거 보강, 복수 후보 추천 및 반복 갱신은 아직 완료되지 않았다. 첫 조사 이후 정확도·비용·유지보수량을 보고 다음 배치를 정한다. Jabra와 CT06의 이미 예약된 실제 재조회 간격을 단축하지 않는다.
 
 근거: [OpenAI 웹 검색](https://developers.openai.com/api/docs/guides/tools-web-search), [모델 지원](https://developers.openai.com/api/docs/models/gpt-5.4-mini), [공개 가격](https://developers.openai.com/api/docs/pricing).
+
+## JBL 후속 검증 (2026-11-13)
+
+JBL TUNE BEAM 2 블랙은 삼성닷컴의 실제 99,000원 관측, 제조사 ANC/Android 사양 자동 점검, API 추천을 검증했다. [평가](evaluations/jbl-tune-beam2-2026-11-13/README.md)를 따른다. 개발 DB는 미병합 Sony PR #59 데이터를 포함해 활성 24개·9개 브랜드이며, main 기반 이 변경의 manifest만으로는 활성 23개다. 기존 첫 조사 실패 기록은 당시 결과로 보존한다.
+
+Samsung 자체 브랜드 공백과 실제 주기 반복 검증은 남아 있다. JBL·Sony 한 모델씩의 성공으로 주류 제품 전체 확보나 가격 자동 갱신 목표를 완료 처리하지 않는다. 기존 제품의 예약 간격도 단축하지 않는다.

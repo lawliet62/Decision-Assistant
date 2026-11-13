@@ -65,3 +65,12 @@ test("문구가 있어도 제목 누락·다른 모델·복수 제목은 점검 
     assert.equal(requiresAttention(rows), true);
   }
 });
+
+test("JBL 제조사 출처에서 두 사양을 한 번 조회하고 확인 시각은 보존한다", async () => {
+  const fs = await import("node:fs");
+  const entry = JSON.parse(fs.readFileSync(new URL("../../backend/src/main/resources/catalog/earbuds.json",import.meta.url),"utf8")).find(e=>e.id==="jbl-tune-beam2-black");
+  const before=JSON.stringify(entry);let calls=0;
+  const results=await inspect([entry],async ()=>{calls++;return new Response("<title>JBL Tune Beam 2 | 트루 와이어리스 노이즈 캔슬링 이어버드</title>"+entry.facts.map(f=>f.evidence.quote).join(" "));},new Date("2026-11-13T13:00:00Z"));
+  assert.equal(calls,1);assert.equal(results.length,2);
+  assert.ok(results.every(r=>r.observation==="QUOTE_PRESENT"&&r.titleCheck==="MATCH"));assert.equal(JSON.stringify(entry),before);
+});

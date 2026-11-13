@@ -46,6 +46,14 @@ final class OfficialProductParser {
         var doc = Jsoup.parse(page.html(), requestedUrl);
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
+        if (store.id().equals("jbl-samsung-kr")) {
+            if (!catalog || !JblTuneBeam2Verifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var price = JblTuneBeam2Verifier.price(page.html()).orElse(null);
+            if (price == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct(JblTuneBeam2Verifier.NAME, JblTuneBeam2Verifier.IDENTITY,
+                    new OfficialOffer(requestedUrl, store.name(), price, "KRW", null, fetchedAt,
+                            "공식 블랙 SKU 1개의 기준가·일반 구매 금액을 대조한 가격", OfficialStorePolicy.VERSION), "", "기준가 " + price + "원"), null);
+        }
         if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
         if (store.id().equals("audio-technica-kr")) {
             var ac5 = AudioTechnicaProductVerifier.AC5_URL.equals(requestedUrl);

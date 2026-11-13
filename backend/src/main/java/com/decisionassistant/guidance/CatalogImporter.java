@@ -52,6 +52,7 @@ public class CatalogImporter implements ApplicationRunner {
             var uri = URI.create(f.sourceUrl());
             if (!"https".equals(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null || uri.getPort() != -1
                     || !(Set.of("www.qcy.com", "qcystore.co.kr", "www.samsung.com", "www.apple.com", "support.apple.com", "www.lge.co.kr").contains(uri.getHost())
+                         || JblTuneBeam2Verifier.SPEC_URL.equals(f.sourceUrl()) && JblTuneBeam2Verifier.URL.equals(e.purchaseUrl())
                          || AnkerP31iSpecificationVerifier.URL.equals(f.sourceUrl()) && AnkerProductVerifier.URL.equals(e.purchaseUrl())
                          || AnkerProductVerifier.AERO_URL.equals(f.sourceUrl()) && AnkerProductVerifier.AERO_URL.equals(e.purchaseUrl())
                          || AnkerLibertySpecificationVerifier.URL.equals(f.sourceUrl()) && AnkerProductVerifier.LIBERTY_URL.equals(e.purchaseUrl())

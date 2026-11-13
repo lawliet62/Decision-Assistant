@@ -61,6 +61,25 @@ class ProviderResponseConversionTest {
         assertThat(calls).hasValue(1);
     }
 
+    @Test void jblWaitsForRenderedPurchaseFieldsWithoutChangingOtherUrls() {
+        var request = new java.util.concurrent.atomic.AtomicReference<String>();
+        server.createContext("/scrape", exchange -> {
+            calls.incrementAndGet(); request.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            var body = new tools.jackson.databind.ObjectMapper().writeValueAsBytes(java.util.Map.of("success", true, "data",
+                    java.util.Map.of("markdown", "", "rawHtml", JblTuneBeam2VerifierTest.HTML, "metadata",java.util.Map.of("url",JblTuneBeam2Verifier.URL))));
+            exchange.getResponseHeaders().add("Content-Type","application/json"); exchange.sendResponseHeaders(200,body.length);
+            try(var out=exchange.getResponseBody()){out.write(body);} exchange.close();
+        });
+        context.run(app -> {
+            var provider=provider(app.getBean(RestClient.Builder.class));
+            assertThat(provider.scrapeProduct(JblTuneBeam2Verifier.URL).html()).isEqualTo(JblTuneBeam2VerifierTest.HTML);
+            assertThat(new tools.jackson.databind.ObjectMapper().readTree(request.get()).path("waitFor").asInt()).isEqualTo(8000);
+            provider.scrapeProduct("https://qcystore.co.kr/product/detail.html?product_no=990");
+            assertThat(new tools.jackson.databind.ObjectMapper().readTree(request.get()).has("waitFor")).isFalse();
+        });
+        assertThat(calls).hasValue(2);
+    }
+
     @Test void productScrapeConvertsHtmlAndFinalUrlWithOneRequest() {
         var request = new java.util.concurrent.atomic.AtomicReference<String>();
         server.createContext("/scrape", exchange -> {

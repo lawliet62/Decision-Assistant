@@ -187,6 +187,8 @@
 - **동작:** 홈·조건 입력·결과에 공식 판매처 기준과 다른 판매·할인 경로가 더 저렴할 수 있음을 본문으로 표시한다. 실행의 정책 버전과 개별 공식 offer를 저장하며 기존 추천·직접 추가를 공식 추천으로 소급하지 않는다.
 - **이유:** 추천 범위와 가격 정렬의 의미를 명확히 하되 제품 안전성·품질·정품·최저가를 인증하지 않는다.
 
+- **JBL TUNE BEAM 2 적용 범위:** BR-DISC-04의 카탈로그 검증은 공식 제조사가 연결한 삼성닷컴 블랙 단일 SKU에 한정한다. 조건부 최대 혜택가를 단독 사용하지 않고 구조화 가격·명시 기준가·선택 총액·수량·재고·구매 버튼을 교차 대조한다. 제조사 페이지의 ANC 및 Android 페어링 근거를 등록하며 iOS는 UNKNOWN이다. 검증은 `JblTuneBeam2VerifierTest`, `ProviderResponseConversionTest`, `CatalogApiIntegrationTest.jblReviewsPersistOncePerWeekAndReachAndroidAncRecommendation`과 [실측](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 따른다.
+
 ### BR-DISC-05: 같은 조건의 추가 탐색은 비교와 추천 이력을 보존한다
 
 - **동작:** 명시적 refresh는 최초 저장한 조건과 동의로 새 generation을 만든다. 승인·제외·미선택을 포함한 이전 추천 전체를 모델 식별자·정규화한 이름·공식 상품 URL로 누적 제외한다. 최근 공개 모델명 최대 5개만 검색 보조 조건으로 보내고 전체 제외는 서버에서 적용한다. 직접 편집한 제품명·메모는 검색 조건에 추가하지 않는다.

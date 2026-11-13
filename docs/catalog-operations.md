@@ -149,3 +149,11 @@ node scripts/catalog/report.mjs observations.json products.json
 Apple 한국 스토어의 AirPods Pro 3는 JSON-LD Offer의 단일 SKU와 현재 상품 구매 선택 링크의 `product` 값을 대조하고, 해당 링크 안의 단일 원화 표시 가격이 같은 경우만 수용한다. 비교 추천 영역의 가격, 서로 다른 세대 리다이렉트, 복수 구매 링크·SKU, 회원 등 조건부 문구는 확인 가격으로 사용하지 않는다. 사양은 모델이 명시된 공식 사양 페이지의 ANC·IP57만 등록했다. 기본 연결 호환성은 현재 추출 규칙이 판정할 명시 근거를 등록하지 않아 선택한 플랫폼에 대해 UNKNOWN일 수 있다.
 
 [실제 Dev 갱신 검증](evaluations/catalog-2026-10-29/README.md)은 Firecrawl과 PostgreSQL 저장을 포함한다. 개발 PC의 smoke는 상시 클라우드 운영 검증을 대신하지 않는다. 신규 상품을 늘릴 때 활성 수 × 월 일수를 기존 호출 상한과 대조하고, 실패도 호출을 소비한다는 점을 유지한다.
+
+## JBL TUNE BEAM 2 운영 범위
+
+블랙 SKU JBLTBEAM2BLKAS의 가격은 기존 48시간 worker에서만 갱신한다. 이 URL에만 8초 렌더링 대기를 적용한다. 선택 수량·재고·구매 버튼과 구조화 가격·공개 기준가·총액을 대조하며 조건부 금액이나 다른 SKU는 거절한다.
+
+사양은 고정 JBL 제조사 페이지의 모델·canonical·제목·기능 문단을 Java 코드로 검증한다. 기존 spec-refresh-enabled 플래그와 7일 사전 예약을 공유하며 실패도 예약을 소비한다. ANC와 Android 기본 연결 근거가 같은 경우에만 fact_reviews를 갱신하고 가격·값은 변경하지 않는다. GitHub Actions에도 이 공식 페이지의 제목·문구 점검을 추가했으며 workflow는 DB 확인 시각을 갱신하지 않는다. iOS 근거는 확보하지 않아 UNKNOWN이다.
+
+기존 코드 경로를 선택한 이유는 동일 SKU의 반복 검증에 LLM 판단이나 토큰을 추가할 필요가 없고, 웹 검색 제안만으로 렌더링된 구매 금액을 검증할 수 없기 때문이다. 최초 통합에는 수집 표현 차이 진단이 필요했다. 이후 DOM 변경 대응이 반복되면 그 유지 비용을 에이전트 비용과 비교한다. [실제 결과·비용](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 기준으로 하며 상시 운영·production 활성화는 별개다.

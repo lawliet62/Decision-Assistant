@@ -67,6 +67,8 @@ class CatalogBrandMigrationIntegrationTest {
         }
         assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET name='soundcore Buds' WHERE id='generic-buds'"))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET name='JBL Buds' WHERE id='generic-buds'"))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         jdbc.update("UPDATE catalog_products SET brand_status='UNVERIFIED', name='soundcore Buds' WHERE id='generic-buds'");
         assertThatThrownBy(() -> jdbc.update("UPDATE catalog_products SET brand_status='KNOWN' WHERE id='generic-buds'"))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);

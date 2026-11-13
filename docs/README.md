@@ -1,5 +1,7 @@
 # 문서 색인
 
+- [JBL TUNE BEAM 2 국내 공식 판매 검증](evaluations/jbl-tune-beam2-2026-11-13/README.md): 실제 가격·Java 사양 갱신·DB/API 결과와 남은 범위
+
 - [이어폰 데이터 확대와 혼합 수집](catalog-expansion.md): 주류 브랜드·가격대 확대 완료 기준과 제한된 OpenAI 공식 출처 조사
 
 - [MVP 배포 준비 보고서](mvp-readiness.md): 승인된 범위·검증 결과·무료 VM 가능성·배포 전 남은 작업

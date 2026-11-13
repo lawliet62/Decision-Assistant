@@ -9,6 +9,7 @@
 | LG전자 | `www.lge.co.kr`의 모니터·노트북 개별 상품 경로. [공식 제품 페이지](https://www.lge.co.kr/product/monitors/27gs85q) |
 | QCY 한국 공식몰 | `qcystore.co.kr/product/`의 상품 번호가 있는 경로. [QCY KOREA 공식 유통 안내](https://www.qcykorea.com/default/customer/customer17.php?com_board_basic=read_form&com_board_id=17&com_board_idx=1&com_board_page=&com_board_search_code=&com_board_search_value1=&com_board_search_value2=&sub=01)에서 연결한 판매처 |
 | QCY 공식 스마트스토어 | 위 공식 유통 안내로 확인한 `smartstore.naver.com/ylintl/products/` 경로만 허용. 다른 판매자나 네이버 전체 도메인은 허용하지 않음 |
+| 삼성닷컴 JBL 공식 판매 | [JBL 한국 제조사 제품 페이지](https://kr.jbl.com/TUNE-BEAM-2.html?dwvar_TUNE-BEAM-2_color=Black-APAC-Current)가 연결한 [TUNE BEAM 2 블랙](https://www.samsung.com/sec/harman-life-style-audio/jbl-earphone-tunebeam2-d2c/JBLTBEAM2BLKAS/) 단일 SKU만 허용. 다른 하만 경로·색상·query는 미지원 |
 | 소니 한국 공식 스토어 | `store.sony.co.kr/product-view/109871591` 한 상품에 한정. [공식 이어폰 목록](https://store.sony.co.kr/products/audio/wireless_earphones)에서 연결된 Float Run. 실제 Firecrawl의 구매 영역 검증이 실패하여 카탈로그에서는 비활성 상태 |
 | Marshall 한국 공식 스토어 | [공식 이어폰 목록](https://www.marshall.com/kr/ko/headphones/earbuds)에서 연결한 MOTIF II A.N.C. 블랙(`pid=1006450`)과 MINOR IV 블랙(`pid=1006653`)에 한정. 실제 응답과 검증 범위는 [평가](evaluations/catalog-2026-10-29/README.md)에 기록 |
 | BOSE 한국 공식 온라인 스토어 | [QC 이어버드(New) 아이스 블루](https://www.bose.co.kr/357/?idx=307) 한 상품에 한정. 단일 색상·상품 번호·구매 가격을 검증하며 사양은 미확인 |
@@ -61,3 +62,5 @@ QCY CT06 상품 994는 세 색상의 상품 코드·재고와 동일 판매가�
 v2의 기본 추천에는 선택한 호환성도 충족해야 한다. 이어폰의 기본 플랫폼 연결·사용과 앱·기기별 추가 기능을 구분하며 후자는 사양과 제약으로 별도 표시한다. 설명은 검증 결과에서 서버가 구성한다. v1 후보·설명은 새 기준으로 재작성하지 않고 과거 기준임을 표시한다. [ADR 0014](decisions/0014-evidence-based-discovery-validation.md)에 변경 이유와 한계를 기록한다.
 
 2026-10-29 카탈로그 확장에서는 [AirPods Pro 3 구매 페이지](https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3)의 Offer SKU `MFHP4KH/A`, 단일 구매 선택 링크와 표시 금액을 확인했다. AirPods 5 무선 충전 케이스 모델은 두 구매 선택지 중 유일하게 선택된 항목의 URL·SKU·가격을 단일 Offer와 대조한다. Apple의 금액은 `₩`가 숫자 앞에 오므로 전용 구매 영역에서만 처리한다. 기존 AirPods 4 구매 주소가 AirPods 5로 이동하는 사례를 확인했으며 다른 세대로의 이동은 계속 거절한다. 삼성 버즈3 FE의 확인한 직접 응답은 제품 JSON-LD가 없는 공통 페이지여서 신규 카탈로그로 등록하지 않았다. 이는 모든 삼성 제품이나 Firecrawl 응답이 수집 불가능하다는 결론은 아니다.
+
+JBL TUNE BEAM 2 블랙은 카탈로그 전용이다. 렌더링된 구매 영역에서 단일 Product/Offer·SKU·수량 1·재고 상한·활성 버튼을 대조한다. JSON 가격, 명시된 기준가, 선택 총액, 최대 혜택가의 숫자가 모두 같을 때만 기준가를 확인 가격으로 사용한다. 조건별 금액이 다르거나 초기 HTML의 빈 필드만 있으면 보류한다. 최대 혜택가 단독 숫자와 제조사 안내 사이트의 판매 가능 플래그는 국내 구매 증거로 사용하지 않는다. [실측](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 참고한다. 이미지는 새 외부 전송 범위를 추가하지 않도록 사용하지 않는다.
