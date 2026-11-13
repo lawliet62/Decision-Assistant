@@ -11,11 +11,11 @@ import tools.jackson.databind.json.JsonMapper;
 /** 공식 출처 조사 제안만 반환한다. 가격·사양의 검증 결과가 아니다. */
 public final class OpenAiCatalogResearch {
     public static final String MODEL = "gpt-5.4-mini-2026-03-17";
-    public static final String PROMPT_VERSION = "catalog-official-research-v1";
+    public static final String PROMPT_VERSION = "catalog-official-research-v2";
     public enum Task {
         SAMSUNG("Samsung Galaxy Buds", List.of("samsung.com")),
         SONY("Sony wireless earbuds", List.of("sony.co.kr", "store.sony.co.kr")),
-        JBL("JBL wireless earbuds", List.of("jbl.co.kr", "samsung.com")),
+        JBL("JBL wireless earbuds", List.of("kr.jbl.com", "support.jbl.com", "samsung.com")),
         QCY("QCY CT06", List.of("qcystore.co.kr", "qcy.com")),
         ANKER("Soundcore P41i A3937", List.of("ankerkorea.co.kr", "ankerjapan.com", "soundcore.com"));
         final String subject; final List<String> domains;

@@ -29,6 +29,19 @@ class OpenAiCatalogResearchTest {
    assertThat(calls.get()).isEqualTo(1);
   }finally{server.stop(0);}
  }
+ @Test void jblResearchUsesConfirmedKoreanAndSupportDomains() {
+  var request=OpenAiCatalogResearch.request(OpenAiCatalogResearch.Task.JBL);
+  var domains=JSON.valueToTree(request).path("tools").path(0).path("filters").path("allowed_domains");
+  assertThat(domains.toString()).isEqualTo("[\"kr.jbl.com\",\"support.jbl.com\",\"samsung.com\"]");
+  var jbl=RESPONSE.replace("https://www.samsung.com/sec/buds/","https://kr.jbl.com/TOUR-PRO-3.html");
+  assertThat(OpenAiCatalogResearch.parse(OpenAiCatalogResearch.Task.JBL,JSON.readTree(jbl)).sources())
+    .containsExactly("https://kr.jbl.com/TOUR-PRO-3.html");
+  for(var host:new String[]{"jbl.co.kr","kr.jbl.com.evil.example","other.jbl.com"}) {
+   var outside=jbl.replace("kr.jbl.com",host);
+   assertThatThrownBy(()->OpenAiCatalogResearch.parse(OpenAiCatalogResearch.Task.JBL,JSON.readTree(outside)))
+     .hasMessage("RESEARCH_SOURCE_OUTSIDE_ALLOWLIST");
+  }
+ }
  @Test void incompleteResponsePreservesUsageAndSafeReason() throws Exception {
   var response=RESPONSE.replace("\"status\":\"completed\"", "\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"}");
   var server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);
