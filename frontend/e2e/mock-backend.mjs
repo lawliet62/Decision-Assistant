@@ -108,16 +108,16 @@ const server = http.createServer(async (request, response) => {
     return send(200, { ok: true });
   }
   if (request.method === "GET" && url.pathname === "/api/v1/decisions/counts") {
-    const rows = listFixture ?? (current ? [current] : []);
+    const rows = (listFixture ?? (current ? [current] : [])).filter(d => !d.deletedAt && !d.archivedAt);
     return send(200, ["DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED"].map(status => ({ status, count: rows.filter(d => d.status === status).length })));
   }
   if (request.method === "GET" && url.pathname === "/api/v1/decisions/selection") {
     const selected = url.searchParams.getAll("statuses").flatMap(s => s.split(","));
-    return send(200, (listFixture ?? (current ? [current] : [])).filter(d => !selected.length || selected.includes(d.status)));
+    return send(200, (listFixture ?? (current ? [current] : [])).filter(d => !d.deletedAt && !d.archivedAt && (!selected.length || selected.includes(d.status))));
   }
   if (request.method === "GET" && url.pathname === "/api/v1/decisions") {
     const selected = url.searchParams.getAll("statuses").flatMap(s => s.split(","));
-    const rows = (listFixture ?? (current ? [current] : [])).filter(d => !selected.length || selected.includes(d.status));
+    const rows = (listFixture ?? (current ? [current] : [])).filter(d => !d.deletedAt && !d.archivedAt && (!selected.length || selected.includes(d.status)));
     const field = { UPDATED_AT: "updatedAt", CREATED_AT: "createdAt", TITLE: "title", TEMPLATE_KEY: "templateKey" }[url.searchParams.get("sort")] ?? "updatedAt";
     const factor = url.searchParams.get("direction") === "ASC" ? 1 : -1;
     rows.sort((a, b) => factor * String(a[field]).localeCompare(String(b[field])) || a.id.localeCompare(b.id));
@@ -126,12 +126,32 @@ const server = http.createServer(async (request, response) => {
     const page = Math.max(0, Math.min(Number(url.searchParams.get("page") ?? 0), totalPages - 1));
     return send(200, { items: rows.slice(page * size, (page + 1) * size), page, size, totalElements: rows.length, totalPages });
   }
-  const listRow = listFixture?.find(d => url.pathname === `/api/v1/decisions/${d.id}`);
+  if (url.pathname === "/api/v1/decisions/recovery-notice") return send(200, { restoredTo: null });
+  if (url.pathname === "/api/v1/decisions/management") {
+    const view = url.searchParams.get("view");
+    const rows = (listFixture ?? []).filter(d => view === "TRASH" ? d.deletedAt : !d.deletedAt && (view === "ARCHIVE" ? d.archivedAt : !d.archivedAt));
+    const page = Number(url.searchParams.get("page") ?? 0);
+    return send(200, { items: rows.slice(page * 10, page * 10 + 10).map(d => ({ ...d, personalizationEnabled: d.personalizationEnabled ?? true, recoverable: !!d.deletedAt, recoverableUntil: d.deletedAt ? new Date(Date.parse(d.deletedAt) + 30 * 86400000).toISOString() : null })), page, hasNext: rows.length > page * 10 + 10 });
+  }
+  if (request.method === "PATCH" && url.pathname.endsWith("/retention")) {
+    const row = listFixture?.find(d => url.pathname === `/api/v1/decisions/${d.id}/retention`);
+    if (!row) return send(404, {});
+    if (row.version !== body.expectedVersion) return send(409, {});
+    if (body.action === "ARCHIVE") row.archivedAt = new Date().toISOString();
+    if (body.action === "UNARCHIVE") row.archivedAt = null;
+    if (body.action === "RESTORE") row.deletedAt = null;
+    if (body.action === "PERSONALIZATION_ON") row.personalizationEnabled = true;
+    if (body.action === "PERSONALIZATION_OFF") row.personalizationEnabled = false;
+    row.version++;
+    return send(200, row);
+  }
+  const listRow = listFixture?.find(d => !d.deletedAt && url.pathname === `/api/v1/decisions/${d.id}`);
   if (listRow && request.method === "GET") return send(200, { ...create({ intentText: listRow.title, templateKey: listRow.templateKey, selectedSources: [] }), ...listRow });
   if (request.method === "DELETE" && url.pathname.startsWith("/api/v1/decisions/")) {
     if (!listRow) return send(404, { detail: "결정을 찾을 수 없습니다." });
     if (Number(url.searchParams.get("expectedVersion")) !== listRow.version) return send(409, { detail: "결정이 변경되었습니다." });
-    listFixture = listFixture.filter(d => d.id !== listRow.id);
+    listRow.deletedAt = new Date().toISOString();
+    listRow.version++;
     return send(204);
   }
   if (request.url === "/api/v1/me") return send(200, { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", email: "user@example.com" }, { "set-cookie": "XSRF-TOKEN=test-token; Path=/; SameSite=Lax" });

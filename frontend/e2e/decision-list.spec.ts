@@ -1,7 +1,39 @@
 import { expect, test } from "@playwright/test";
 
+test("완료 결정을 보관하고 활용을 끈 뒤 삭제·복구한다", async ({ page }) => {
+  await page.goto("/?open=CHOSEN");
+  const chosen = page.getByRole("region", { name: "선택 완료", exact: true });
+  page.on("dialog", dialog => dialog.accept());
+  await chosen.getByRole("button", { name: "보관하기", exact: true }).first().click();
+  await page.getByRole("button", { name: "보관함", exact: true }).click();
+  const management = page.getByRole("region", { name: "결정 보관과 삭제 관리" });
+  await expect(management.getByRole("link")).toHaveCount(1);
+  const title = await management.getByRole("link").innerText();
+  await management.getByRole("button", { name: "개인화 활용 끄기" }).click();
+  await expect(management.getByRole("button", { name: "개인화 활용 켜기" })).toBeVisible();
+  await management.getByRole("button", { name: "삭제하기", exact: true }).click();
+  await expect(management.getByText("결정이 없습니다.")).toBeVisible();
+  await page.getByRole("button", { name: "휴지통", exact: true }).click();
+  await expect(management.getByText(title, { exact: true })).toBeVisible();
+  await expect(management.getByText("복구 기한:", { exact: false })).toBeVisible();
+  await management.getByRole("button", { name: "복구하기" }).click();
+  await expect(management.getByText("결정이 없습니다.")).toBeVisible();
+  await page.getByRole("button", { name: "보관함", exact: true }).click();
+  await expect(management.getByRole("link", { name: title })).toBeVisible();
+  await expect(management.getByRole("button", { name: "개인화 활용 켜기" })).toBeVisible();
+});
+
 test.beforeEach(async ({ request }) => {
   await request.post("http://127.0.0.1:18080/__test/decision-list", { data: {} });
+});
+
+test("백업 복원 기준 시각과 변경 유실 가능성을 안내한다", async ({ page }) => {
+  await page.route("**/api/v1/decisions/recovery-notice", route => route.fulfill({
+    json: { restoredTo: "2026-11-14T03:00:00Z" },
+  }));
+  await page.goto("/");
+  await expect(page.getByText("장애 복구로 서비스 데이터가", { exact: false })).toContainText("KST");
+  await expect(page.getByText("장애 복구로 서비스 데이터가", { exact: false })).toContainText("생성·수정·삭제한 기록이 반영되지 않았을 수 있습니다.");
 });
 
 test("선택 버튼은 범위별 상태를 표시하고 다시 누르면 해당 범위만 해제한다", async ({ page }) => {
@@ -57,7 +89,7 @@ test("단일 결정 삭제 후 다른 결정의 선택을 유지한다", async (
   const draft = page.getByRole("region", { name: "비교 중", exact: true });
   await draft.getByRole("checkbox", { name: "결정 10 선택" }).check();
   await draft.getByRole("button", { name: "결정 11 삭제" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "영구 삭제" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "휴지통으로 이동" }).click();
   await expect(draft.getByRole("checkbox", { name: "결정 10 선택" })).toBeChecked();
   await expect(page.getByText("1개 선택", { exact: false })).toBeVisible();
 });
@@ -108,7 +140,7 @@ test("표시 상태 전체 선택은 모든 페이지와 접힌 그룹을 포함
   await page.getByRole("dialog").getByRole("button", { name: "취소" }).click();
   await expect(page.getByText("13개 선택", { exact: false })).toBeVisible();
   await page.locator('[aria-label="결정 선택"]').getByRole("button", { name: "선택 삭제" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "영구 삭제" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "휴지통으로 이동" }).click();
   await expect(page.getByRole("dialog")).toContainText("13개 삭제 또는 이미 삭제됨");
   await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
   await expect(page.getByRole("button", { name: "비교 중 0건" })).toBeVisible();
@@ -125,7 +157,7 @@ test("개별 복수 선택의 일부 충돌과 통신 실패를 표시하고 성
     return route.continue();
   });
   await page.locator('[aria-label="결정 선택"]').getByRole("button", { name: "선택 삭제" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "영구 삭제" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "휴지통으로 이동" }).click();
   await expect(page.getByRole("dialog")).toContainText("1개 삭제 또는 이미 삭제됨 · 2개 확인 필요");
   await expect(page.getByRole("dialog")).toContainText("다른 곳에서 변경됨");
   await expect(page.getByRole("dialog")).toContainText("결과 확인 불가");
@@ -145,7 +177,7 @@ test("페이지 간 개별 선택과 전체 선택 오류, 이미 삭제된 결�
   await expect(page.getByText("2개 선택", { exact: false })).toBeVisible();
   await page.route("**/api/v1/decisions/*?expectedVersion=*", route => route.fulfill({ status: 404, json: {} }));
   await page.locator('[aria-label="결정 선택"]').getByRole("button", { name: "선택 삭제" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "영구 삭제" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "휴지통으로 이동" }).click();
   await expect(page.getByRole("dialog")).toContainText("2개 삭제 또는 이미 삭제됨 · 0개 확인 필요");
   await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
   await expect(page.getByText("0개 선택", { exact: false })).toBeVisible();
@@ -208,11 +240,11 @@ test("삭제 취소·오류·성공과 마지막 페이지 보정을 제공한�
   await expect(draft.getByRole("button", { name: "결정 01 삭제" })).toBeFocused();
   await page.route("**/api/v1/decisions/*?expectedVersion=*", route => route.fulfill({ status: 503, json: { detail: "fixture" } }));
   await draft.getByRole("button", { name: "결정 01 삭제" }).click();
-  await page.getByRole("button", { name: "영구 삭제", exact: true }).click();
+  await page.getByRole("button", { name: "휴지통으로 이동", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText("삭제하지 못했습니다");
   await expect(draft.getByRole("listitem")).toHaveCount(1);
   await page.unroute("**/api/v1/decisions/*?expectedVersion=*");
-  await page.getByRole("button", { name: "영구 삭제", exact: true }).click();
+  await page.getByRole("button", { name: "휴지통으로 이동", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(draft.getByRole("listitem")).toHaveCount(10);
   await expect(draft.getByText("1 / 1 페이지 · 10건")).toBeVisible();

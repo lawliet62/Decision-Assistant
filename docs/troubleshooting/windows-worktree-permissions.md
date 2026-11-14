@@ -91,6 +91,14 @@ git config --global --add safe.directory C:/Users/dlwld/.air/worktrees/temporary
 
 ## 이전 진단에서 남겼던 후속 검증
 
+### 파일 읽기 복구 이후의 별도 제한
+
+2026-11-14 coral-gazelle에서는 기본 명령 도구로 worktree 파일 읽기·수정과 Git 조회가 성공했다. 그러나 GitHub helper는 `AuthorizationManager 검사에 실패했습니다`, `Get-ExecutionPolicy -List`는 레지스트리 접근 거부를 반환했다. 연결 worktree의 Git 쓰기는 원본 `.git/worktrees`의 `index.lock` 생성 권한, Gradle은 사용자 홈 캐시의 `.lck` 접근에서 별도로 실패했다. 필요한 명령만 권한을 높여 기존 helper·Git·Gradle로 실행한 뒤 fetch·branch·테스트 성공을 확인했다. 개인 인증으로 전환하거나 전역 실행 정책을 변경하지 않는다.
+
+Windows PowerShell에서 한글이 들어 있는 here-string을 `node` 표준 입력으로 전달했을 때 한글 리터럴이 `?`로 변환되어 문자열 치환이 일치하지 않고 신규 문구가 손상되었다. 한글 변경은 UTF-8을 보존하는 파일 편집 도구를 사용하고 diff에서 문구를 확인한다. 기존 UTF-8 파일은 `Get-Content -Encoding UTF8`로 읽는다. 명령의 종료 코드 0만으로 한글 치환 성공을 판단하지 않는다.
+
+이 환경의 Chromium 목록 테스트에서는 서버가 화면을 렌더링했지만 클라이언트의 목록 API 요청 전에 로딩 상태로 멈추는 간헐적 실패도 관찰했다. 단독 목록 suite는 15개 중 14개가 통과했고 남은 빈 목록 사례는 단독 실행에서 통과했다. trace에는 로컬 필터링 소프트웨어가 주입한 script도 있었으나 원인으로 확정하지 않았다. trace ZIP의 모든 `*.network`를 확인해야 한다. 첫 파일은 Playwright request fixture만 담고 브라우저 요청은 다른 파일에 있을 수 있다. API 요청 전 hydration 정체와 API 응답 오류를 구분하고 Linux CI 결과와 비교한다. assertion을 약화하거나 보안 소프트웨어의 전역 설정을 변경하지 않는다.
+
 기존 `node --test scripts/worktree-guard.test.mjs`는 호스트 실행에서 7개 모두 통과했지만, MXC에서는 4개만 통과했다. MXC가 새로 만든 임시 저장소도 `Administrators` 소유로 나타나 Git commit이 거부됐으며, HOME을 바꾸는 설치 테스트는 사용자 `safe.directory` 예외를 읽지 못했다. 현재 worktree의 신뢰 등록은 이 임시 저장소 문제를 해결하지 않는다. 따라서 셸·읽기·현재 worktree Git 조회의 개선과 전체 테스트 환경 복구를 구분한다. IDE를 일반 사용자로 다시 실행한 뒤 새 ACP 세션에서 재검증할 필요가 있다. 이것이 임시 저장소의 소유권까지 해결하는지는 이 세션에서 검증하지 못했다. 테스트 assertion이나 Git 소유권 검사 전체를 해제해 통과시키지 않는다.
 
 새 ACP 세션에서 기본 명령 도구로 `Get-Location`, `git status --short --branch`, 필요한 원본 파일의 읽기를 확인한다. 계속 오류 740이 발생하면 CLI 버전, Windows build, 선택된 sandbox, 실패 단계와 `CODEX_HOME/.sandbox/`의 관련 로그를 수집한다. 자격 증명, 전체 환경 변수, `.sandbox-secrets/` 내용은 수집하지 않는다. 현재 worktree의 명령이 실패한다고 원본 checkout에서 빌드를 대신 실행하지 않는다.

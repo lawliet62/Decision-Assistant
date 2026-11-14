@@ -230,12 +230,12 @@ public class DecisionService {
         var decision = decisions.lockByIdAndOwner(id, currentUser.current().id())
                 .orElseThrow(() -> new NotFoundException("결정을 찾을 수 없습니다."));
         if (decision.version() != expectedVersion) throw new ConflictException("결정이 변경되었습니다. 최신 목록을 확인한 뒤 다시 삭제하세요.");
-        decisions.deleteAggregate(id);
+        decision.trash(Instant.now(clock));
+        var deletedAt = decision.deletedAt();
         org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
                 new org.springframework.transaction.support.TransactionSynchronization() {
                     @Override public void afterCommit() {
-                        // 백업 복원 시 재삭제할 최소 식별자만 남긴다. 제목·소유자·본문은 기록하지 않는다.
-                        log.info("product_event=decision_deleted decision_id={} deleted_at={}", id, Instant.now(clock));
+                        log.info("product_event=decision_trashed decision_id={} deleted_at={}", id, deletedAt);
                     }
                 });
     }

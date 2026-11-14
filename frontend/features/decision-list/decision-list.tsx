@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArchiveButton, RecoveryNotice, RetentionPanel } from "./retention-panel";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { api } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
@@ -41,8 +42,10 @@ export function DecisionList() {
     <div className="flex items-center justify-between gap-3"><h2 id="decision-list-title" className="text-xl font-semibold">내 결정</h2>
       <button ref={refreshButton} className={button} onClick={() => setRevision(v => v + 1)}>목록 새로고침</button></div>
     <p className="text-sm text-zinc-600">상태를 선택하고 그룹을 펼쳐 저장한 결정을 확인하세요.</p>
+    <RecoveryNotice />
+    <RetentionPanel onChanged={() => setRevision(v => v + 1)} />
     <p role="status" className="text-sm text-emerald-800">{notice}</p>
-    <LoadedList key={revision} onRefresh={() => { setRevision(v => v + 1); refreshButton.current?.focus(); }} onDeleted={() => { setNotice("결정과 연결된 기록을 영구 삭제했습니다."); refreshButton.current?.focus(); }} />
+    <LoadedList key={revision} onRefresh={() => { setRevision(v => v + 1); refreshButton.current?.focus(); }} onDeleted={() => { setNotice("휴지통으로 이동했습니다. 30일 동안 복구할 수 있습니다."); refreshButton.current?.focus(); }} />
   </section>;
 }
 
@@ -151,7 +154,7 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
         <h3><button aria-expanded={open} aria-controls={`group-${s}`} className="flex w-full items-center justify-between gap-4 p-4 text-left font-semibold hover:bg-zinc-50" onClick={() => changeQuery(p => p.set("open", (open ? opened.filter(item => item !== s) : [...opened.filter(Boolean), s]).join(",")))}>
           <span>{labels[s]} <span className="ml-2 text-sm font-normal text-zinc-500">{counts.find(item => item.status === s)?.count ?? 0}건</span></span><span aria-hidden="true">{open ? "−" : "+"}</span>
         </button></h3>
-        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}-${revision}`} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} chosen={chosen} onToggle={toggle} updateVisible={updateVisible} selecting={selecting} onSelectItems={selectItems} onUnselectItems={unselectItems} onSelectStatus={() => selectAll([s], s)} statusSelected={!!scopeIsSelected([s])} allSelected={!!scopeIsSelected(selected)} onSelectAll={() => selectAll(selected, s)} onClear={() => setChosen({})} onBulkDelete={() => setBulkOpen(true)} selectionError={errorStatus === s ? selectionError : ""} />}</div>
+        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}-${revision}`} onChanged={() => { setChosen({}); setRevision(v => v + 1); }} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} chosen={chosen} onToggle={toggle} updateVisible={updateVisible} selecting={selecting} onSelectItems={selectItems} onUnselectItems={unselectItems} onSelectStatus={() => selectAll([s], s)} statusSelected={!!scopeIsSelected([s])} allSelected={!!scopeIsSelected(selected)} onSelectAll={() => selectAll(selected, s)} onClear={() => setChosen({})} onBulkDelete={() => setBulkOpen(true)} selectionError={errorStatus === s ? selectionError : ""} />}</div>
       </section>;
     })}
     {deleting && <DeleteDialog decision={deleting} onCancel={() => setDeleting(undefined)} onDeleted={() => { if (deleting.id) setChosen(previous => { const next = { ...previous }; delete next[deleting.id!]; return next; }); setDeleting(undefined); setRevision(v => v + 1); onDeleted(); }} onRefresh={onRefresh} />}
@@ -159,7 +162,7 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
   </>;
 }
 
-function DecisionGroup({ status, page, sort, direction, onDelete, chosen, onToggle, updateVisible, selecting, onSelectItems, onUnselectItems, onSelectStatus, statusSelected, allSelected, onSelectAll, onClear, onBulkDelete, selectionError }: { status: Status; page: number; sort: Sort; direction: "ASC" | "DESC"; onDelete: (d: Summary) => void; chosen: Record<string, Summary>; onToggle: (d: Summary, checked: boolean) => void; updateVisible: (status: Status, ids: string[]) => void; selecting: boolean; onSelectItems: (items: Summary[]) => void; onUnselectItems: (items: Summary[]) => void; onSelectStatus: () => void; statusSelected: boolean; allSelected: boolean; onSelectAll: () => void; onClear: () => void; onBulkDelete: () => void; selectionError: string }) {
+function DecisionGroup({ onChanged, status, page, sort, direction, onDelete, chosen, onToggle, updateVisible, selecting, onSelectItems, onUnselectItems, onSelectStatus, statusSelected, allSelected, onSelectAll, onClear, onBulkDelete, selectionError }: { onChanged: () => void; status: Status; page: number; sort: Sort; direction: "ASC" | "DESC"; onDelete: (d: Summary) => void; chosen: Record<string, Summary>; onToggle: (d: Summary, checked: boolean) => void; updateVisible: (status: Status, ids: string[]) => void; selecting: boolean; onSelectItems: (items: Summary[]) => void; onUnselectItems: (items: Summary[]) => void; onSelectStatus: () => void; statusSelected: boolean; allSelected: boolean; onSelectAll: () => void; onClear: () => void; onBulkDelete: () => void; selectionError: string }) {
   const [result, setResult] = useState<Page>();
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -194,7 +197,7 @@ function DecisionGroup({ status, page, sort, direction, onDelete, chosen, onTogg
       <Link href={`/decisions/${d.id}`} className="min-w-0 flex-1 rounded-md py-1 hover:text-emerald-700">
         <span className="block break-words font-medium">{d.title}</span><span className="mt-1 block text-sm text-zinc-500">{categories[d.templateKey ?? ""] ?? "직접 비교"} · {labels[status]}</span>
         <span className="mt-1 block text-xs text-zinc-500">생성 {date(d.createdAt)} · 수정 {date(d.updatedAt)}</span>
-      </Link><button className={button + " shrink-0 text-red-700"} aria-label={`${d.title} 삭제`} onClick={() => onDelete(d)}>삭제</button>
+      </Link>{(d.status === "CHOSEN" || d.status === "ABANDONED") && d.id && d.version !== undefined && <ArchiveButton id={d.id} version={d.version} onChanged={onChanged} />}<button className={button + " shrink-0 text-red-700"} aria-label={`${d.title} 삭제`} onClick={() => onDelete(d)}>삭제</button>
     </li>)}</ul>}
     {(result.totalPages ?? 0) > 0 && <nav aria-label={`${labels[status]} 페이지`} className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 pt-4">
       <button className={button} disabled={!result.page} onClick={() => changeQuery(p => p.set(`page.${status}`, String((result.page ?? 0) - 1)))}>이전</button>
@@ -231,10 +234,10 @@ function BulkDeleteDialog({ decisions, onCancel, onFinished }: { decisions: Summ
     setBusy(false);
   }
   return <dialog ref={dialog} aria-labelledby="bulk-delete-title" onCancel={e => { e.preventDefault(); if (!busy) onCancel(); }} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl p-6 shadow-xl backdrop:bg-black/40">
-    <h2 id="bulk-delete-title" className="text-xl font-semibold">선택한 결정 {snapshot.length}개를 영구 삭제할까요?</h2>
-    <p className="mt-3 text-sm">후보, 평가·AI 기록, 회고, 예약 알림과 각 결정에서 생성된 성향 기억도 삭제됩니다. 앱에서 복구할 수 없습니다. 이미 전송된 요청과 다른 결정에 적용된 값은 유지됩니다.</p>
+    <h2 id="bulk-delete-title" className="text-xl font-semibold">선택한 결정 {snapshot.length}개를 휴지통으로 이동할까요?</h2>
+    <p className="mt-3 text-sm">개인화 활용과 후속 작업을 중단합니다. 30일 동안 복구할 수 있으며 이후 후보·평가·회고·알림·성향 기억을 영구 삭제합니다. 이미 전송된 요청과 다른 결정에 적용된 값은 유지됩니다.</p>
     {report && <div role="status" className="mt-4"><p>{report.success}개 삭제 또는 이미 삭제됨 · {report.failures.length}개 확인 필요</p>{report.failures.length > 0 && <><ul className="mt-2 max-h-48 overflow-auto">{report.failures.map(({ item, reason }) => <li key={item.id}>{item.title}: {reason}</li>)}</ul><p>변경되었거나 결과를 확인할 수 없는 결정은 목록을 새로고침해 확인하세요.</p></>}</div>}
-    <div className="mt-5 flex justify-end gap-2"><button className={button} disabled={busy} onClick={onCancel}>{report ? "닫기" : "취소"}</button>{!report && <button className="rounded-lg bg-red-700 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={busy} onClick={remove}>{busy ? "삭제 중…" : "영구 삭제"}</button>}</div>
+    <div className="mt-5 flex justify-end gap-2"><button className={button} disabled={busy} onClick={onCancel}>{report ? "닫기" : "취소"}</button>{!report && <button className="rounded-lg bg-red-700 px-4 py-2 text-sm text-white disabled:opacity-50" disabled={busy} onClick={remove}>{busy ? "삭제 중…" : "휴지통으로 이동"}</button>}</div>
   </dialog>;
 }
 
@@ -258,10 +261,10 @@ function DeleteDialog({ decision, onCancel, onDeleted, onRefresh }: { decision: 
     finally { setBusy(false); }
   }
   return <dialog ref={dialog} aria-labelledby="delete-title" aria-describedby="delete-description" onCancel={e => { e.preventDefault(); if (!busy) onCancel(); }} className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl p-6 shadow-xl backdrop:bg-black/40">
-    <h2 id="delete-title" className="text-xl font-semibold">결정을 영구 삭제할까요?</h2>
+    <h2 id="delete-title" className="text-xl font-semibold">결정을 휴지통으로 이동할까요?</h2>
     <p className="mt-3 break-words font-medium">{decision.title}</p>
-    <p id="delete-description" className="mt-3 text-sm leading-6 text-zinc-600">후보, 평가·AI 기록, 회고, 예약 알림과 이 결정에서 생성된 성향 기억도 삭제됩니다. 앱에서 복구할 수 없습니다. 다른 결정에 이미 적용된 값과 전송된 메일은 취소되지 않습니다.</p>
+    <p id="delete-description" className="mt-3 text-sm leading-6 text-zinc-600">개인화 활용과 후속 작업을 중단합니다. 30일 동안 복구할 수 있으며 이후 후보·평가·회고·알림·성향 기억을 영구 삭제합니다. 다른 결정에 이미 적용된 값과 전송된 메일은 취소되지 않습니다.</p>
     {error && <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>}
-    <div className="mt-5 flex flex-wrap justify-end gap-2"><button className={button} disabled={busy} onClick={onCancel}>취소</button>{error && <button className={button} disabled={busy} onClick={onRefresh}>목록 새로고침</button>}<button className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy} onClick={remove}>{busy ? "삭제 중…" : "영구 삭제"}</button></div>
+    <div className="mt-5 flex flex-wrap justify-end gap-2"><button className={button} disabled={busy} onClick={onCancel}>취소</button>{error && <button className={button} disabled={busy} onClick={onRefresh}>목록 새로고침</button>}<button className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50" disabled={busy} onClick={remove}>{busy ? "삭제 중…" : "휴지통으로 이동"}</button></div>
   </dialog>;
 }

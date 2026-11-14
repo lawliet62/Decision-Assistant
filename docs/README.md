@@ -1,5 +1,7 @@
 # 문서 색인
 
+- [결정 보관·휴지통과 개인화 활용](decisions/0020-decision-retention-and-personalization.md): 30일 복구·만료 삭제·복원 안내
+
 - [GitHub 출처 점검 실패 분리](evaluations/source-check-2026-11-14/README.md): 제목 변경·환경별 403·출처 404와 관측 제목 진단
 
 - [Apple iOS 기본 연결 보강](evaluations/apple-ios-2026-11-14/README.md): 모델별 사양 검증·기존 가격 시각 보존과 실제 추천 후보 증가

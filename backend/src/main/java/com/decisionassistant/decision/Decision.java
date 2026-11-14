@@ -25,6 +25,21 @@ import static com.decisionassistant.decision.DecisionTypes.TemplateKey;
 @Table(name = "decisions")
 public class Decision {
 
+    @Column(name = "archived_at")
+    private Instant archivedAt;
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+    @Column(name = "personalization_enabled", nullable = false)
+    private boolean personalizationEnabled = true;
+
+    public Instant archivedAt() { return archivedAt; }
+    public Instant deletedAt() { return deletedAt; }
+    public boolean personalizationEnabled() { return personalizationEnabled; }
+    public void archive(boolean archived, Instant now) { archivedAt = archived ? now : null; updatedAt = now; }
+    public void trash(Instant now) { deletedAt = now; updatedAt = now; }
+    public void restore(Instant now) { deletedAt = null; updatedAt = now; }
+    public void personalization(boolean enabled, Instant now) { personalizationEnabled = enabled; updatedAt = now; }
+
     @Id
     private UUID id;
 

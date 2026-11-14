@@ -330,8 +330,9 @@ class DiscoveryApiIntegrationTest {
                 release.countDown();
                 future.get(5, java.util.concurrent.TimeUnit.SECONDS);
                 worker.processNext();
-                for (var table : List.of("product_discoveries", "candidate_suggestions"))
-                    assertThat(jdbc.queryForObject("select count(*) from " + table + " where decision_id = ?", Integer.class, UUID.fromString(id))).isZero();
+                // 휴지통에서 기존 실행 기록은 유지하지만 늦은 AI 후보를 저장하지 않는다.
+                assertThat(jdbc.queryForObject("select count(*) from product_discoveries where decision_id = ?", Integer.class, UUID.fromString(id))).isEqualTo(1);
+                assertThat(jdbc.queryForObject("select count(*) from candidate_suggestions where decision_id = ?", Integer.class, UUID.fromString(id))).isZero();
                 mvc.perform(get("/api/v1/decisions/" + id).with(owner)).andExpect(status().isNotFound());
                 verify(discoverer, times(1)).discover(any());
             } finally { release.countDown(); }

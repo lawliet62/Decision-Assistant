@@ -60,3 +60,7 @@ Decision draft ──evaluate──> Evaluation(snapshot + results)
 - Resolution의 selected Option은 해당 Decision에 존재해야 한다.
 - 직접 확인한 기능은 해당 후보·기능의 비교 판정에만 우선 적용하며 background import가 덮어쓰지 않는다. 조건 변경은 이미 저장된 Resolution snapshot을 재계산하지 않는다.
 - 사용자 resource는 소유한 ApplicationUser만 읽고 변경할 수 있다.
+
+## 결정 보관과 삭제 수명
+
+진행 상태와 별도로 `archivedAt`, `deletedAt`, `personalizationEnabled`를 관리한다. 보관은 목록 정리이며 삭제는 30일 복구 유예 후 연쇄 영구 삭제다. [ADR 0020](decisions/0020-decision-retention-and-personalization.md)을 따른다.

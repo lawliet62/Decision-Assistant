@@ -59,6 +59,12 @@ class DecisionApiIntegrationTest {
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
 
     @Autowired
+    com.decisionassistant.decision.DecisionRetentionService retention;
+
+    @Autowired
+    com.decisionassistant.preference.PreferenceMemoryRepository preferenceMemories;
+
+    @Autowired
     MockMvc mvc;
 
     @Autowired
@@ -192,7 +198,7 @@ class DecisionApiIntegrationTest {
     }
 
     @Test
-    void permanentlyDeletesOwnedAggregateAndDerivedMemoriesWithoutTouchingOtherDecisions() throws Exception {
+    void trashesThenPurgesOwnedAggregateAndDerivedMemoriesWithoutTouchingOtherDecisions() throws Exception {
         var owner = createOtherUser();
         var id = seedDecision(owner, "삭제할 결정", "CHOSEN", "EARBUDS");
         var keep = seedDecision(owner, "유지할 결정", "DRAFT", "EARBUDS");
@@ -223,6 +229,13 @@ class DecisionApiIntegrationTest {
         org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("select count(*) from decisions where id = ?", Long.class, id)).isEqualTo(1);
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/decisions/{id}", id)
                 .param("expectedVersion", "0").with(signedIn(owner)).with(csrf())).andExpect(status().isNoContent());
+        mvc.perform(get("/api/v1/decisions/{id}", id).with(signedIn(owner))).andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("select count(*) from preference_memories where owner_user_id = ?", Long.class, owner.userId())).isEqualTo(3);
+        // 만료 전에는 유지하고 기한 경과 후 기존 cascade를 검증한다.
+        retention.purgeExpired(id, java.time.Instant.now());
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("select count(*) from decisions where id = ?", Long.class, id)).isEqualTo(1);
+        jdbc.update("update decisions set deleted_at = now() - interval '31 days' where id = ?", id);
+        retention.purgeExpired(id, java.time.Instant.now());
         for (var table : List.of("decision_options", "criteria", "option_values", "decision_constraints", "constraint_results", "resolutions", "outcome_check_ins", "evaluations", "structure_runs", "evidence_imports", "candidate_suggestions", "decision_questions", "product_discoveries", "outcome_reminders")) {
             org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("select count(*) from " + table + " where decision_id = ?", Long.class, id)).as(table).isZero();
         }
@@ -232,6 +245,60 @@ class DecisionApiIntegrationTest {
         mvc.perform(get("/api/v1/decisions/{id}", id).with(signedIn(owner))).andExpect(status().isNotFound());
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/decisions/{id}", id)
                 .param("expectedVersion", "0").with(signedIn(owner)).with(csrf())).andExpect(status().isNotFound());
+    }
+
+
+    @Test
+    void archiveTrashRestoreAndPersonalizationRespectOwnerVersionAndExpiry() throws Exception {
+        var owner = createOtherUser();
+        var id = seedDecision(owner, "완료 기록", "CHOSEN", "EARBUDS");
+        var draft = seedDecision(owner, "진행 중", "DRAFT", "EARBUDS");
+        jdbc.update("insert into preference_memories(id, owner_user_id, template_key, statement, strength, status, confidence, source_decision_id, created_at, updated_at) values (?, ?, 'EARBUDS', '가격 중시', 2, 'CONFIRMED', 'LOW', ?, now(), now())", UUID.randomUUID(), owner.userId(), id);
+        var endpoint = "/api/v1/decisions/" + id + "/retention";
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(endpoint)
+                .with(signedIn(createOtherUser())).with(csrf()).contentType("application/json")
+                .content("{\"expectedVersion\":0,\"action\":\"ARCHIVE\"}")).andExpect(status().isNotFound());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/decisions/" + draft + "/retention")
+                .with(signedIn(owner)).with(csrf()).contentType("application/json")
+                .content("{\"expectedVersion\":0,\"action\":\"ARCHIVE\"}")).andExpect(status().isUnprocessableEntity());
+        changeRetention(owner, id, 0, "ARCHIVE", 200);
+        assertPersonalizationCount(owner, 1);
+        mvc.perform(get("/api/v1/decisions/management").param("view", "ARCHIVE").with(signedIn(owner)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].id").value(id.toString()));
+        mvc.perform(get("/api/v1/decisions/selection").with(signedIn(owner)))
+                .andExpect(jsonPath("$[*].id", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(id.toString()))));
+        changeRetention(owner, id, 0, "UNARCHIVE", 409);
+        changeRetention(owner, id, 1, "PERSONALIZATION_OFF", 200);
+        assertPersonalizationCount(owner, 0);
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject("select personalization_enabled from decisions where id = ?", Boolean.class, id)).isFalse();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/decisions/" + id)
+                .param("expectedVersion", "2").with(signedIn(owner)).with(csrf())).andExpect(status().isNoContent());
+        changeRetention(owner, id, 3, "RESTORE", 200);
+        assertPersonalizationCount(owner, 0);
+        // 복구는 이전 보관 여부와 개인화 설정을 보존한다.
+        mvc.perform(get("/api/v1/decisions/management").param("view", "ARCHIVE").with(signedIn(owner)))
+                .andExpect(jsonPath("$.items[0].personalizationEnabled").value(false));
+        changeRetention(owner, id, 4, "PERSONALIZATION_ON", 200);
+        assertPersonalizationCount(owner, 1);
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/decisions/" + id)
+                .param("expectedVersion", "5").with(signedIn(owner)).with(csrf())).andExpect(status().isNoContent());
+        assertPersonalizationCount(owner, 0);
+        org.assertj.core.api.Assertions.assertThat(preferenceMemories.findAllByOwnerUserIdOrderByUpdatedAtDesc(owner.userId())).isEmpty();
+        jdbc.update("update decisions set deleted_at = now() - interval '30 days' where id = ?", id);
+        changeRetention(owner, id, 6, "RESTORE", 409);
+    }
+
+    private void assertPersonalizationCount(AppUserPrincipal owner, int expected) {
+        org.assertj.core.api.Assertions.assertThat(preferenceMemories.findByOwnerUserIdAndStatusAndTemplateKey(
+                owner.userId(), com.decisionassistant.preference.PreferenceMemory.Status.CONFIRMED,
+                com.decisionassistant.decision.DecisionTypes.TemplateKey.EARBUDS)).hasSize(expected);
+    }
+
+    private void changeRetention(AppUserPrincipal owner, UUID id, int version, String action, int expected) throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/decisions/" + id + "/retention")
+                .with(signedIn(owner)).with(csrf()).contentType("application/json")
+                .content("{\"expectedVersion\":" + version + ",\"action\":\"" + action + "\"}"))
+                .andExpect(status().is(expected));
     }
 
     private UUID seedDecision(AppUserPrincipal owner, String title, String status, String template) {
