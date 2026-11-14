@@ -1,6 +1,5 @@
 package com.decisionassistant;
 
-import com.decisionassistant.guidance.CatalogImporter;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -14,15 +13,18 @@ import static org.assertj.core.api.Assertions.*;
 
 @Tag("integration") @Testcontainers
 class CatalogBrandMigrationIntegrationTest {
+    // V17 이전 등록 제품의 고정 fixture다. 이후 추가된 브랜드를 과거 DB에 소급 삽입하지 않는다.
+    private record LegacyCatalogEntry(String id, int revision, String name, String purchaseUrl,
+                                      String expectedIdentity, boolean active, String brandName) {}
     @Container static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17-alpine");
 
     @Test void backfillsExistingCatalogAndPreservesDataWhileRejectingKnownBrandBlanks() throws Exception {
         var source = new DriverManagerDataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
         Flyway.configure().dataSource(source).target("16").load().migrate();
         var jdbc = new JdbcTemplate(source);
-        CatalogImporter.Entry[] entries;
-        try (var in = getClass().getResourceAsStream("/catalog/earbuds.json")) {
-            entries = new ObjectMapper().readValue(in, CatalogImporter.Entry[].class);
+        LegacyCatalogEntry[] entries;
+        try (var in = getClass().getResourceAsStream("/catalog/pre-brand-products.json")) {
+            entries = new ObjectMapper().readValue(in, LegacyCatalogEntry[].class);
         }
         for (var e : entries) {
             jdbc.update("""

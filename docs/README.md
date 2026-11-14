@@ -1,5 +1,7 @@
 # 문서 색인
 
+- [Jabra 실제 수집 검증](evaluations/jabra-2026-11-14/README.md): 구매 영역 거절·inline 근거 부재·단일 호출과 등록 보류
+
 - [CT06 개발 DB 실제 갱신](evaluations/catalog-refresh-2026-11-14/README.md): 기한 도래 직접 HTTP·DB/API 반영·Apple iOS manifest 적용과 예약 보존
 
 - [GitHub 출처 점검 실패 분리](evaluations/source-check-2026-11-14/README.md): 제목 변경·환경별 403·출처 404와 관측 제목 진단

@@ -1,0 +1,19 @@
+{
+  "fetchedAt": "2026-11-14T11:06:47.706925100Z",
+  "resolvedUrl": "https://www.jabramall.com/product/detail.html?product_no=2162",
+  "htmlLength": 155328,
+  "stage": "PURCHASE_AREA",
+  "price": null,
+  "counts": {
+    "canonical": 1,
+    "productGroup": 1,
+    "detail": 1,
+    "regularPrice": 1,
+    "salePrice": 1,
+    "options": 3,
+    "actionBuy": 2
+  },
+  "inlineStockPresent": false,
+  "inlineSalePricePresent": false,
+  "workerRequests": 1
+}
