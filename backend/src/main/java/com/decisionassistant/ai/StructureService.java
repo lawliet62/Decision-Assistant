@@ -3,6 +3,7 @@ package com.decisionassistant.ai;
 import com.decisionassistant.common.ConflictException;
 import com.decisionassistant.decision.DecisionDtos;
 import com.decisionassistant.decision.DecisionService;
+import com.decisionassistant.decision.DecisionTaskWriter;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 
@@ -25,17 +26,20 @@ public class StructureService {
     private final AiCallExecutor executor;
     private final AiProperties properties;
     private final AiDataPolicy dataPolicy;
+    private final DecisionTaskWriter writer;
     private final Clock clock = Clock.systemUTC();
 
     public StructureService(DecisionService decisions, StructureRunRepository runs,
                             ObjectProvider<AiContracts.DecisionStructurer> structurer,
-                            AiCallExecutor executor, AiProperties properties, AiDataPolicy dataPolicy) {
+                            AiCallExecutor executor, AiProperties properties, AiDataPolicy dataPolicy,
+                            DecisionTaskWriter writer) {
         this.decisions = decisions;
         this.runs = runs;
         this.structurer = structurer.getIfAvailable();
         this.executor = executor;
         this.properties = properties;
         this.dataPolicy = dataPolicy;
+        this.writer = writer;
     }
 
     public StructureRunResponse create(UUID decisionId, CreateStructureProposalRequest request) {
@@ -46,24 +50,35 @@ public class StructureService {
         }
         var input = input(decision);
         var run = new StructureRun(decisionId, decision.version(), input, Instant.now(clock));
-        runs.saveAndFlush(run);
+        writer.write(decisionId, parent -> {
+            if (parent.version() != request.expectedVersion()) {
+                throw new ConflictException("Decision version이 변경되었습니다. 최신 draft에서 다시 요청하세요.");
+            }
+            return runs.saveAndFlush(run);
+        });
 
         var started = Instant.now(clock);
         if (!properties.enabled() || structurer == null) {
-            run.failed("AI가 비활성화되어 있습니다.", properties.provider(), properties.model(),
-                    PROMPT_VERSION, SCHEMA_VERSION, 0);
-            return response(runs.saveAndFlush(run));
+            return complete(run, item -> item.failed("AI가 비활성화되어 있습니다.", properties.provider(), properties.model(),
+                    PROMPT_VERSION, SCHEMA_VERSION, 0));
         }
+        AiContracts.AiResult<AiContracts.StructureProposal> result;
         try {
-            var result = executor.call(() -> structurer.structure(input));
-            run.succeeded(result.value(), properties.provider(), properties.model(),
-                    PROMPT_VERSION, SCHEMA_VERSION, Duration.between(started, Instant.now(clock)).toMillis(),
-                    result.inputTokens(), result.outputTokens());
+            result = executor.call(() -> structurer.structure(input));
         } catch (RuntimeException exception) {
-            run.failed(exception.getMessage(), properties.provider(), properties.model(),
-                    PROMPT_VERSION, SCHEMA_VERSION, Duration.between(started, Instant.now(clock)).toMillis());
+            return complete(run, item -> item.failed(exception.getMessage(), properties.provider(), properties.model(),
+                    PROMPT_VERSION, SCHEMA_VERSION, Duration.between(started, Instant.now(clock)).toMillis()));
         }
-        return response(runs.saveAndFlush(run));
+        return complete(run, item -> item.succeeded(result.value(), properties.provider(), properties.model(),
+                PROMPT_VERSION, SCHEMA_VERSION, Duration.between(started, Instant.now(clock)).toMillis(),
+                result.inputTokens(), result.outputTokens()));
+    }
+
+    private StructureRunResponse complete(StructureRun run, java.util.function.Consumer<StructureRun> update) {
+        return writer.write(run.decisionId(), parent -> {
+            update.accept(run);
+            return response(runs.saveAndFlush(run));
+        });
     }
 
     public AiCapabilitiesResponse capabilities() {

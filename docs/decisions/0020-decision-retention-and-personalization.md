@@ -26,3 +26,5 @@ CHOSEN·ABANDONED 결정은 보관할 수 있다. 보관은 진행 상태를 변
 ## 검증
 
 `DecisionApiIntegrationTest`가 소유권·version·보관·활용 설정·삭제·복구 기한·purge 전후 FK cascade를 PostgreSQL에서 검증한다. 기존 늦은 AI 결과 및 알림 경합 테스트도 유지한다. `decision-list.spec.ts`는 목록 관리와 휴지통 이동을 검증한다.
+
+`AiDeletionIntegrationTest`는 구조화·평가 생성·평가 재시도에서 외부 응답을 대기시킨 뒤 휴지통으로 이동해 성공·실패 결과가 모두 저장되지 않는지 검증한다. 실행 기록 생성과 결과 변경은 삭제와 같은 부모 잠금 transaction에서 수행하고 외부 호출 중에는 잠금을 유지하지 않는다. 삭제된 경우 404를 반환하며 기존 PENDING 기록은 유지하므로 복구해도 뒤늦은 결과가 나타나지 않는다.
