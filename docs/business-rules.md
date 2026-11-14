@@ -1,5 +1,12 @@
 # Business rules
 
+## 예산 입력 UI
+
+- 추천 시작 화면의 최대 예산은 5만원에서 시작한다. 추천 시작과 비교 조건 화면에서 만원 단위 정수를 직접 입력하거나 `−5`, `−1`, `+1`, `+5` 버튼으로 조절한다.
+- 직접 입력 범위는 1~10,000만원이며 증감 버튼은 범위 끝에서 멈춘다. 빈칸과 ‘제한 없음’은 예산 제한 해제이며, 금액을 다시 설정하는 기본값은 5만원이다.
+- API에는 기존과 같이 원 단위로 전달한다. 기존 비교의 저장 금액은 열기만 해서는 반올림하거나 변경하지 않는다.
+- 검증: `frontend/e2e/budget-input.spec.ts`, `frontend/e2e/comparison-flow.spec.ts`.
+
 이 문서는 MVP의 사용자에게 관찰 가능한 도메인 동작을 정의한다. `domain.md`의 용어와 aggregate 모델을 보완하며, API·UI·backend 구현·테스트는 아래 규칙을 따라야 한다.
 
 규칙을 변경할 때는 이 문서, 영향받는 API contract, 그리고 해당 규칙을 검증하는 테스트를 함께 갱신한다. 구현 세부사항(저장 방식, 오류 문구, private method)은 이 문서의 대상이 아니다.
@@ -180,6 +187,12 @@
 - **동작:** 홈·조건 입력·결과에 공식 판매처 기준과 다른 판매·할인 경로가 더 저렴할 수 있음을 본문으로 표시한다. 실행의 정책 버전과 개별 공식 offer를 저장하며 기존 추천·직접 추가를 공식 추천으로 소급하지 않는다.
 - **이유:** 추천 범위와 가격 정렬의 의미를 명확히 하되 제품 안전성·품질·정품·최저가를 인증하지 않는다.
 
+- **Sony WF-C710N 적용 범위:** BR-DISC-04의 카탈로그 판매가는 고정 글래스 블루 구성의 선택 후 HTML에만 적용한다. ANC는 모델명이 포함된 Sony의 정확한 노이즈 캔슬링 인용만 지원 근거로 인정하며 일반적인 노이즈 제거 문구를 모든 제품의 ANC로 해석하지 않는다. 호환성은 공식 펌웨어의 Android/iPhone 근거이며 현재 iPhone을 iOS 별칭으로 확장하지 않아 iOS는 UNKNOWN이다. 사양 점검은 같은 값·출처·인용을 확인했을 때만 시각을 연장한다. 검증은 SonyC710nVerifierTest, ProviderResponseConversionTest, CatalogApiIntegrationTest.sonyRegisteredFactsReachAncAndroidRecommendationWithoutAi와 [실측](evaluations/sony-c710n-2026-11-13/README.md)을 따른다.
+
+- **JBL TUNE BEAM 2 적용 범위:** BR-DISC-04의 카탈로그 검증은 공식 제조사가 연결한 삼성닷컴 블랙 단일 SKU에 한정한다. 조건부 최대 혜택가를 단독 사용하지 않고 구조화 가격·명시 기준가·선택 총액·수량·재고·구매 버튼을 교차 대조한다. 제조사 페이지의 ANC 및 Android 페어링 근거를 등록하며 iOS는 UNKNOWN이다. 검증은 `JblTuneBeam2VerifierTest`, `ProviderResponseConversionTest`, `CatalogApiIntegrationTest.jblReviewsPersistOncePerWeekAndReachAndroidAncRecommendation`과 [실측](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 따른다.
+
+- **Samsung 버즈4 적용 범위:** BR-DISC-04의 등록 화이트 SKU에서 즉시 할인·카드 미적용 상태·선택 수량·총액을 대조한다. 알려진 행사 기간이 관측 후 72시간을 포함하지 않으면 새 할인 가격을 보류한다. OS 독립 근거의 Android/iOS 대응은 기본 블루투스 연결에 한하며 앱·고급 설정과 일반 실시간 탐색으로 확대하지 않는다. `SamsungBuds4VerifierTest`, `ProviderResponseConversionTest`, `CatalogApiIntegrationTest.samsungBasicAudioAndAncReachBothPlatformsWithOneWeeklyReview`와 [실측](evaluations/samsung-buds4-2026-11-13/README.md)이 검증한다.
+
 ### BR-DISC-05: 같은 조건의 추가 탐색은 비교와 추천 이력을 보존한다
 
 - **동작:** 명시적 refresh는 최초 저장한 조건과 동의로 새 generation을 만든다. 승인·제외·미선택을 포함한 이전 추천 전체를 모델 식별자·정규화한 이름·공식 상품 URL로 누적 제외한다. 최근 공개 모델명 최대 5개만 검색 보조 조건으로 보내고 전체 제외는 서버에서 적용한다. 직접 편집한 제품명·메모는 검색 조건에 추가하지 않는다.
@@ -190,18 +203,29 @@
 
 ### BR-CAT-01: 등록 제품 추천은 사용자 후보·외부 전송 없이 시작한다
 
+- Apple AirPods 5·Pro 3의 iOS 기본 연결은 각 공식 사양 페이지의 최신 iOS/iPhone 요구사항과 기본 Bluetooth 사용 안내를 모델·canonical과 함께 대조한 등록 근거에 한해 판정한다. 고급 기능·특정 OS 버전·Android 지원으로 확대하지 않는다. SOFTWARE 수명과 기존 주간 예약을 적용한다. [검증과 제한](evaluations/apple-ios-2026-11-14/README.md)을 따른다.
+
 - **동작:** 기본 경로는 무선 이어폰, 초기 5개·활성 최대 30개 중 최대 5개다. 선택 조건은 DB의 공식 근거로 결정적으로 판정한다. 추천 시 외부 호출은 없고 검색·수집·AI 동의는 false여야 한다. 메모는 개인 비교에만 저장하며 자동 필터로 해석하지 않는다.
 - **동작:** 모델·구성이 불확실한 별칭은 결합하지 않는다. ANC·호환성 등의 근거가 없으면 UNKNOWN이며 조건을 자동 완화하지 않는다. 후보 수용은 여전히 사용자 선택이다.
 - **이유:** 카탈로그에서 확인 가능한 근거가 없는 경우의 UNKNOWN은 MVP의 정상 동작이다. 제조사의 정보 제공 여부를 별도로 조사하거나 확인할 수 없는 기능 지원을 추론하지 않는다. 사용자가 직접 확인해야 하는 불편을 감수한다.
 - **이유:** 후보 없는 클릭 진입을 유지하면서 검색 실패·외부 호출 비용을 제한한다.
 
+### BR-CAT-04: 브랜드명과 브랜드 확인 상태를 분리한다
+
+- **동작:** 관리용 대표 브랜드는 이름과 KNOWN/UNBRANDED/UNVERIFIED 상태를 manifest와 DB에 명시한다. soundcore는 Anker로 통일한다. KNOWN은 공백 아닌 실제 이름이 필수이며, 브랜드 없음 확인과 조사 중 상태는 이름을 NULL로 저장한다. 누락·모순된 조합은 오류다. 알려진 브랜드의 UNBRANDED 선언은 차단하되 조사 중인 UNVERIFIED는 허용한다. DB 직접 쓰기에도 같은 제약을 적용한다. 상세 경계와 표시 기준은 [카탈로그 운영](catalog-operations.md#관리용-대표-브랜드)을 따른다.
+- **이유:** 실제 브랜드 없음과 미확인을 구분하고 브랜드명에 상태 문자열을 섞지 않는다. 등록 상태는 사용자 확인·추천 판정과 독립적이다.
+
 ### BR-CAT-02: 가격과 고정 사양의 수명을 분리한다
+
+- 개발 검증에서 선택하는 CT06 고정 URL 직접 HTTP 수집에도 같은 가격 수명·48시간 간격·월 사전 예약을 적용한다. 직접 실패를 같은 시도의 Firecrawl 재호출로 대체하지 않는다. 활성화 범위는 ADR 0016을 따른다.
 
 - **동작:** 가격은 확인 시각부터 72시간 미만만 예산 판정에 사용한다. 없는/만료된 가격은 확인 필요이며 다른 조건의 명확한 미달이 없으면 UNKNOWN으로 분류한다. 저장 시각·조회 시각으로 가격 시각을 갱신하지 않는다. 고정 사양은 90일 점검 대상으로 유지하고 SOFTWARE 사양은 30일 이후 새 추천에서 보류한다.
   - **동작:** 공식 판매 URL을 제품별 48시간 간격으로 수집한다. 등록된 URL이나 식별자가 바뀌면 기존 가격은 무효화하되 마지막 시도에 따른 다음 시도 시각은 유지한다. 수집 실패는 이전 시각을 연장하지 않는다. 품절·가격 검증 실패·모델 불일치는 새 추천의 판매 정보를 제외한다. 월 한도와 시도 기록은 호출 전에 commit하며 실패·재시작도 한도를 소비한다.
 - **이유:** 느리게 변하는 정보의 운영 비용과 가격 오판 위험을 구분한다. 일중 변동과 판매처 정확성은 보장하지 않는다.
 
 ### BR-CAT-03: 공개 등록 정보와 개인 비교 snapshot은 구분한다
+
+- 젠하이저 상품 731은 확인한 일반형과 `[젠사페]` 행사형의 canonical·제품명 쌍만 동일 상품의 출처 변형으로 처리한다. 상품 ID·색상 SKU·재고·가격과 사양 표 대조는 유지하며 다른 행사 접두사는 추론하지 않는다. 구매 URL·identity와 저장된 확인 시각은 이 처리만으로 바꾸지 않는다.
 
 - **동작:** 운영자가 검토한 로컬 manifest만 등록하며 수정은 revision 증가를 요구한다. 사양은 공식 URL·인용·확인 시각을 보존하고 UNREVIEWED로 표시한다. URL·identity 변경은 기존 가격을 초기화한다.
 - **동작:** 후보 생성 당시의 사양과 가격을 개인 비교에 복사한다. 이후 공용 등록 수정은 개인 확인값·평가를 덮어쓰지 않는다. 과거 후보를 읽을 때에도 가격의 72시간 규칙을 적용한다.
@@ -250,6 +274,7 @@
 | BR-CMP-01~02 | `ComparisonTest`, `DecisionApiIntegrationTest.comparisonConditionsConfirmationAndResolutionSnapshotSurviveReopening`, `frontend/e2e/comparison-flow.spec.ts` |
 | BR-AUTH-01 | `UserProvisioningServiceTest` |
 | BR-CAT-01~03 | `CatalogPolicyTest`, `CatalogApiIntegrationTest`, `frontend/e2e/catalog.spec.ts`, `scripts/catalog/report.test.mjs` |
+| BR-CAT-04 | `CatalogBrandTest`, `CatalogBrandMigrationIntegrationTest` |
 | BR-OWN-01 | `DecisionApiIntegrationTest.isolatesEveryDecisionOperationByOwner`, `DecisionApiIntegrationTest.requiresAuthenticationAndCsrf` |
 | BR-EVAL-01 | `SnapshotFactoryTest.blocksEvaluationWhenAnActiveValueIsMissing` |
 | BR-EVAL-02, BR-EVAL-03 | `AlgorithmEvaluatorTest.appliesConstraintsAnchorsWeightsAndEstimatedFlag`, `AlgorithmEvaluatorTest.clampsNumericUtilityOutsideAnchors` |

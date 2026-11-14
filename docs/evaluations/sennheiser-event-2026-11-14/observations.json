@@ -1,0 +1,14 @@
+{
+  "observedAt": "2026-11-13T16:09:59.600Z",
+  "url": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+  "nativeStatus": 200,
+  "renderedStatus": 200,
+  "resolvedUrl": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+  "title": "한국어 쇼핑몰 | 모멘텀 트루 와이어리스 5",
+  "canonical": "https://kr.sennheiser-hearing.com/product/젠사페-모멘텀-트루-와이어리스-5/731/",
+  "htmlSha256": "f8129582f15612c937945ce2c2766e28850c96e124239bfaded940d253fdb3aa",
+  "priceInspection": "CATALOG_INSPECTION_RESULT={\"outcome\":\"VERIFIED\",\"identity\":\"sennheiser-kr:cafe24_bnispace_1_731\",\"price\":429000,\"currency\":\"KRW\"}",
+  "specificationInspection": "CATALOG_SPEC_INSPECTION={\"방수\":true,\"ANC 지원\":true}",
+  "databaseUpdated": false,
+  "paidProviderCalls": 0
+}

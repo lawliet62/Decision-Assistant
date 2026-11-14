@@ -19,7 +19,10 @@ final class SennheiserProductVerifier {
         if (html == null || html.length() > 2_000_000) return Optional.empty();
         var doc = Jsoup.parse(html);
         var canonical = doc.select("link[rel=canonical]");
-        if (canonical.size() != 1 || !canonical(canonical.first().attr("href"))) return Optional.empty();
+        if (canonical.size() != 1) return Optional.empty();
+        var canonicalUrl = canonical.first().attr("href");
+        var name = nameForCanonical(canonicalUrl).orElse(null);
+        if (name == null) return Optional.empty();
         var groups = new ArrayList<tools.jackson.databind.JsonNode>();
         for (var script : doc.select("script[type=application/ld+json]")) {
             try {
@@ -29,7 +32,7 @@ final class SennheiserProductVerifier {
         }
         if (groups.size() != 1) return Optional.empty();
         var group = groups.getFirst();
-        if (!NAME.equals(group.path("name").asText("")) || !"cafe24_bnispace_1_731".equals(group.path("productGroupID").asText(""))
+        if (!name.equals(group.path("name").asText("")) || !"cafe24_bnispace_1_731".equals(group.path("productGroupID").asText(""))
                 || !group.path("variesBy").isArray() || group.path("variesBy").size() != 1
                 || !"color".equals(group.path("variesBy").get(0).asText("")) || !group.path("hasVariant").isArray()
                 || group.path("hasVariant").size() != COLORS.size()) return Optional.empty();
@@ -40,14 +43,14 @@ final class SennheiserProductVerifier {
             var code = COLORS.get(color);
             var offer = variant.path("offers");
             if (code == null || !seen.add(color) || !"Product".equals(variant.path("@type").asText(""))
-                    || !(NAME + " " + color).equals(variant.path("name").asText(""))
+                    || !(name + " " + color).equals(variant.path("name").asText(""))
                     || !("cafe24_bnispace_1_731_" + code).equals(variant.path("sku").asText(""))
                     || !"Offer".equals(offer.path("@type").asText("")) || !"KRW".equals(offer.path("priceCurrency").asText(""))
                     || !"https://schema.org/InStock".equals(offer.path("availability").asText(""))
                     || offer.has("priceSpecification") || offer.has("eligibleCustomerType") || offer.has("eligibleQuantity")
                     || offer.has("validForMemberTier") || offer.has("businessFunction") || offer.has("priceValidUntil")
                     || offer.has("itemCondition") && !"https://schema.org/NewCondition".equals(offer.path("itemCondition").asText(""))
-                    || !offerUrl(offer.path("url").asText(""), code)) return Optional.empty();
+                    || !offerUrl(offer.path("url").asText(""), code, canonicalUrl)) return Optional.empty();
             var raw = offer.path("price").asText("");
             if (!raw.matches("[1-9][0-9]{0,7}")) return Optional.empty();
             prices.add(new BigDecimal(raw));
@@ -79,20 +82,27 @@ final class SennheiserProductVerifier {
         return Optional.of(price);
     }
 
-    private static boolean canonical(String url) {
+    // 확인한 행사명 두 형태만 허용한다. 임의 접두사 제거·상품 번호만으로의 승격은 하지 않는다.
+    static Optional<String> nameForCanonical(String url) {
         try {
             var uri = URI.create(url);
-            return "https".equals(uri.getScheme()) && "kr.sennheiser-hearing.com".equals(uri.getHost())
-                    && uri.getUserInfo() == null && uri.getPort() == -1 && uri.getQuery() == null
-                    && "/product/모멘텀-트루-와이어리스-5/731/".equals(uri.getPath());
-        } catch (RuntimeException e) { return false; }
+            if (!"https".equals(uri.getScheme()) || !"kr.sennheiser-hearing.com".equals(uri.getHost())
+                    || uri.getUserInfo() != null || uri.getPort() != -1 || uri.getQuery() != null
+                    || uri.getFragment() != null || OfficialStorePolicy.store(url).isEmpty()) return Optional.empty();
+            return switch (uri.getPath()) {
+                case "/product/모멘텀-트루-와이어리스-5/731/" -> Optional.of(NAME);
+                case "/product/젠사페-모멘텀-트루-와이어리스-5/731/" -> Optional.of("[젠사페] " + NAME);
+                default -> Optional.empty();
+            };
+        } catch (RuntimeException e) { return Optional.empty(); }
     }
-    private static boolean offerUrl(String url, String code) {
+    private static boolean offerUrl(String url, String code, String canonicalUrl) {
         try {
             var uri = URI.create(url);
             return "https".equals(uri.getScheme()) && "kr.sennheiser-hearing.com".equals(uri.getHost())
                     && uri.getUserInfo() == null && uri.getPort() == -1
-                    && "/product/모멘텀-트루-와이어리스-5/731/".equals(uri.getPath())
+                    && uri.getFragment() == null && OfficialStorePolicy.store(url).isPresent()
+                    && URI.create(canonicalUrl).getPath().equals(uri.getPath())
                     && ("item_code=" + code).equals(uri.getRawQuery());
         } catch (RuntimeException e) { return false; }
     }

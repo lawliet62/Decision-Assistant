@@ -7,6 +7,7 @@ import type { components } from "@/shared/api/schema";
 import { DecisionCreateForm } from "./decision-create-form";
 import { problemMessage } from "@/features/product-lookup/product-picker";
 import { OfficialPolicyNotice } from "@/features/product-lookup/official-policy-notice";
+import { BudgetInput } from "@/shared/ui/budget-input";
 
 type Template = components["schemas"]["IntakeTemplate"];
 type Capabilities = components["schemas"]["LookupCapabilities"];
@@ -18,7 +19,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [category, setCategory] = useState(initialCategory ?? "EARBUDS");
   const [uses, setUses] = useState<string[]>([]);
-  const [budget, setBudget] = useState<number>();
+  const [budget, setBudget] = useState<number | undefined>(50000);
   const [compatibility, setCompatibility] = useState<string>();
   const [minimumRequirements, setMinimumRequirements] = useState<NonNullable<components["schemas"]["DiscoveryRequest"]["minimumRequirements"]>>({});
   const [note, setNote] = useState("");
@@ -60,7 +61,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
     finally { inFlight.current = false; setPending(false); }
   }
 
-  return <div className="mt-8 space-y-6">
+  return <div className="intake-panel mt-8 space-y-6">
     <div className="flex flex-wrap gap-2" aria-label="시작 방법">
       <button className={chip + (!manual ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-zinc-200")} aria-pressed={!manual} onClick={() => setManual(false)}>조건으로 추천받기</button>
       <button className={chip + (manual ? "border-emerald-700 bg-emerald-50 text-emerald-900" : "border-zinc-200")} aria-pressed={manual} onClick={() => setManual(true)}>제품 직접 추가</button>
@@ -68,10 +69,10 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
     {manual ? <DecisionCreateForm /> : <form onSubmit={submit} className="space-y-7 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
       <OfficialPolicyNotice version={web?.discoveryPolicy?.version} placement="input" />
       <fieldset disabled={pending || !web || !template} className="space-y-7">
-        <ChoiceGroup title="제품군" options={templates.map(item => ({ value: item.key!, label: item.label! }))} selected={template?.key} onSelect={value => { setCategory(value!); setUses([]); setBudget(undefined); setCompatibility(undefined); setMinimumRequirements({}); }} />
+        <ChoiceGroup title="제품군" options={templates.map(item => ({ value: item.key!, label: item.label! }))} selected={template?.key} onSelect={value => { setCategory(value!); setUses([]); setBudget(50000); setCompatibility(undefined); setMinimumRequirements({}); }} />
         {template && <>
           <ChoiceGroup title="주로 어떻게 쓰나요? (복수 선택)" options={[{ label: "아직 모르겠어요" }, ...(template.uses ?? []).map(value => ({ value, label: value }))]} selected={uses} onSelect={value => setUses(current => value === undefined ? [] : current.includes(value) ? current.filter(item => item !== value) : [...current, value])} />
-          <ChoiceGroup title="최대 예산" options={[{ label: "제한 없음" }, ...(template.budgets ?? []).map(value => ({ value: String(value), label: `${value / 10000}만원` }))]} selected={budget === undefined ? undefined : String(budget)} onSelect={value => setBudget(value ? Number(value) : undefined)} />
+          <div className="max-w-md"><BudgetInput label="최대 예산" value={budget} onChange={setBudget} /></div>
           <ChoiceGroup title="필요한 호환성" options={[{ label: "상관없음" }, ...(template.compatibility ?? []).map(value => ({ value, label: value }))]} selected={compatibility} onSelect={setCompatibility} />
           <p className="text-xs text-zinc-500">선택한 호환성을 확인하지 못한 제품은 별도로 표시합니다.{template.key === "EARBUDS" && " Android·iOS는 기본 연결·음악·통화 사용을 뜻합니다. 전용 앱과 기기별 추가 기능은 근거가 있으면 따로 안내합니다."}</p>
           {!!template.minimumRequirements?.length && <fieldset className="space-y-4 rounded-2xl border border-zinc-200 p-4">
@@ -87,7 +88,6 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
             {template.key === "TABLET" && <p className="text-xs text-zinc-500">전용 펜 지원은 능동형 펜과의 호환을 뜻하며, 펜 기본 포함 여부와는 다릅니다.</p>}
           </fieldset>}
           <details className="text-sm"><summary className="cursor-pointer text-zinc-600">상세 조건 (선택)</summary><div className="mt-3 space-y-3">
-            <label className="block">정확한 최대 예산 (원)<input type="number" min={1} max={100000000} value={budget ?? ""} onChange={event => setBudget(event.target.value ? Number(event.target.value) : undefined)} className="mt-1 w-full rounded-xl border p-3" /></label>
             <label className="block">구매 메모<textarea maxLength={4000} value={note} onChange={event => setNote(event.target.value)} className="mt-1 w-full rounded-xl border p-3" /></label>
             <p className="text-xs text-zinc-500">메모는 비교에 저장하며 최초 추천 검색·AI에는 보내지 않습니다.</p>
           </div></details>

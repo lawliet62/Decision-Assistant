@@ -61,6 +61,78 @@ class ProviderResponseConversionTest {
         assertThat(calls).hasValue(1);
     }
 
+    @Test void sonyUsesOnePostSelectionSnapshotAndNeverFallsBackToRawHtml() {
+        var invalid = new AtomicInteger();
+        var request = new java.util.concurrent.atomic.AtomicReference<String>();
+        server.createContext("/scrape", exchange -> {
+            calls.incrementAndGet();
+            request.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            var snapshot = java.util.Map.of("url", invalid.get() == 1 ? SonyC710nVerifier.URL + "0" : SonyC710nVerifier.URL,
+                    "html", SonyC710nVerifierTest.HTML);
+            var data = java.util.Map.of("markdown", "", "rawHtml", "before selection",
+                    "metadata", java.util.Map.of("title", "WF-C710N", "statusCode", invalid.get() == 3 ? 500 : 200),
+                    "actions", java.util.Map.of("scrapes", invalid.get() == 2 ? java.util.List.of() : java.util.List.of(snapshot)));
+            var body = new tools.jackson.databind.ObjectMapper().writeValueAsBytes(java.util.Map.of("success", true, "data", data));
+            exchange.getResponseHeaders().add("Content-Type", "application/json"); exchange.sendResponseHeaders(200, body.length);
+            try (var stream = exchange.getResponseBody()) { stream.write(body); }
+            exchange.close();
+        });
+        context.run(app -> {
+            var provider = provider(app.getBean(RestClient.Builder.class));
+            var page = provider.scrapeProduct(SonyC710nVerifier.URL);
+            assertThat(page.html()).isEqualTo(SonyC710nVerifierTest.HTML);
+            assertThat(page.resolvedUrl()).isEqualTo(SonyC710nVerifier.URL);
+            var actions = new tools.jackson.databind.ObjectMapper().readTree(request.get()).path("actions");
+            assertThat(actions.size()).isEqualTo(5);
+            assertThat(actions.path(4).path("type").asText()).isEqualTo("scrape");
+            for (int i = 1; i <= 3; i++) {
+                invalid.set(i);
+                assertThatThrownBy(() -> provider.scrapeProduct(SonyC710nVerifier.URL)).isInstanceOf(WebEvidenceException.class);
+            }
+        });
+        assertThat(calls).hasValue(4);
+    }
+
+    @Test void samsungRequiresOnePostWaitSnapshotWithoutRawFallback() {
+        var invalid=new AtomicInteger();var request=new java.util.concurrent.atomic.AtomicReference<String>();
+        server.createContext("/scrape",exchange->{
+            calls.incrementAndGet();request.set(new String(exchange.getRequestBody().readAllBytes(),StandardCharsets.UTF_8));
+            var snapshot=java.util.Map.of("url",invalid.get()==1?SamsungBuds4Verifier.URL+"0":SamsungBuds4Verifier.URL,"html",SamsungBuds4VerifierTest.HTML);
+            var data=java.util.Map.of("markdown","","rawHtml","initial page", "metadata",java.util.Map.of("statusCode",invalid.get()==3?403:200),"actions",java.util.Map.of("scrapes",invalid.get()==2?java.util.List.of():java.util.List.of(snapshot)));
+            var bytes=new tools.jackson.databind.ObjectMapper().writeValueAsBytes(java.util.Map.of("success",true,"data",data));
+            exchange.getResponseHeaders().add("Content-Type","application/json");exchange.sendResponseHeaders(200,bytes.length);
+            try(var out=exchange.getResponseBody()){out.write(bytes);}exchange.close();
+        });
+        context.run(app->{
+            var provider=provider(app.getBean(RestClient.Builder.class));
+            assertThat(provider.scrapeProduct(SamsungBuds4Verifier.URL).html()).isEqualTo(SamsungBuds4VerifierTest.HTML);
+            var actions=new tools.jackson.databind.ObjectMapper().readTree(request.get()).path("actions");
+            assertThat(actions.size()).isEqualTo(2);assertThat(actions.path(0).path("milliseconds").asInt()).isEqualTo(8000);
+            assertThat(actions.path(1).path("type").asText()).isEqualTo("scrape");
+            for(int i=1;i<=3;i++){invalid.set(i);assertThatThrownBy(()->provider.scrapeProduct(SamsungBuds4Verifier.URL)).isInstanceOf(WebEvidenceException.class);}
+        });
+        assertThat(calls).hasValue(4);
+    }
+
+    @Test void jblWaitsForRenderedPurchaseFieldsWithoutChangingOtherUrls() {
+        var request = new java.util.concurrent.atomic.AtomicReference<String>();
+        server.createContext("/scrape", exchange -> {
+            calls.incrementAndGet(); request.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            var body = new tools.jackson.databind.ObjectMapper().writeValueAsBytes(java.util.Map.of("success", true, "data",
+                    java.util.Map.of("markdown", "", "rawHtml", JblTuneBeam2VerifierTest.HTML, "metadata",java.util.Map.of("url",JblTuneBeam2Verifier.URL))));
+            exchange.getResponseHeaders().add("Content-Type","application/json"); exchange.sendResponseHeaders(200,body.length);
+            try(var out=exchange.getResponseBody()){out.write(body);} exchange.close();
+        });
+        context.run(app -> {
+            var provider=provider(app.getBean(RestClient.Builder.class));
+            assertThat(provider.scrapeProduct(JblTuneBeam2Verifier.URL).html()).isEqualTo(JblTuneBeam2VerifierTest.HTML);
+            assertThat(new tools.jackson.databind.ObjectMapper().readTree(request.get()).path("waitFor").asInt()).isEqualTo(8000);
+            provider.scrapeProduct("https://qcystore.co.kr/product/detail.html?product_no=990");
+            assertThat(new tools.jackson.databind.ObjectMapper().readTree(request.get()).has("waitFor")).isFalse();
+        });
+        assertThat(calls).hasValue(2);
+    }
+
     @Test void productScrapeConvertsHtmlAndFinalUrlWithOneRequest() {
         var request = new java.util.concurrent.atomic.AtomicReference<String>();
         server.createContext("/scrape", exchange -> {
@@ -80,6 +152,7 @@ class ProviderResponseConversionTest {
         });
         assertThat(request.get()).contains("rawHtml", "markdown", "storeInCache");
         assertThat(new tools.jackson.databind.ObjectMapper().readTree(request.get()).path("maxAge").asInt(-1)).isZero();
+        assertThat(new tools.jackson.databind.ObjectMapper().readTree(request.get()).has("actions")).isFalse();
         assertThat(calls).hasValue(1);
     }
 

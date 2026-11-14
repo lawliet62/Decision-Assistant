@@ -39,21 +39,38 @@ final class OfficialProductParser {
         var store = OfficialStorePolicy.store(requestedUrl).orElse(null);
         if (store == null) return Result.rejected(Rejection.UNREGISTERED_STORE);
         if (page.html() == null) return Result.rejected(Rejection.HTML_MISSING);
-        if (page.html().length() > 2_000_000) return Result.rejected(Rejection.HTML_TOO_LARGE);
+        if (page.html().length() > (catalog && SamsungBuds4Verifier.URL.equals(requestedUrl) ? SamsungBuds4Verifier.MAX_PRICE_HTML : 2_000_000)) return Result.rejected(Rejection.HTML_TOO_LARGE);
         // provider가 최종 URL을 확인하지 못하거나 다른 상품으로 이동했다면 공식 상품으로 승격하지 않는다.
         if (page.resolvedUrl() == null || page.resolvedUrl().isBlank()) return Result.rejected(Rejection.RESOLVED_URL_MISSING);
         if (!samePage(requestedUrl, page.resolvedUrl())) return Result.rejected(Rejection.RESOLVED_URL_MISMATCH);
         var doc = Jsoup.parse(page.html(), requestedUrl);
+        if (SamsungBuds4Verifier.URL.equals(requestedUrl)) {
+            if (!catalog) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var price=SamsungBuds4Verifier.price(page.html(),fetchedAt).orElse(null);
+            if(price==null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct(SamsungBuds4Verifier.NAME,"samsung-kr:"+SamsungBuds4Verifier.SKU,
+                    new OfficialOffer(requestedUrl,store.name(),price,"KRW",null,fetchedAt,"공식 화이트 SKU 1개의 즉시 할인·카드 미적용 금액을 대조한 가격",OfficialStorePolicy.VERSION),"","즉시 할인 적용가 "+price+"원"),null);
+        }
         var canonical = doc.selectFirst("link[rel=canonical]");
         if (canonical != null && !samePage(requestedUrl, canonical.absUrl("href"))) return Result.rejected(Rejection.CANONICAL_URL_MISMATCH);
-        if (store.id().equals("sony-kr")) return catalog ? inspectSony(doc, requestedUrl, store, fetchedAt) : Result.rejected(Rejection.UNREGISTERED_STORE);
-        if (store.id().equals("jabra-kr")) {
-            if (!catalog || !JabraEvolve2PriceVerifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
-            var verified = JabraEvolve2PriceVerifier.price(page.html(), fetchedAt).orElse(null);
-            if (verified == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
-            return new Result(new OfficialProduct("Jabra Evolve2 Buds USB-A UC", "jabra-kr:2162-usba",
-                    new OfficialOffer(requestedUrl, store.name(), verified, "KRW", null, fetchedAt,
-                            "공식 USB-A 구성의 재고·할인 기간·구매 영역을 대조한 판매가", OfficialStorePolicy.VERSION), "", "판매가 " + verified + "원"), null);
+        if (store.id().equals("jbl-samsung-kr")) {
+            if (!catalog || !JblTuneBeam2Verifier.URL.equals(requestedUrl)) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            var price = JblTuneBeam2Verifier.price(page.html()).orElse(null);
+            if (price == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+            return new Result(new OfficialProduct(JblTuneBeam2Verifier.NAME, JblTuneBeam2Verifier.IDENTITY,
+                    new OfficialOffer(requestedUrl, store.name(), price, "KRW", null, fetchedAt,
+                            "공식 블랙 SKU 1개의 기준가·일반 구매 금액을 대조한 가격", OfficialStorePolicy.VERSION), "", "기준가 " + price + "원"), null);
+        }
+        if (store.id().equals("sony-kr")) {
+            if (!catalog) return Result.rejected(Rejection.UNREGISTERED_STORE);
+            if (SonyC710nVerifier.URL.equals(requestedUrl)) {
+                var price = SonyC710nVerifier.price(page.html()).orElse(null);
+                if (price == null) return Result.rejected(Rejection.PRICE_CONTEXT_MISSING);
+                return new Result(new OfficialProduct(SonyC710nVerifier.NAME, SonyC710nVerifier.IDENTITY,
+                        new OfficialOffer(requestedUrl, store.name(), price, "KRW", null, fetchedAt,
+                                "공식 상품의 선택된 글래스 블루 1개와 판매가를 대조한 가격", OfficialStorePolicy.VERSION), "", "판매가 " + price + "원"), null);
+            }
+            return inspectSony(doc, requestedUrl, store, fetchedAt);
         }
         if (store.id().equals("audio-technica-kr")) {
             var ac5 = AudioTechnicaProductVerifier.AC5_URL.equals(requestedUrl);
@@ -255,7 +272,6 @@ final class OfficialProductParser {
     static boolean samePage(String left, String right) {
         try {
             var a = URI.create(left); var b = URI.create(right);
-            if (JabraEvolve2PriceVerifier.page(left) && JabraEvolve2PriceVerifier.page(right)) return true;
             return OfficialStorePolicy.store(left).isPresent() && OfficialStorePolicy.store(right).isPresent()
                     && a.getHost().equalsIgnoreCase(b.getHost()) && productPath(a).equals(productPath(b));
         } catch (RuntimeException ignored) { return false; }

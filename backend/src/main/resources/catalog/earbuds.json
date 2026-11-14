@@ -1,6 +1,8 @@
 [
   {
     "id": "qcy-t13-anc",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 2,
     "name": "QCY T13 ANC APP 액티브노이즈캔슬링 블루투스 이어폰",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-t13-anc-app-%EC%95%A1%ED%8B%B0%EB%B8%8C%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-%ED%99%94%EC%9D%B4%ED%8A%B8/633/",
@@ -35,6 +37,8 @@
   },
   {
     "id": "qcy-ht16",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 2,
     "name": "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%9E%99/990/",
@@ -57,6 +61,8 @@
   },
   {
     "id": "qcy-ht19",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 4,
     "name": "QCY HT19 멜로버즈 듀얼 블루투스 무선 이어폰 ANC 노이즈캔슬링 고음질 LDAC",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-ht19-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%9D%B4%EC%96%B4%ED%8F%B0-%EA%B2%8C%EC%9D%B4%EB%B0%8D-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EA%B3%A0%EC%9D%8C%EC%A7%88/1012/",
@@ -91,6 +97,8 @@
   },
   {
     "id": "qcy-t13-pro",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 2,
     "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-t13pro-anc-%EB%B8%94%EB%A5%B4%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%BB%A4%EB%84%90%ED%98%95-%EC%9D%B4%EC%96%B4%ED%8F%B0/1033/category/134/display/1/",
@@ -137,6 +145,8 @@
   },
   {
     "id": "qcy-t17-app",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 2,
     "name": "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전",
     "purchaseUrl": "https://qcystore.co.kr/product/qcy-t17app-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%BB%A4%EB%84%90%ED%98%95-%EB%AC%B4%EC%84%A0%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%A0%80%EC%A7%80%EC%97%B0-%ED%81%90%EC%94%A8%EC%99%80%EC%9D%B4-%EC%B4%88%EA%B2%BD%EB%9F%89-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A453%EB%B2%84%EC%A0%84-%EB%B8%94%EB%9E%99/563/",
@@ -159,7 +169,9 @@
   },
   {
     "id": "apple-airpods-pro-3",
-    "revision": 1,
+    "brandName": "Apple",
+    "brandStatus": "KNOWN",
+    "revision": 2,
     "name": "AirPods Pro 3",
     "purchaseUrl": "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3",
     "expectedIdentity": "apple-kr:mfhp4kh/a",
@@ -187,13 +199,27 @@
           "normalizationVersion": null
         },
         "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "iOS",
+          "sourceUrl": "https://www.apple.com/kr/airpods-pro/specs/",
+          "quote": "최신 버전 iOS가 설치된 iPhone 모델",
+          "fetchedAt": "2026-11-13T16:27:36.731Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
       }
     ],
     "active": true
   },
   {
     "id": "apple-airpods-5-wireless",
-    "revision": 1,
+    "brandName": "Apple",
+    "brandStatus": "KNOWN",
+    "revision": 2,
     "name": "AirPods 5 무선 충전 케이스 모델",
     "purchaseUrl": "https://www.apple.com/kr/shop/buy-airpods/airpods-5/%EB%AC%B4%EC%84%A0-%EC%B6%A9%EC%A0%84-%EC%BC%80%EC%9D%B4%EC%8A%A4-%ED%8F%AC%ED%95%A8",
     "expectedIdentity": "apple-kr:mkft4kh/a",
@@ -221,12 +247,26 @@
           "normalizationVersion": null
         },
         "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "iOS",
+          "sourceUrl": "https://www.apple.com/kr/airpods-5/specs/",
+          "quote": "최신 버전 iOS가 설치된 iPhone 모델",
+          "fetchedAt": "2026-11-13T16:27:37.299Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
       }
     ],
     "active": true
   },
   {
     "id": "sennheiser-momentum-tw5",
+    "brandName": "Sennheiser",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "모멘텀 트루 와이어리스 5",
     "purchaseUrl": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
@@ -261,6 +301,8 @@
   },
   {
     "id": "sony-float-run",
+    "brandName": "Sony",
+    "brandStatus": "KNOWN",
     "revision": 2,
     "name": "플로트 런 Float Run",
     "purchaseUrl": "https://store.sony.co.kr/product-view/109871591",
@@ -270,6 +312,8 @@
   },
   {
     "id": "marshall-motif-ii-anc",
+    "brandName": "Marshall",
+    "brandStatus": "KNOWN",
     "revision": 2,
     "name": "MOTIF II A.N.C.",
     "purchaseUrl": "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450",
@@ -292,6 +336,8 @@
   },
   {
     "id": "qcy-ht20",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍",
     "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=1028",
@@ -314,6 +360,8 @@
   },
   {
     "id": "qcy-t29-app",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버",
     "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=709",
@@ -336,6 +384,8 @@
   },
   {
     "id": "qcy-ht10-hires",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙",
     "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=924",
@@ -358,6 +408,8 @@
   },
   {
     "id": "marshall-minor-iv-black",
+    "brandName": "Marshall",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "MINOR IV",
     "purchaseUrl": "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653",
@@ -380,6 +432,8 @@
   },
   {
     "id": "qcy-ht08-pro-plus",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "QCY HT08 멜로버즈 프로 플러스 블루투스 이어폰 노이즈캔슬링 / 블랙",
     "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=977",
@@ -402,6 +456,8 @@
   },
   {
     "id": "bose-qc-earbuds-ice-blue",
+    "brandName": "BOSE",
+    "brandStatus": "KNOWN",
     "revision": 2,
     "name": "[New Launch] BOSE 보스 QC 이어버드(New)(아이스 블루)",
     "purchaseUrl": "https://www.bose.co.kr/357/?idx=307",
@@ -423,6 +479,8 @@
   },
   {
     "id": "qcy-ct06",
+    "brandName": "QCY",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프",
     "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=994",
@@ -445,6 +503,8 @@
   },
   {
     "id": "anker-p31i-d1202",
+    "brandName": "Anker",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "앤커 사운드코어 P31i(R60i NC) 노이즈캔슬링 무선 블루투스 이어폰 D1202",
     "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=43",
@@ -467,6 +527,8 @@
   },
   {
     "id": "anker-aeroclip-a3388",
+    "brandName": "Anker",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "앤커 사운드코어 에어로클립 오픈형 블루투스이어폰 A3388",
     "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=45",
@@ -489,6 +551,8 @@
   },
   {
     "id": "anker-liberty5-a3957",
+    "brandName": "Anker",
+    "brandStatus": "KNOWN",
     "revision": 2,
     "name": "앤커 사운드코어 리버티5 노이즈캔슬링 블루투스 이어폰 A3957",
     "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=40",
@@ -523,6 +587,8 @@
   },
   {
     "id": "anker-liberty5-pro-d1203",
+    "brandName": "Anker",
+    "brandStatus": "KNOWN",
     "revision": 2,
     "name": "앤커 사운드코어 리버티 5 프로 무선 블루투스 이어폰 D1203",
     "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=154",
@@ -557,6 +623,8 @@
   },
   {
     "id": "anker-p41i-a3937",
+    "brandName": "Anker",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "앤커 사운드코어 P41i 노이즈캔슬링 블루투스이어폰 A3937",
     "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=91",
@@ -579,6 +647,8 @@
   },
   {
     "id": "audio-technica-sq1tw2nc",
+    "brandName": "Audio-Technica",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "오디오테크니카 ATH-SQ1TW2NC",
     "purchaseUrl": "https://audio-technica.co.kr/product/ath-sq1tw2nc/955/",
@@ -601,6 +671,8 @@
   },
   {
     "id": "audio-technica-ac5tw",
+    "brandName": "Audio-Technica",
+    "brandStatus": "KNOWN",
     "revision": 1,
     "name": "오디오테크니카 ATH-AC5TW",
     "purchaseUrl": "https://audio-technica.co.kr/product/ath-ac5tw/921/",
@@ -622,22 +694,109 @@
     "active": true
   },
   {
-    "id": "jabra-evolve2-buds-usba",
+    "id": "samsung-galaxy-buds4-white",
+    "brandName": "Samsung",
+    "brandStatus": "KNOWN",
     "revision": 1,
-    "name": "Jabra Evolve2 Buds USB-A UC (무선 충전 패드 미포함)",
-    "purchaseUrl": "https://www.jabramall.com/product/detail.html?product_no=2162",
-    "expectedIdentity": "jabra-kr:2162-usba",
+    "name": "삼성 갤럭시 버즈4 화이트",
+    "purchaseUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+    "expectedIdentity": "samsung-kr:SM-R540NZWAKOO",
     "facts": [
       {
         "evidence": {
           "name": "ANC 지원",
           "value": "지원",
-          "sourceUrl": "https://www.jabra.com/ko-kr/about/news-and-press-releases/2022-jabra-evolve2-buds",
-          "quote": "Adjustable Active Noise Cancellation",
-          "fetchedAt": "2026-11-02T21:07:00Z",
-          "verificationStatus": "UNREVIEWED"
+          "sourceUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+          "quote": "액티브 노이즈 캔슬링(ANC) 알고리즘이 실시간으로 주변 소음을 차단하죠.",
+          "fetchedAt": "2026-11-13T13:05:28.887Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
         },
         "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "Android/iOS",
+          "sourceUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+          "quote": "갤럭시 버즈4를 블루투스 오디오로 연결하는 것은 OS에 관계없이 가능하지만",
+          "fetchedAt": "2026-11-13T13:05:28.887Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "sony-wf-c710n-glass-blue",
+    "revision": 2,
+    "name": "소니 WF-C710N 글래스 블루",
+    "brandName": "Sony",
+    "brandStatus": "KNOWN",
+    "purchaseUrl": "https://store.sony.co.kr/product-view/128838586",
+    "expectedIdentity": "sony-kr:128838586",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://www.sony.co.kr/headphones/products/wf-c710n",
+          "quote": "듀얼 마이크가 주변 소리를 감지하여 WF-C710N의 노이즈 캔슬링 기능을 개선",
+          "fetchedAt": "2026-11-13T11:13:35.839Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "Android/iPhone",
+          "sourceUrl": "https://www.sony.co.kr/electronics/support/software/00369642",
+          "quote": "헤드셋이 Android 장치 또는 iPhone에 연결되어야 합니다.",
+          "fetchedAt": "2026-11-13T11:13:37.475Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
+      }
+    ],
+    "active": true
+  },
+  {
+    "id": "jbl-tune-beam2-black",
+    "brandName": "JBL",
+    "brandStatus": "KNOWN",
+    "revision": 1,
+    "name": "JBL TUNE BEAM 2 블랙",
+    "purchaseUrl": "https://www.samsung.com/sec/harman-life-style-audio/jbl-earphone-tunebeam2-d2c/JBLTBEAM2BLKAS/",
+    "expectedIdentity": "jbl-samsung-kr:JBLTBEAM2BLKAS",
+    "facts": [
+      {
+        "evidence": {
+          "name": "ANC 지원",
+          "value": "지원",
+          "sourceUrl": "https://kr.jbl.com/TUNE-BEAM-2.html",
+          "quote": "ANC 기능을 켠 상태",
+          "fetchedAt": "2026-11-13T12:25:02.769Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "HARDWARE"
+      },
+      {
+        "evidence": {
+          "name": "호환성",
+          "value": "Android",
+          "sourceUrl": "https://kr.jbl.com/TUNE-BEAM-2.html",
+          "quote": "JBL Tune Beam 2는 Google의 빠른 페어링 기능을 지원하므로 한 번의 탭으로 Android 장치와 페어링할 수 있습니다.",
+          "fetchedAt": "2026-11-13T12:25:02.769Z",
+          "verificationStatus": "UNREVIEWED",
+          "normalizationVersion": null
+        },
+        "cycle": "SOFTWARE"
       }
     ],
     "active": true

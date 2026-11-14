@@ -1,0 +1,47 @@
+{
+  "productId": "jbl-tune-beam2-black",
+  "evaluatedAt": "2026-11-13T12:39:42.526Z",
+  "firstAttempt": {
+    "outcome": "PRICE_CONTEXT_MISSING",
+    "attempted_at": "2026-11-13T12:29:37.106122+00:00",
+    "completed_at": "2026-11-13T12:29:55.215841+00:00"
+  },
+  "correctedAttempt": {
+    "outcome": "VERIFIED",
+    "attempted_at": "2026-11-13T12:34:29.142215+00:00",
+    "completed_at": "2026-11-13T12:34:44.87771+00:00",
+    "price": 99000,
+    "currency": "KRW"
+  },
+  "priceFetchedAtEpochSeconds": "1794573284.670325900",
+  "nextPriceAttempt": "2026-11-15 12:34:29.142215+00",
+  "factReviewsEpochSeconds": {
+    "호환성": 1794572995.332349,
+    "ANC 지원": 1794572995.332349
+  },
+  "nextSpecificationAttempt": "2026-11-20 12:29:55.332349+00",
+  "api": {
+    "budget": 100000,
+    "compatibility": "Android",
+    "anc": "required",
+    "externalConsents": false,
+    "result": "RECOMMENDED",
+    "compatibilityStatus": "MEETS",
+    "ancStatus": "MEETS",
+    "temporaryDecisionDeleted": true
+  },
+  "devDatabase": {
+    "activeProducts": 24,
+    "brands": 9,
+    "includesUnmergedSonyPr": 59
+  },
+  "cost": {
+    "appCallsBefore": 73,
+    "appCallsAfter": 76,
+    "additionalFirecrawlRequests": 3,
+    "remainingCredits": 996,
+    "planCredits": 1000,
+    "additionalOpenAiRequests": 0,
+    "billingAmountVerified": false
+  }
+}

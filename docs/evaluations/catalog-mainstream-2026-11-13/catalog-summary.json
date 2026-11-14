@@ -1,0 +1,45 @@
+{
+  "evaluatedAt": "2026-11-13T13:35:47.011Z",
+  "activeProducts": 25,
+  "brands": 10,
+  "verifiedWithin72Hours": 22,
+  "brandsWithVerifiedPrice": 9,
+  "priceBands": [
+    {
+      "minimumInclusive": 0,
+      "maximumExclusive": 50000,
+      "count": 8
+    },
+    {
+      "minimumInclusive": 50000,
+      "maximumExclusive": 150000,
+      "count": 7
+    },
+    {
+      "minimumInclusive": 150000,
+      "maximumExclusive": 300000,
+      "count": 6
+    },
+    {
+      "minimumInclusive": 300000,
+      "maximumExclusive": null,
+      "count": 1
+    }
+  ],
+  "unavailablePriceProducts": [
+    {
+      "id": "qcy-ht10-hires",
+      "status": "PRODUCT_MISSING"
+    },
+    {
+      "id": "qcy-ct06",
+      "status": "RESOLVED_URL_MISMATCH"
+    },
+    {
+      "id": "sennheiser-momentum-tw5",
+      "status": "CANONICAL_URL_MISMATCH"
+    }
+  ],
+  "canonicalDevMonthlyCalls": 77,
+  "integrationDatabaseExternalAttempts": 0
+}

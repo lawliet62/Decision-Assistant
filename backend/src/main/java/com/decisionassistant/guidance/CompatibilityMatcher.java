@@ -15,7 +15,7 @@ public final class CompatibilityMatcher {
         var name = switch (category) { case EARBUDS -> "호환성"; case MONITOR -> "연결 단자"; default -> "OS"; };
         var evidence = facts.stream().filter(f -> name.equals(f.name()))
                 .filter(f -> category != TemplateKey.EARBUDS || relevantTo(requested, f)).toList();
-        var values = evidence.stream().map(f -> value(category, requested, f)).toList();
+        var values = evidence.stream().map(f -> value(category, requested, f, catalog)).toList();
         var status = RequirementStatus.UNKNOWN;
         if (!values.isEmpty() && values.stream().noneMatch(Objects::isNull) && values.stream().distinct().count() == 1)
             status = values.getFirst() ? RequirementStatus.MEETS : RequirementStatus.BELOW;
@@ -23,8 +23,10 @@ public final class CompatibilityMatcher {
                 : values.stream().filter(Objects::nonNull).distinct().count() > 1 ? UnknownReason.CONFLICT : UnknownReason.AMBIGUOUS;
         return new RequirementCheck("compatibility", category == TemplateKey.EARBUDS ? "기본 연결·사용 호환성" : "필요한 호환성", requested, status, evidence, reason);
     }
-    private static Boolean value(TemplateKey category, String requested, ProductFact fact) {
+    private static Boolean value(TemplateKey category, String requested, ProductFact fact, boolean catalog) {
         if (fact.value() == null || fact.quote() == null || "DISPUTED".equals(fact.verificationStatus())) return null;
+        if (catalog && category == TemplateKey.EARBUDS && SamsungBuds4Verifier.basicPlatform(fact, requested)) return true;
+        if (catalog && category == TemplateKey.EARBUDS && AppleSpecificationVerifier.basicIos(fact, requested)) return true;
         var text = fact.quote();
         if (text.matches("(?is).*(?:미확인|알 수 없|unknown).*")) return null;
         if (category == TemplateKey.EARBUDS) {

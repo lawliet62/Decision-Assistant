@@ -16,7 +16,7 @@ class CatalogPolicyTest {
         var p = new CatalogProduct("qcy-test");
         p.register(1, "QCY T13 ANC", url, "qcy:test", List.of(
                 new CatalogProduct.Fact(fact("ANC 지원", "지원", "Active Noise Cancellation (ANC)"), CatalogProduct.ReviewCycle.HARDWARE),
-                new CatalogProduct.Fact(fact("호환성", "iOS/Android", "Compatible system: iOS/Android"), CatalogProduct.ReviewCycle.SOFTWARE)), true);
+                new CatalogProduct.Fact(fact("호환성", "iOS/Android", "Compatible system: iOS/Android"), CatalogProduct.ReviewCycle.SOFTWARE)), true, "Test", CatalogProduct.BrandStatus.KNOWN);
         return p;
     }
     @Test void priceExpiresAtBoundaryAndNeverBecomesFreshThroughReading() {
@@ -40,16 +40,16 @@ class CatalogPolicyTest {
                 .containsExactly("ANC 지원", "호환성");
         assertThat(p.usableFacts(checked.plus(Duration.ofDays(31))).get(1).fetchedAt()).isEqualTo(review);
         assertThatThrownBy(() -> p.reviewedFact(2, "호환성", review)).isInstanceOf(IllegalArgumentException.class);
-        p.register(1, p.name(), url, "qcy:test", p.facts(), true);
+        p.register(1, p.name(), url, "qcy:test", p.facts(), true, "Test", CatalogProduct.BrandStatus.KNOWN);
         assertThat(p.usableFacts(checked.plus(Duration.ofDays(31)))).hasSize(2);
-        p.register(2, p.name(), url, "qcy:test", p.facts(), true);
+        p.register(2, p.name(), url, "qcy:test", p.facts(), true, "Test", CatalogProduct.BrandStatus.KNOWN);
         assertThat(p.usableFacts(checked.plus(Duration.ofDays(31)))).hasSize(1);
     }
     @Test void catalogRevisionCannotSilentlyHideChangedRegistration() {
         var p = product();
-        assertThatThrownBy(() -> p.register(1, "Changed", url, "qcy:test", p.facts(), true)).isInstanceOf(IllegalArgumentException.class);
-        p.register(2, "Changed", url, "qcy:test", p.facts(), true);
-        p.register(1, "Old", url, "qcy:test", List.of(), false);
+        assertThatThrownBy(() -> p.register(1, "Changed", url, "qcy:test", p.facts(), true, "Test", CatalogProduct.BrandStatus.KNOWN)).isInstanceOf(IllegalArgumentException.class);
+        p.register(2, "Changed", url, "qcy:test", p.facts(), true, "Test", CatalogProduct.BrandStatus.KNOWN);
+        p.register(1, "Old", url, "qcy:test", List.of(), false, "Test", CatalogProduct.BrandStatus.KNOWN);
         assertThat(p.name()).isEqualTo("Changed");
     }
     @Test void failedFetchDoesNotRenewPriceAndIdentityChangeInvalidatesIt() {
@@ -59,14 +59,14 @@ class CatalogPolicyTest {
         assertThat(p.usableOffer().fetchedAt()).isEqualTo(checked);
         p.rejected("UNAVAILABLE"); assertThat(p.usableOffer()).isNull();
         p.observed(new OfficialProduct("QCY T13 ANC", "qcy:test", offer(checked), ""));
-        p.register(2, "Other", url, "qcy:other", List.of(), true);
+        p.register(2, "Other", url, "qcy:other", List.of(), true, "Test", CatalogProduct.BrandStatus.KNOWN);
         assertThat(p.usableOffer()).isNull();
     }
     @Test void seedFactsAreExplicitAndDoNotPretendUnsupportedAliasesAreVerified() throws Exception {
         try (var in = getClass().getResourceAsStream("/catalog/earbuds.json")) {
             var entries = new tools.jackson.databind.ObjectMapper().readValue(in, CatalogImporter.Entry[].class);
-            assertThat(entries).hasSize(25);
-            assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(23);
+            assertThat(entries).hasSize(27);
+            assertThat(Arrays.stream(entries).filter(CatalogImporter.Entry::active)).hasSize(25);
             assertThat(entries[0].active()).isFalse();
             var marshall = Arrays.stream(entries).filter(e -> e.id().equals("marshall-motif-ii-anc")).findFirst().orElseThrow();
             assertThat(marshall.active()).isTrue();

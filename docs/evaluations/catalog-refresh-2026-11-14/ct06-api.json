@@ -1,0 +1,29 @@
+{
+  "checkedAt": "2026-11-14T10:47:27.923Z",
+  "price": 46900,
+  "fetchedAt": "2026-11-14T10:45:22.676114900Z",
+  "group": "RECOMMENDED",
+  "generations": [
+    {
+      "generation": 0,
+      "names": [
+        "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
+        "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍",
+        "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버",
+        "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전",
+        "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링"
+      ]
+    },
+    {
+      "generation": 1,
+      "names": [
+        "앤커 사운드코어 P31i(R60i NC) 노이즈캔슬링 무선 블루투스 이어폰 D1202",
+        "QCY HT08 멜로버즈 프로 플러스 블루투스 이어폰 노이즈캔슬링 / 블랙",
+        "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프",
+        "QCY HT19 멜로버즈 듀얼 블루투스 무선 이어폰 ANC 노이즈캔슬링 고음질 LDAC",
+        "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙"
+      ]
+    }
+  ],
+  "newExternalAttempts": 0
+}

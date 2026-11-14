@@ -4,6 +4,8 @@
 
 `CatalogProduct`는 운영자가 등록한 공개 제품·공식 사양·최근 판매 관측이다. 사용자와 무관한 공유 데이터이며 `Decision`의 소유권 경계를 확장하지 않는다. 사양의 출처·인용·확인 시각·점검 주기, 모델 identity와 등록 revision을 보존한다. `catalog_observations`와 `catalog_monthly_usage`는 고정 URL 수집 결과와 호출 한도를 기록하며 사용자 조건을 저장하지 않는다.
 
+브랜드는 관리용 대표 이름과 KNOWN(이름 확인), UNBRANDED(브랜드 없음 확인), UNVERIFIED(존재 여부 또는 이름 조사 중)로 구분한다. KNOWN은 실제 이름이 필수이고 나머지는 NULL이다. 확인된 이름 누락은 저장 오류이며 별도의 정상 상태로 보존하지 않는다. 미확인을 브랜드 없음으로 추론하지 않는다.
+
 후보 생성 시 근거를 개인 `CandidateSuggestion`으로 복사한다. 공용 정보 갱신은 이미 선택한 Option·확인값·Evaluation을 변경하지 않는다. 등록 사양도 `UNREVIEWED`이며 사용자 확인 사실과 다르다. [정보 수명과 운영](catalog-operations.md)을 따른다.
 
 ## Aggregate와 lifecycle

@@ -19,7 +19,7 @@ class CatalogRequirementCoverageTest {
                 if (!entry.active()) continue;
                 active++;
                 var product = new CatalogProduct(entry.id());
-                product.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), true);
+                product.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), true, entry.brandName(), entry.brandStatus());
                 // 등록 시각 직후로 고정하여 만료와 문구 해석을 분리한다.
                 var at = entry.facts().stream().map(f -> f.evidence().fetchedAt()).max(Instant::compareTo).orElseThrow();
                 var facts = product.usableFacts(at);
@@ -37,9 +37,9 @@ class CatalogRequirementCoverageTest {
                 }
                 if (CompatibilityMatcher.check(EARBUDS, "멀티포인트", facts, null, true).status() == RequirementStatus.MEETS) multipoint++;
             }
-            assertThat(active).isEqualTo(23);
-            assertThat(anc).isEqualTo(16);
-            assertThat(compatibility).isEqualTo(2);
+            assertThat(active).isEqualTo(25);
+            assertThat(anc).isEqualTo(18);
+            assertThat(compatibility).isEqualTo(8);
             assertThat(multipoint).isEqualTo(1);
         }
     }

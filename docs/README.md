@@ -1,5 +1,23 @@
 # 문서 색인
 
+- [Jabra 실제 수집 검증](evaluations/jabra-2026-11-14/README.md): 구매 영역 거절·inline 근거 부재·단일 호출과 등록 보류
+
+- [CT06 개발 DB 실제 갱신](evaluations/catalog-refresh-2026-11-14/README.md): 기한 도래 직접 HTTP·DB/API 반영·Apple iOS manifest 적용과 예약 보존
+
+- [GitHub 출처 점검 실패 분리](evaluations/source-check-2026-11-14/README.md): 제목 변경·환경별 403·출처 404와 관측 제목 진단
+
+- [Apple iOS 기본 연결 보강](evaluations/apple-ios-2026-11-14/README.md): 모델별 사양 검증·기존 가격 시각 보존과 실제 추천 후보 증가
+- [젠하이저 행사명 변경 검증](evaluations/sennheiser-event-2026-11-14/README.md): 고정 상품의 canonical·제품명 변경과 가격·사양 실제 입력 검증
+
+- [주류 이어폰 3개 브랜드 통합 검증](evaluations/catalog-mainstream-2026-11-13/README.md): 25개 카탈로그 조합·실측 근거·비용과 미완료 항목
+- [Samsung 버즈4 실제 검증](evaluations/samsung-buds4-2026-11-13/README.md): 선택 SKU·즉시 할인·Android/iOS 기본 연결
+
+- [Sony WF-C710N 실제 검증](evaluations/sony-c710n-2026-11-13/README.md): 선택 후 판매가·사양 시각 갱신·개발 DB/API 검증과 남은 범위
+
+- [JBL TUNE BEAM 2 국내 공식 판매 검증](evaluations/jbl-tune-beam2-2026-11-13/README.md): 실제 가격·Java 사양 갱신·DB/API 결과와 남은 범위
+
+- [이어폰 데이터 확대와 혼합 수집](catalog-expansion.md): 주류 브랜드·가격대 확대 완료 기준과 제한된 OpenAI 공식 출처 조사
+
 - [MVP 배포 준비 보고서](mvp-readiness.md): 승인된 범위·검증 결과·무료 VM 가능성·배포 전 남은 작업
 - [단일 VM 배포 자산](../deploy/README.md): 컨테이너·로컬 smoke·백업/복원·비용 통제
 - [목록 관리·영구 삭제 결정](decisions/0018-decision-management-and-deletion.md)

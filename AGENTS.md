@@ -19,6 +19,7 @@
 ## Git safety and delivery
 
 - 독립 agent 세션은 각자 별도 Git worktree에서 작업한다. 다른 실행 중인 세션이 점유한 worktree에서는 작업을 거부하고 별도 worktree를 사용한다. 하위 agent는 부모 세션의 worktree를 공유할 수 있다.
+- 탐색·검증·개발 명령은 현재 task의 worktree에서 실행한다. 원본 checkout의 파일이 꼭 필요하면 현재 worktree를 작업 디렉터리로 유지한 채 필요한 파일만 읽을 수 있다. 이 읽기는 다른 worktree의 점유 획득·수정·빌드 실행을 허용하지 않는다. 권한 실패는 [Windows worktree 명령 진단](docs/troubleshooting/windows-worktree-permissions.md)에 따라 Hook 차단, 프로세스 시작 실패, Git 소유권, 파일 접근 실패를 구분한다.
 - 변경 작업은 repository의 canonical default branch가 아닌 작업별 branch에서 수행하고, default branch에 직접 commit하거나 push하지 않는다.
 - 작업 전에 current branch, upstream, working tree를 확인하고, 사용자의 미커밋·untracked·unrelated change를 임의로 discard, overwrite, stash, stage, commit하지 않는다.
 - `reset --hard`, `clean -fd`, 강제 checkout, history rewrite, force push 등 복구 위험이 큰 Git 작업은 agent가 독자적으로 실행하지 않는다.
@@ -56,6 +57,16 @@
 
 - 현재 human 요청, 승인된 spec 또는 Accepted ADR이 아직 결정하지 않은 선택이 제품·핵심 domain 정책, 데이터 의미·수명, 인증·보안·개인정보·외부 전송 경계, runtime·provider·배포 architecture 또는 Accepted ADR을 변경한다면 구현 전에 human의 명시적 결정을 받는다. 세부 기준과 요청 형식은 [Development workflow](docs/development.md#human-decision-gate)를 따른다.
 - 기존 경계 안에서 검증 가능하고 쉽게 되돌릴 수 있는 구현 선택은 재확인을 요청하지 않고 agent가 자율적으로 결정하며, 가장 단순하고 가역적인 선택을 우선한다.
+
+## Code Review Rules
+
+- 리뷰 제목, 개별 리뷰 코멘트, 전체 리뷰 요약은 한국어 존댓말로 작성합니다.
+- 공적이고 전문적인 문체로 핵심을 간결하게 설명합니다.
+- 아첨이나 불필요한 서론을 생략하고, 문제의 발생 조건과 실제 영향을 구체적으로 설명합니다.
+- 확인된 사실과 추정을 구분하고, 추정에는 근거와 불확실성을 명시합니다.
+- 약어는 문서 내 첫 사용 시 전체 명칭을 함께 제시합니다. 다만 API, HTTP 등 널리 통용되는 약어와 코드 식별자는 예외로 합니다.
+- 숫자·날짜·버전의 범위는 물결표 대신 하이픈(-)으로 표기합니다.
+- 기술 용어, 고유명사, 코드 식별자, 파일 경로, 명령어는 정확성과 가독성을 위해 원문을 유지할 수 있습니다.
 
 ## 공통 규칙
 

@@ -15,16 +15,15 @@ public final class OfficialStorePolicy {
     public static Description description() { return new Description(VERSION, "KOREAN_OFFICIAL_STORES", "OBSERVED_KRW_PRICE"); }
     public record Store(String id, String name, String host, String productPath, Set<String> imageHosts) {}
     private static final List<Store> STORES = List.of(
+            new Store("jbl-samsung-kr", "삼성닷컴 JBL 공식 판매", "www.samsung.com", "/sec/harman-life-style-audio/jbl-earphone-tunebeam2-d2c/JBLTBEAM2BLKAS/", Set.of()),
             new Store("samsung-kr", "삼성닷컴", "www.samsung.com", "/sec/(buds|smartphones|tablets|galaxybook|monitors)/[^/]+/[^/]+/?", Set.of("images.samsung.com")),
             new Store("apple-kr", "Apple 공식 스토어", "www.apple.com", "/kr/shop/(buy-[^/]+|product)/.+", Set.of("store.storeimages.cdn-apple.com", "www.apple.com")),
             new Store("lg-kr", "LG전자", "www.lge.co.kr", "/(?:product/)?(?:monitors|notebook)/[^/]+/?", Set.of("www.lge.co.kr")),
-            new Store("sony-kr", "소니 공식 스토어", "store.sony.co.kr", "/product-view/109871591/?", Set.of("store.sony.co.kr")),
+            new Store("sony-kr", "소니 공식 스토어", "store.sony.co.kr", "/product-view/(109871591|128838586)/?", Set.of("store.sony.co.kr")),
             new Store("bose-kr", "BOSE 공식 온라인 스토어", "www.bose.co.kr", "/357/?", Set.of()),
-            new Store("jabra-kr", "자브라 공식 온라인 스토어", "www.jabramall.com", "/product/(?:detail\\.html|핫딜-jabra-evolve2-buds/2162/)", Set.of()),
-            new Store("jabra-kr", "자브라 공식 온라인 스토어", "jabramall.com", "/product/(?:detail\\.html|핫딜-jabra-evolve2-buds/2162/)", Set.of()),
             new Store("anker-kr", "앤커코리아 공식 스토어", "ankerkorea.co.kr", "/product/(?:detail\\.html|[^/]+/(?:40|43|45|91|154)/?)", Set.of()),
             new Store("marshall-kr", "Marshall 공식 스토어", "www.marshall.com", "/kr/ko/product/(?:motif-ii-anc|minor-iv)/?", Set.of()),
-            new Store("sennheiser-kr", "젠하이저 공식 스토어", "kr.sennheiser-hearing.com", "/product/(?:detail\\.html|모멘텀-트루-와이어리스-5/731/?)", Set.of()),
+            new Store("sennheiser-kr", "젠하이저 공식 스토어", "kr.sennheiser-hearing.com", "/product/(?:detail\\.html|(?:젠사페-)?모멘텀-트루-와이어리스-5/731/?)", Set.of()),
             new Store("audio-technica-kr", "오디오테크니카 공식 스토어", "audio-technica.co.kr", "/product/(?:ath-sq1tw2nc/955|ath-ac5tw/921)/?", Set.of()),
             new Store("qcy-kr", "QCY 공식몰", "qcystore.co.kr", "/product/(?:detail.html|[^/]+/[0-9]+(?:/.*)?)", Set.of("qcystore.co.kr")),
             new Store("qcy-naver", "QCY 공식 스마트스토어", "smartstore.naver.com", "/ylintl/products/[0-9]+/?", Set.of("shop-phinf.pstatic.net")));
@@ -36,8 +35,9 @@ public final class OfficialStorePolicy {
                     || uri.getRawPath().toLowerCase(Locale.ROOT).matches(".*%(?:2f|5c|2e|25).*" )
                     || !uri.normalize().getPath().equals(uri.getPath())) return Optional.empty();
             return STORES.stream().filter(store -> store.host().equalsIgnoreCase(uri.getHost()) && uri.getPath().matches(store.productPath()))
+                    .filter(store -> !store.id().equals("samsung-kr") || !uri.getPath().equals("/sec/buds/galaxy-buds4/buy/") || SamsungBuds4Verifier.URL.equals(url))
+                    .filter(store -> !store.id().equals("jbl-samsung-kr") || uri.getRawQuery() == null && uri.getFragment() == null)
                     .filter(store -> !store.id().equals("sony-kr") || uri.getRawQuery() == null)
-                    .filter(store -> !store.id().equals("jabra-kr") || JabraEvolve2PriceVerifier.page(url))
                     .filter(store -> !store.id().equals("audio-technica-kr") || uri.getRawQuery() == null && uri.getFragment() == null)
                     .filter(store -> !store.id().equals("bose-kr") || "idx=307".equals(uri.getRawQuery()))
                     .filter(store -> !store.id().equals("anker-kr") || (uri.getPath().equals("/product/detail.html")

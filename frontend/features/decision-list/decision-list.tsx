@@ -37,7 +37,7 @@ export function DecisionList() {
   const [revision, setRevision] = useState(0);
   const [notice, setNotice] = useState("");
   const refreshButton = useRef<HTMLButtonElement>(null);
-  return <section aria-labelledby="decision-list-title" className="space-y-4">
+  return <section aria-labelledby="decision-list-title" className="decision-workspace space-y-4">
     <div className="flex items-center justify-between gap-3"><h2 id="decision-list-title" className="text-xl font-semibold">내 결정</h2>
       <button ref={refreshButton} className={button} onClick={() => setRevision(v => v + 1)}>목록 새로고침</button></div>
     <p className="text-sm text-zinc-600">상태를 선택하고 그룹을 펼쳐 저장한 결정을 확인하세요.</p>

@@ -12,6 +12,7 @@ public class AppleSpecificationRefreshWorker {
     private static final String ID = "apple-airpods-pro-3";
     private static final String URL = "https://www.apple.com/kr/airpods-pro/specs/";
     private static final Map<String, List<String>> CHECKS = Map.of(
+            "호환성", List.of("iOS", AppleSpecificationVerifier.IOS_QUOTE),
             "ANC 지원", List.of("지원", "액티브 노이즈 캔슬링"),
             "방수", List.of("IP57", "먼지, 땀, 습기에 강한 방진 및 생활 방수 디자인(IP57)"));
     private final SpecificationRefreshRunner runner;

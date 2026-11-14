@@ -14,7 +14,7 @@ import java.util.*;
 @Component
 public class CatalogImporter implements ApplicationRunner {
     public record Entry(String id, int revision, String name, String purchaseUrl, String expectedIdentity,
-                        List<CatalogProduct.Fact> facts, boolean active) {}
+                        List<CatalogProduct.Fact> facts, boolean active, String brandName, CatalogProduct.BrandStatus brandStatus) {}
     private final CatalogProperties config;
     private final CatalogProductRepository products;
     private final ResourceLoader resources;
@@ -32,7 +32,7 @@ public class CatalogImporter implements ApplicationRunner {
                 validate(entry, Instant.now());
                 if (!ids.add(entry.id()) || !urls.add(entry.purchaseUrl()) || !identities.add(entry.expectedIdentity())) throw new IllegalArgumentException("중복 카탈로그 항목입니다.");
                 var product = products.findById(entry.id()).orElseGet(() -> new CatalogProduct(entry.id()));
-                product.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), entry.active());
+                product.register(entry.revision(), entry.name(), entry.purchaseUrl(), entry.expectedIdentity(), entry.facts(), entry.active(), entry.brandName(), entry.brandStatus());
                 products.save(product);
             }
             if (products.findByActiveTrueOrderByIdAsc().size() > 30) throw new IllegalArgumentException("활성 카탈로그는 최대 30개입니다.");
@@ -43,6 +43,7 @@ public class CatalogImporter implements ApplicationRunner {
                 || e.name().length() > 300 || e.expectedIdentity() == null || e.expectedIdentity().isBlank() || e.expectedIdentity().length() > 500
                 || OfficialStorePolicy.store(e.purchaseUrl()).isEmpty() || e.facts() == null || e.facts().size() > 20)
             throw new IllegalArgumentException("카탈로그 제품과 공식 판매 URL을 확인하세요.");
+        CatalogBrand.validate(e.brandName(), e.brandStatus(), e.id(), e.name(), e.expectedIdentity());
         for (var item : e.facts()) {
             var f = item.evidence();
             if (item.cycle() == null || f == null || f.name() == null || "가격".equals(f.name()) || f.value() == null || f.value().isBlank()
@@ -51,6 +52,8 @@ public class CatalogImporter implements ApplicationRunner {
             var uri = URI.create(f.sourceUrl());
             if (!"https".equals(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null || uri.getPort() != -1
                     || !(Set.of("www.qcy.com", "qcystore.co.kr", "www.samsung.com", "www.apple.com", "support.apple.com", "www.lge.co.kr").contains(uri.getHost())
+                         || Set.of(SonyC710nVerifier.SPEC_URL, SonyC710nVerifier.CONNECTION_URL).contains(f.sourceUrl()) && SonyC710nVerifier.URL.equals(e.purchaseUrl())
+                         || JblTuneBeam2Verifier.SPEC_URL.equals(f.sourceUrl()) && JblTuneBeam2Verifier.URL.equals(e.purchaseUrl())
                          || AnkerP31iSpecificationVerifier.URL.equals(f.sourceUrl()) && AnkerProductVerifier.URL.equals(e.purchaseUrl())
                          || AnkerProductVerifier.AERO_URL.equals(f.sourceUrl()) && AnkerProductVerifier.AERO_URL.equals(e.purchaseUrl())
                          || AnkerLibertySpecificationVerifier.URL.equals(f.sourceUrl()) && AnkerProductVerifier.LIBERTY_URL.equals(e.purchaseUrl())
@@ -58,7 +61,6 @@ public class CatalogImporter implements ApplicationRunner {
                          || AnkerP41iVerifier.SPEC_URL.equals(f.sourceUrl()) && AnkerP41iVerifier.URL.equals(e.purchaseUrl())
                          || AudioTechnicaSpecificationSource.URL.equals(f.sourceUrl()) && AudioTechnicaProductVerifier.URL.equals(e.purchaseUrl())
                          || BoseQcSpecificationSource.URL.equals(f.sourceUrl()) && "https://www.bose.co.kr/357/?idx=307".equals(e.purchaseUrl())
-                         || JabraEvolve2SpecificationSource.URL.equals(f.sourceUrl()) && JabraEvolve2PriceVerifier.URL.equals(e.purchaseUrl())
                          || AudioTechnicaProductVerifier.AC5_URL.equals(f.sourceUrl()) && AudioTechnicaProductVerifier.AC5_URL.equals(e.purchaseUrl())
                          || Set.of("marshall-kr", "sennheiser-kr").contains(OfficialStorePolicy.store(f.sourceUrl()).map(OfficialStorePolicy.Store::id).orElse(""))))
                 throw new IllegalArgumentException("등록된 공식 출처만 사양 근거로 허용합니다.");

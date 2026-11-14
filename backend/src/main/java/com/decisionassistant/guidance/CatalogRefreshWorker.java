@@ -17,9 +17,19 @@ public class CatalogRefreshWorker {
     private final CatalogProductRepository products;
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
+    private final QcyCatalogPriceSource direct;
+    private final boolean directEnabled;
     public CatalogRefreshWorker(CatalogProperties config, WebProperties web, FirecrawlWebEvidenceProvider provider,
                                 CatalogProductRepository products, JdbcTemplate jdbc, PlatformTransactionManager manager) {
+        this(config, web, provider, products, jdbc, manager, new QcyCatalogPriceSource(), false);
+    }
+    @org.springframework.beans.factory.annotation.Autowired
+    public CatalogRefreshWorker(CatalogProperties config, WebProperties web, FirecrawlWebEvidenceProvider provider,
+                                CatalogProductRepository products, JdbcTemplate jdbc, PlatformTransactionManager manager,
+                                QcyCatalogPriceSource direct,
+                                @org.springframework.beans.factory.annotation.Value("${decision-assistant.catalog.qcy-direct-enabled:false}") boolean directEnabled) {
         this.config = config; this.web = web; this.provider = provider; this.products = products; this.jdbc = jdbc;
+        this.direct = direct; this.directEnabled = directEnabled;
         tx = new TransactionTemplate(manager);
         tx.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
@@ -32,10 +42,11 @@ public class CatalogRefreshWorker {
         refreshOne();
     }
     private boolean refreshOne() {
-        if (!config.enabled() || !config.refreshEnabled() || !web.configured() || config.monthlyLimit() <= 0) return false;
+        if (!config.enabled() || !config.refreshEnabled() || (!web.configured() && !directEnabled) || config.monthlyLimit() <= 0) return false;
         var now = Instant.now();
         var work = tx.execute(status -> {
-            var product = products.claimNext(now).orElse(null);
+            var product = (web.configured() ? products.claimNext(now)
+                    : products.claimNextDirect(now, QcyCatalogPriceSource.URL)).orElse(null);
             if (product == null) return null;
             // 외부 요청 전에 quota와 당일 시도를 영속화한다. 재시작·동시 실행·실패도 한도를 공유한다.
             var reserved = jdbc.update("""
@@ -54,10 +65,15 @@ public class CatalogRefreshWorker {
         OfficialProductParser.Result inspected = null;
         String outcome;
         try {
-            inspected = OfficialProductParser.inspect(work.url(), provider.scrapeProduct(work.url()), Instant.now(), true);
+            var page = directEnabled && QcyCatalogPriceSource.supports(work.url())
+                    ? direct.fetch(work.url()) : provider.scrapeProduct(work.url());
+            inspected = OfficialProductParser.inspect(work.url(), page, Instant.now(), true);
             outcome = inspected.product() == null ? inspected.rejection().name()
                     : work.identity().equals(inspected.product().identity()) ? "VERIFIED" : "MODEL_MISMATCH";
-        } catch (RuntimeException ex) { outcome = "COLLECTION_FAILED"; }
+        } catch (Exception ex) {
+            if (ex instanceof InterruptedException) Thread.currentThread().interrupt();
+            outcome = "COLLECTION_FAILED";
+        }
         var result = inspected;
         var code = outcome;
         tx.executeWithoutResult(status -> {

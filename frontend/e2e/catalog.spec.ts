@@ -23,7 +23,7 @@ test("카탈로그는 외부 동의 없이 클릭으로 시작하고 만료 가�
   });
   await page.goto("/decisions/new");
   await page.getByRole("button", { name: "출퇴근", exact: true }).click();
-  await page.getByRole("button", { name: "5만원", exact: true }).click();
+  await expect(page.getByRole("textbox", { name: "최대 예산", exact: true })).toHaveValue("5");
   await page.getByRole("button", { name: "지원 필수", exact: true }).click();
   await expect(page.getByRole("checkbox")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "노트북", exact: true })).toHaveCount(0);

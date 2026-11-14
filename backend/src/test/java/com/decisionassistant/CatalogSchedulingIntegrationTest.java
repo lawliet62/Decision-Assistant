@@ -43,7 +43,8 @@ class CatalogSchedulingIntegrationTest {
     @MockitoBean AudioTechnicaSpecificationRefreshWorker audioTechnicaWorker;
     @MockitoBean AudioTechnicaAc5SpecificationRefreshWorker audioTechnicaAc5Worker;
     @MockitoBean BoseQcSpecificationRefreshWorker boseQcWorker;
-    @MockitoBean JabraEvolve2SpecificationRefreshWorker jabraWorker;
+    @MockitoBean SamsungBuds4SpecificationSource samsung;
+    @MockitoBean JblTuneBeam2SpecificationSource jbl;
     @MockitoBean FirecrawlWebEvidenceProvider web;
     @MockitoBean SerperSearchProvider search;
     @MockitoBean ProductDiscoverer ai;
@@ -55,16 +56,16 @@ class CatalogSchedulingIntegrationTest {
         while (Instant.now().isBefore(deadline)) {
             priceAttempts = jdbc.queryForObject("select count(*) from catalog_observations where outcome='COLLECTION_FAILED'", Integer.class);
             specAttempts = jdbc.queryForObject("select count(*) from catalog_spec_attempts", Integer.class);
-            if (priceAttempts == 20 && specAttempts == 19) break;
+            if (priceAttempts == 20 && specAttempts == 21) break;
             Thread.sleep(100);
         }
         assertThat(priceAttempts).isEqualTo(20);
-        assertThat(specAttempts).isEqualTo(19);
+        assertThat(specAttempts).isEqualTo(21);
         Thread.sleep(1000); // 여러 scheduler tick에서 재시도가 발생하지 않는지 확인한다.
         assertThat(jdbc.queryForObject("select count(*) from catalog_observations", Integer.class)).isEqualTo(20);
         assertThat(jdbc.queryForObject("select calls from catalog_monthly_usage", Integer.class)).isEqualTo(20);
         assertThat(jdbc.queryForObject("select count(*) from catalog_products where active and next_attempt_at >= last_attempt_at + interval '48 hours'", Integer.class)).isEqualTo(20);
-        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where next_attempt_at > now() + interval '6 days'", Integer.class)).isEqualTo(19);
+        assertThat(jdbc.queryForObject("select count(*) from catalog_spec_attempts where next_attempt_at > now() + interval '6 days'", Integer.class)).isEqualTo(21);
         verify(web, times(20)).scrapeProduct(anyString());
     }
 }

@@ -1,5 +1,11 @@
 # 카탈로그 등록·갱신·관측 운영
 
+## QCY 직접 HTTP 개발 검증
+
+`DECISION_ASSISTANT_CATALOG_QCY_DIRECT_ENABLED=true`는 CT06 상품 994 고정 주소만 직접 수집한다. 기본값은 false다. 카탈로그와 가격 refresh도 켜야 하며 Firecrawl을 쓰지 않는 개발 검증에서는 `DECISION_ASSISTANT_WEB_ENABLED=false`로 둔다. 이 경우 다른 상품은 수집하지 않는다. Firecrawl을 함께 켠 경우 CT06만 직접 수집하고 다른 상품은 기존 경로로 처리한다. 직접 실패를 Firecrawl 재호출로 대체하지 않으며 월 700회 예약과 48시간 간격은 그대로 적용한다.
+
+11월 12일 실제 CT06 직접 수집은 격리 DB에서 46,900원 VERIFIED였으나 단일 시점 검증이다. 이 실측을 반영해 다음 CT06 개발 수집은 2026-11-14 15:42 KST 이후에 수행한다. 이번 변경으로 개발 앱이나 운영 환경의 자동 갱신을 활성화하지 않았다.
+
 ## 갱신 방식 선택
 
 반복 갱신에 애플리케이션 코드와 간단한 자동화를 우선하는 이유는 세 가지다. 등록된 공식 출처와 모델에 같은 검증 규칙을 반복 적용할 수 있고, 호출 상한·실패 처리·판정 근거를 코드와 테스트로 확인할 수 있으며, 매번 에이전트를 실행하지 않아 반복적인 토큰 비용을 피할 수 있다. 가격 수집에는 기존 Firecrawl 비용이 들고 판매처별 파서 개발과 사이트 변경 대응에도 운영 시간이 필요하다. 반면 에이전트는 비정형 페이지 변경을 조사하는 데 유연하지만 실행 비용과 결과 검토가 필요하다. 따라서 코드 방식의 총비용이 에이전트보다 낮다고 검증된 것은 아니다.
@@ -32,13 +38,39 @@ QCY CT06의 오픈형은 국내 공식 상품명·상품 번호와 구조화 상
 
 별도 PostgreSQL 시험에서 실제 제조사 페이지를 조회해 P41i의 ANC와 리버티 5 프로의 ANC·IP55 확인 시각 및 각 제품의 다음 주간 시도를 저장했다. 이는 일회성 시험이며 장기 예약 실행의 안정성을 입증하지 않는다.
 
-기본 추천은 활성 이어폰 23개(QCY 9개, Apple 한국 스토어 2개, Marshall 2개, 젠하이저 1개, BOSE 1개, 앤커코리아 5개, 오디오테크니카 2개, 자브라 1개)를 사용한다. BOSE QC 이어버드 아이스 블루의 ANC 지원은 국내 공식몰의 제품명·색상과 제조사의 같은 제품·색상 설명을 대조해 등록한다. 제조사 페이지의 고정 주소·모델·색상과 제품 설명이 일치하면 확인 시각을 주간 갱신하며 출처 점검에도 포함한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
+기본 추천은 활성 이어폰 25개(QCY 9개, Apple 한국 스토어 2개, Marshall 2개, 젠하이저 1개, BOSE 1개, 앤커코리아 5개, 오디오테크니카 2개, Sony 1개, JBL 1개, Samsung 1개)를 사용한다. BOSE QC 이어버드 아이스 블루의 ANC 지원은 국내 공식몰의 제품명·색상과 제조사의 같은 제품·색상 설명을 대조해 등록한다. 제조사 페이지의 고정 주소·모델·색상과 제품 설명이 일치하면 확인 시각을 주간 갱신하며 출처 점검에도 포함한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
 
 오디오테크니카 ATH-SQ1TW2NC의 ANC 지원은 [국내 공식 수입원의 출시 안내](https://audio-technica.co.kr/board/news/read.html?board_no=8&no=11458)와 [제조사 출시 안내](https://www.audio-technica.co.jp/corp/news/detail/1350)에서 확인했다. 제조사 안내의 모델 제목과 명시적인 ANC 문구가 일치하면 사양 확인 시각을 주간 갱신하고, GitHub Actions 출처 점검에도 포함한다.
 
 오디오테크니카 ATH-AC5TW는 국내 공식 판매 페이지의 모델과 오픈이어 설명이 일치하면 형태 확인 시각을 주간 갱신하고, GitHub Actions 출처 점검에도 포함한다. ANC는 미확인이다.
 
-자브라 Evolve2 Buds의 USB-A·UC·무선 충전 패드 미포함 구성은 공식 판매 페이지의 상품·재고·할인 기간 및 구매 영역을 검증한다. ANC는 제조사 공식 모델 안내의 명시적 문구가 일치하면 확인 시각을 주간 갱신하고 출처 점검에도 포함한다. 다른 구성의 재고나 가격은 이 상품에 적용하지 않는다.
+Jabra 추가는 실제 Firecrawl의 구매·재고 근거 검증이 완료되지 않아 보류한다. 등록 항목·runtime 지원을 이번 병합 대상에서 제외하고 기존 25개 제품 갱신에 집중한다. [실측과 보류 결정](evaluations/jabra-2026-11-14/README.md)을 따른다.
+
+## 관리용 대표 브랜드
+
+`catalog_products.brand_name`은 실제 관리용 대표 이름만 저장하고 `brand_status`는 확인 상태를 저장한다. manifest에도 `brandName`·`brandStatus`를 명시한다. soundcore는 `Anker`로 통일하며 모기업 소유 관계를 자동 추론하지 않는다.
+
+| brand_status | brand_name | 의미·표시 |
+|---|---|---|
+| KNOWN | 공백 아닌 실제 이름 | 이름 확인, 실제 이름 표시 |
+| UNBRANDED | NULL | 브랜드 없음 확인, `브랜드 없음` 표시 |
+| UNVERIFIED | NULL | 존재 여부 또는 이름 조사 중, `브랜드 미확인` 표시 |
+
+KNOWN의 NULL·빈 문자열·공백은 브랜드명 누락 오류다. 다른 상태는 NULL만 허용하며 빈 문자열을 대체 표기로 사용하지 않는다. 상태 누락과 정의되지 않은 값도 오류다. Java 등록 검증과 DB CHECK에서 동일한 조합을 검사한다. `노브랜드` 같은 실제 이름은 KNOWN으로 등록할 수 있다. 상태를 나타내는 이름 예약값은 사용하지 않는다.
+
+제품 ID·이름·expectedIdentity에 알려진 브랜드 표식이 있으면 UNBRANDED 선언을 차단한다. 브랜드 존재를 알아도 이름 조사 중일 수 있으므로 UNVERIFIED는 허용한다. 알려진 표식은 QCY, Anker/soundcore, Apple/AirPods, Audio-Technica, BOSE, Marshall, Sennheiser, Sony, Samsung, LG와 대응 한글 표기다. 이것은 모든 브랜드를 판별하는 사전이 아니며 표식 부재가 브랜드 없음의 증거는 아니다. 새 브랜드·브랜드 없음 선언은 등록 검토에서 확인한다. 다른 브랜드 호환성을 설명하는 이름도 표식에 걸릴 수 있으므로 해당 제품을 직접 검토한다.
+
+V17은 ID·이름·expectedIdentity로 기존 대표 이름을 채웠고 V18은 과거 예약값 정책을 적용했다. 이미 적용된 migration은 유지한다. V19는 기존 이름을 KNOWN으로, 과거 예약값 `무브랜드`만 UNBRANDED·NULL로 이전한다. 가격·사양·검토 시각·revision은 보존하고 동시성 version은 증가시킨다. manifest도 동일한 상태를 명시하므로 최초 도입 때 revision을 올리지 않는다. 이후 이름·상태 변경에는 revision 증가가 필요하다.
+
+```sql
+SELECT brand_status, brand_name, count(*) AS product_count
+FROM catalog_products
+WHERE active = true
+GROUP BY brand_status, brand_name
+ORDER BY product_count DESC, brand_status, brand_name;
+```
+
+`active = true`는 운영상 활성 제품 기준으로 추천 가능 수와는 다르다. UNBRANDED와 UNVERIFIED는 이름이 모두 NULL이므로 상태까지 묶어 집계한다. 현재 후보 카드·비교 표에는 별도 브랜드 표시가 없고 API에도 전달하지 않는다. 위 표시 문구는 브랜드 표시를 추가할 때의 기준이며, 확인 상태는 가격 유효성·사양 검증·사용자 확인 상태와 독립적이다. 가격·사양 갱신은 브랜드 상태를 자동으로 변경하지 않는다.
 
 ## 첫 실행과 가격 갱신
 
@@ -68,7 +100,9 @@ worker는 기본 1시간마다 기한이 된 제품을 최대 30개 순차 처�
 
 ## 제품·사양 관리
 
-매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 `카탈로그 사양 출처 점검`이 활성 등록 제품의 고정 사양 출처를 제품당 최대 한 번 읽는다. 현재 QCY T13 Pro, HT16, HT10 Hi-Res, HT08, HT20, CT06, T17 APP, T29 APP, HT19, AirPods Pro 3, AirPods 5, Marshall MOTIF II A.N.C.와 MINOR IV, 젠하이저 MOMENTUM True Wireless 5, BOSE QC 이어버드, 앤커 P31i·P41i·에어로클립·리버티 5·리버티 5 프로, 오디오테크니카 ATH-SQ1TW2NC·ATH-AC5TW와 자브라 Evolve2 Buds의 공식 페이지 스물세 곳이 대상이다. GitHub Actions 화면에서 `workflow_dispatch`로 수동 실행할 수도 있다. 비밀이나 운영 DB 권한은 필요하지 않으며 외부 AI를 호출하지 않는다. 예약 실행은 workflow가 기본 branch에 반영된 뒤 동작한다.
+Apple AirPods 5·Pro 3의 iOS 기본 연결도 기존 공식 사양 URL에서 함께 점검한다. SOFTWARE 사양 30일 수명·제품별 주간 예약을 유지하며 별도 외부 요청을 추가하지 않는다. 모델·canonical·요구사항 불일치는 확인 시각을 연장하지 않는다. [실제 입력과 API 평가](evaluations/apple-ios-2026-11-14/README.md)를 따른다.
+
+매주 월요일 03:17 UTC(12:17 KST)에 GitHub Actions의 사양 출처 점검이 활성 제품의 각 허용된 고정 주소를 한 번 읽는다. 대상은 [manifest](../backend/src/main/resources/catalog/earbuds.json)와 [점검 허용 목록](../scripts/catalog/check-sources.mjs)에서 관리한다. 비밀·DB 권한·외부 AI 호출은 필요하지 않다. workflow_dispatch로 수동 실행할 수 있으며 예약은 기본 branch 반영 후 동작한다.
 
 작업 요약에서 `QUOTE_PRESENT`는 단순 문구 존재, `QUOTE_MISSING`은 미발견, `UNAVAILABLE`은 접근 실패, `UNSUPPORTED_SOURCE`는 허용된 고정 주소가 아닌 사양이다. 제목은 등록된 예상 제목과 비교하며 `MATCH`, `MISMATCH`, `UNAVAILABLE`로 표시한다. 문구가 다른 상품·추천 영역에 나타날 수도 있고 제목만으로 모델을 확정할 수 없으므로 **제목과 문구 일치는 동일 모델이나 사양의 정확성을 검증하지 않는다**. 점검 기한이 7일 이내이거나 제목 불일치·문구 미발견·접근 실패가 있으면 작업을 실패로 표시한다. 광고 문구 등 제목의 무해한 변경도 경고가 될 수 있으므로 실제 모델을 확인한 뒤 예상 제목을 수정한다. 수집 실패의 HTTP 상태와 크기 초과는 간단한 코드만 남긴다. GitHub 알림 수신 여부는 계정 설정에 달려 있으며 예약 자체가 누락된 경우 이 workflow가 알림을 보장하지 않는다.
 
@@ -107,7 +141,7 @@ node scripts/catalog/report.mjs observations.json products.json
 ## 성능과 장애 대응
 
 - 가격 worker는 관측의 성공 또는 실패를 `catalog_refresh` 로그에 제품 ID와 결과 코드로 남긴다. 마지막으로 사용할 수 있는 가격 대비 2배 이상 또는 절반 이하인 새 가격은 `catalog_price_change` 경고를 추가하지만 자동으로 거절하지 않는다. 할인 등 정상 변동도 포함될 수 있어 경고는 원인 확인 신호다. DB 관측 기록이 최종 결과의 기준이며 로그는 별도 알림 시스템이 아니다.
-- `DECISION_ASSISTANT_CATALOG_MONTHLY_LIMIT=700`은 승인된 월 시도 상한이다. 20개 제품의 31일 일간 시도에는 약 620회가 필요하다. 실패도 한도를 소비하며 Firecrawl 계정의 다른 사용량은 별도로 확인한다.
+- `DECISION_ASSISTANT_CATALOG_MONTHLY_LIMIT=700`은 승인된 월 시도 상한이다. 48시간 간격의 정상 주기만 계산하면 31일에 제품당 최대 16회다. 활성 25개는 최대 400회, 상한 30개는 최대 480회이며 수동 진단·신규 등록에 따른 추가 시도는 별도다. 실패도 한도를 소비하며 Firecrawl 계정의 다른 사용량은 별도로 확인한다.
 
 - `CatalogApiIntegrationTest.measureDatabaseBaselineAtFiveAndThirtyProductsWithoutCache`는 제품 5/30개, 동시 요청 1/5개에서 비교 생성 API를 측정하고 `backend/build/reports/catalog-benchmark.json`을 만든다. 운영 트래픽·브라우저 지연을 포함하지 않는다.
 - `catalog.db.read`, `catalog.discovery` Micrometer timer로 DB 조회와 전체 후보 생성을 구분한다. 외부에 metrics endpoint를 새로 노출하지 않는다. 운영 지연이 관찰되면 DB 시간과 요청 전체 시간부터 확인하고 캐시 효과를 별도 비교한다.
@@ -118,4 +152,30 @@ node scripts/catalog/report.mjs observations.json products.json
 
 Apple 한국 스토어의 AirPods Pro 3는 JSON-LD Offer의 단일 SKU와 현재 상품 구매 선택 링크의 `product` 값을 대조하고, 해당 링크 안의 단일 원화 표시 가격이 같은 경우만 수용한다. 비교 추천 영역의 가격, 서로 다른 세대 리다이렉트, 복수 구매 링크·SKU, 회원 등 조건부 문구는 확인 가격으로 사용하지 않는다. 사양은 모델이 명시된 공식 사양 페이지의 ANC·IP57만 등록했다. 기본 연결 호환성은 현재 추출 규칙이 판정할 명시 근거를 등록하지 않아 선택한 플랫폼에 대해 UNKNOWN일 수 있다.
 
-[실제 Dev 갱신 검증](evaluations/catalog-2026-10-29/README.md)은 Firecrawl과 PostgreSQL 저장을 포함한다. 개발 PC의 smoke는 상시 클라우드 운영 검증을 대신하지 않는다. 신규 상품을 늘릴 때 활성 수 × 월 일수를 기존 호출 상한과 대조하고, 실패도 호출을 소비한다는 점을 유지한다.
+[실제 Dev 갱신 검증](evaluations/catalog-2026-10-29/README.md)은 Firecrawl과 PostgreSQL 저장을 포함한다. 개발 PC의 smoke는 상시 클라우드 운영 검증을 대신하지 않는다. 신규 상품을 늘릴 때 활성 수 × 월 일수의 절반을 올림한 횟수를 기존 호출 상한과 대조하고, 실패도 호출을 소비한다는 점을 유지한다.
+
+## Sony WF-C710N 개발 환경 자동 점검
+
+WF-C710N 글래스 블루의 가격은 기존 48시간 worker가 색상 선택 후 Firecrawl snapshot에서 검증한다. [실측](evaluations/sony-c710n-2026-11-13/README.md)은 개발 DB의 한 차례 성공이며 장기 안정성 검증은 아니다.
+
+사양은 고정 제품 페이지와 펌웨어 1.0.5 페이지 두 곳을 확인한다. Java HTTP 요청은 403, Node는 200으로 확인되어 기존 개발 Node로 조회하고 같은 Java 검증기로 모델·제목·canonical·인용을 대조한다. 성공 시 fact_reviews만 갱신하며 사양 값·가격·가격 확인 시각은 바꾸지 않는다. 새 사양·펌웨어 버전은 자동 승인하지 않는다.
+
+npm run dev 또는 npm run backend:dev에서 DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED=true를 명시하면 점검 자식 프로세스가 함께 실행되고 backend 종료 시 종료된다. local 단일 프로필, 기본 Docker PostgreSQL(localhost 또는 127.0.0.1:5432), 기본 DB 사용자, DB_SECRET_VERSION 미설정일 때만 실행한다. 시간당 기한을 확인하되 요청 전에 7일 간격을 DB에 예약하며 실패도 소비한다. 직접 IDE/Gradle로 실행하면 이 Node helper는 시작하지 않는다. 기본은 비활성이다.
+
+npm run catalog:sony:check는 두 공식 페이지의 읽기 전용 실시간 검증이며 DB를 수정하지 않는다. 원문은 stdin으로 전달하고 저장하지 않는다. GitHub Actions도 두 출처를 각각 점검하지만 DB 확인 시각을 연장하지 않는다. 운영 Node runtime·DB 쓰기 권한·스케줄은 추가하지 않았다.
+
+## JBL TUNE BEAM 2 운영 범위
+
+블랙 SKU JBLTBEAM2BLKAS의 가격은 기존 48시간 worker에서만 갱신한다. 이 URL에만 8초 렌더링 대기를 적용한다. 선택 수량·재고·구매 버튼과 구조화 가격·공개 기준가·총액을 대조하며 조건부 금액이나 다른 SKU는 거절한다.
+
+사양은 고정 JBL 제조사 페이지의 모델·canonical·제목·기능 문단을 Java 코드로 검증한다. 기존 spec-refresh-enabled 플래그와 7일 사전 예약을 공유하며 실패도 예약을 소비한다. ANC와 Android 기본 연결 근거가 같은 경우에만 fact_reviews를 갱신하고 가격·값은 변경하지 않는다. GitHub Actions에도 이 공식 페이지의 제목·문구 점검을 추가했으며 workflow는 DB 확인 시각을 갱신하지 않는다. iOS 근거는 확보하지 않아 UNKNOWN이다.
+
+기존 코드 경로를 선택한 이유는 동일 SKU의 반복 검증에 LLM 판단이나 토큰을 추가할 필요가 없고, 웹 검색 제안만으로 렌더링된 구매 금액을 검증할 수 없기 때문이다. 최초 통합에는 수집 표현 차이 진단이 필요했다. 이후 DOM 변경 대응이 반복되면 그 유지 비용을 에이전트 비용과 비교한다. [실제 결과·비용](evaluations/jbl-tune-beam2-2026-11-13/README.md)을 기준으로 하며 상시 운영·production 활성화는 별개다.
+
+## Samsung 버즈4 운영 범위
+
+화이트 SKU SM-R540NZWAKOO는 대기 후 단일 Firecrawl snapshot을 검증한다. 초기 rawHtml로 대체하거나 수량 input에 기대값을 주입하지 않는다. 수량 알림·단가·총액과 선택 모델·색상, 즉시 할인·카드 미적용 상태를 교차 대조한다. 알려진 다른 canonical은 이 SKU의 고정 별칭만 인정한다.
+
+사양은 같은 고정 페이지를 Java로 직접 조회해 모델·제목·canonical과 정확한 근거를 확인한다. 기존 7일 사전 예약·spec-refresh-enabled 플래그를 사용하며 값·가격은 바꾸지 않는다. OS 독립 문구는 등록 카탈로그의 Android/iOS 기본 블루투스 연결만 판정하고 앱·고급 설정의 지원으로 확대하지 않는다. GitHub Actions는 제목·인용의 존재만 점검한다.
+
+반복 갱신에 추가 LLM 토큰을 쓰지 않고 모델별 명시 근거를 재현할 수 있어 코드 경로를 우선했다. 초기 수집 표현 차이는 [평가](evaluations/samsung-buds4-2026-11-13/README.md)와 [진단](troubleshooting/samsung-selected-price-and-basic-audio.md)에 남겼다. DOM·사양 변경 대응 비용이 반복적으로 커지면 에이전트 경로와 다시 비교한다.

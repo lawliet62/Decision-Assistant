@@ -1,8 +1,23 @@
 # Troubleshooting
 
+- [Jabra 직접 HTML과 Firecrawl 근거 차이](jabra-provider-evidence-gap.md): 첫 거절 단계와 후속 재고 근거 확인, 등록 보류
+
 장애를 해결한 방법뿐 아니라, 기대한 개선이 나타나지 않은 이유와 아직 확인하지 못한 원인도 기록한다. 평가 보고서는 실행 결과의 원본이고, troubleshooting은 그 근거로 다음 진단에서 반복할 판단과 피할 오해를 설명한다.
 
 ## 사례와 진단 방법
+
+- [GitHub 출처 점검 실패 분리](../evaluations/source-check-2026-11-14/README.md): 로컬 성공과 클라우드 접근의 구분, 제목 변경을 제한적으로 처리한 사례
+- [Windows 임시 worktree에서 로컬 명령이 실패하는 경우](windows-worktree-permissions.md): Hook 점유, 실행기 오류 740, Git 소유권, 실제 파일 접근 실패의 구분
+
+- [개발 실행 종료 후 backend가 남는 경우](dev-server-process-shutdown.md): Node wrapper의 신호 전달·하위 서버 정리와 OS별 검증
+
+- [Samsung의 선택 SKU·할인과 기본 연결](samsung-selected-price-and-basic-audio.md): 다중 모델·행사 기간·input property와 문서 직렬화·앱 지원 구분
+
+- [Sony의 선택 후 가격과 HTTP client 차이](sony-selected-option-and-source-client.md): snapshot·공식 링크 정규화·Java 403과 Node 검증
+
+- [JBL 삼성닷컴의 렌더링된 구매 근거](jbl-rendered-purchase-evidence.md): 배열형 JSON-LD·hidden input 제거·기준가와 혜택가 대조
+
+- [웹 검색 조사 실패와 가격 검증 실패의 구분](catalog-research-incomplete.md): 미완성 응답, 실패 시 사용량 보존과 중복 호출 방지
 
 - [결정 전체 선택에서 403이 반환되는 경우](stale-decision-selection-api.md): 구버전 backend와 최신 frontend의 실행 버전 불일치
 
