@@ -38,11 +38,13 @@ QCY CT06의 오픈형은 국내 공식 상품명·상품 번호와 구조화 상
 
 별도 PostgreSQL 시험에서 실제 제조사 페이지를 조회해 P41i의 ANC와 리버티 5 프로의 ANC·IP55 확인 시각 및 각 제품의 다음 주간 시도를 저장했다. 이는 일회성 시험이며 장기 예약 실행의 안정성을 입증하지 않는다.
 
-기본 추천은 활성 이어폰 22개(QCY 9개, Apple 한국 스토어 2개, Marshall 2개, 젠하이저 1개, BOSE 1개, 앤커코리아 5개, 오디오테크니카 2개)를 사용한다. BOSE QC 이어버드 아이스 블루의 ANC 지원은 국내 공식몰의 제품명·색상과 제조사의 같은 제품·색상 설명을 대조해 등록한다. 제조사 페이지의 고정 주소·모델·색상과 제품 설명이 일치하면 확인 시각을 주간 갱신하며 출처 점검에도 포함한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
+기본 추천은 활성 이어폰 25개(QCY 9개, Apple 한국 스토어 2개, Marshall 2개, 젠하이저 1개, BOSE 1개, 앤커코리아 5개, 오디오테크니카 2개, Sony 1개, JBL 1개, Samsung 1개)를 사용한다. BOSE QC 이어버드 아이스 블루의 ANC 지원은 국내 공식몰의 제품명·색상과 제조사의 같은 제품·색상 설명을 대조해 등록한다. 제조사 페이지의 고정 주소·모델·색상과 제품 설명이 일치하면 확인 시각을 주간 갱신하며 출처 점검에도 포함한다. 판매 종료된 QCY T13 ANC는 revision 2에서 비활성화했고 등록 이력은 유지한다. 별도 캐시·관리 UI는 없으며 `backend/src/main/resources/catalog/earbuds.json`이 검토 가능한 등록 원본이다. 정책은 [ADR 0016](decisions/0016-curated-catalog.md), 초기 근거와 성능은 [평가](evaluations/catalog-2026-10-06/README.md)를 따른다.
 
 오디오테크니카 ATH-SQ1TW2NC의 ANC 지원은 [국내 공식 수입원의 출시 안내](https://audio-technica.co.kr/board/news/read.html?board_no=8&no=11458)와 [제조사 출시 안내](https://www.audio-technica.co.jp/corp/news/detail/1350)에서 확인했다. 제조사 안내의 모델 제목과 명시적인 ANC 문구가 일치하면 사양 확인 시각을 주간 갱신하고, GitHub Actions 출처 점검에도 포함한다.
 
 오디오테크니카 ATH-AC5TW는 국내 공식 판매 페이지의 모델과 오픈이어 설명이 일치하면 형태 확인 시각을 주간 갱신하고, GitHub Actions 출처 점검에도 포함한다. ANC는 미확인이다.
+
+Jabra 추가는 실제 Firecrawl의 구매·재고 근거 검증이 완료되지 않아 보류한다. 등록 항목·runtime 지원을 이번 병합 대상에서 제외하고 기존 25개 제품 갱신에 집중한다. [실측과 보류 결정](evaluations/jabra-2026-11-14/README.md)을 따른다.
 
 ## 관리용 대표 브랜드
 

@@ -1,5 +1,7 @@
 # Troubleshooting
 
+- [Jabra 직접 HTML과 Firecrawl 근거 차이](jabra-provider-evidence-gap.md): 첫 거절 단계와 후속 재고 근거 확인, 등록 보류
+
 장애를 해결한 방법뿐 아니라, 기대한 개선이 나타나지 않은 이유와 아직 확인하지 못한 원인도 기록한다. 평가 보고서는 실행 결과의 원본이고, troubleshooting은 그 근거로 다음 진단에서 반복할 판단과 피할 오해를 설명한다.
 
 ## 사례와 진단 방법
