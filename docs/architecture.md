@@ -53,7 +53,7 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 
 단일 GCP VM의 HTTPS proxy·Next.js·Spring Boot·PostgreSQL 구성과 VM attached Identity를 준비한다. 컨테이너는 별도 IAM identity 경계가 아니며 actual provisioning은 수행하지 않았다. [ADR 0019](decisions/0019-portfolio-deployment-preparation.md)를 따른다.
 
-목록은 DTO projection과 DB pagination으로 소유자별 상태 결과만 조회한다. 삭제는 결정 부모 행 잠금·version 확인 뒤 DB cascade를 사용한다. 성향 기억의 source FK도 cascade이며, 외부 작업 완료는 부모 존재를 다시 확인한다. 알림·evidence worker는 삭제와 동일한 부모 잠금 순서로 직렬화한다. commit 후 최소 삭제 audit를 남겨 백업 복원 시 재적용한다. [ADR 0018](decisions/0018-decision-management-and-deletion.md)를 따른다.
+기본 목록은 DTO projection과 DB pagination으로 소유자별 상태 결과 중 보관·삭제되지 않은 결정을 조회한다. 진행 상태와 기록 수명을 분리해 보관과 30일 휴지통 복구를 제공한다. 삭제·복구는 부모 행 잠금·version 확인으로 직렬화하며 만료 후 영구 삭제에 DB cascade를 사용한다. 성향 기억의 source FK도 cascade이며 활용 조회는 원본의 삭제·개인화 설정을 검사한다. 외부 작업 완료는 부모의 존재와 삭제 여부를 다시 확인한다. 알림·evidence worker는 삭제와 동일한 부모 잠금 순서를 사용한다. commit 후 최소 상태 변경 audit를 남겨 백업 복원 시 재적용한다. [ADR 0020](decisions/0020-decision-retention-and-personalization.md)을 따른다.
 
 ## Security/operations baseline
 

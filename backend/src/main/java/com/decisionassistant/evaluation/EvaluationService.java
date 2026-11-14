@@ -7,6 +7,7 @@ import com.decisionassistant.ai.AiProperties;
 import com.decisionassistant.common.ConflictException;
 import com.decisionassistant.common.NotFoundException;
 import com.decisionassistant.decision.DecisionService;
+import com.decisionassistant.decision.DecisionTaskWriter;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.ObjectProvider;
@@ -38,12 +39,14 @@ public class EvaluationService {
     private final AiCallExecutor aiExecutor;
     private final AiProperties aiProperties;
     private final AiDataPolicy aiDataPolicy;
+    private final DecisionTaskWriter writer;
     private final Clock clock;
 
     public EvaluationService(SnapshotLoader snapshots, DecisionService decisions, AlgorithmEvaluator algorithm,
                              EvaluationRepository evaluations, ObjectMapper objectMapper,
                              ObjectProvider<AiContracts.DecisionAssessor> assessor,
-                             AiCallExecutor aiExecutor, AiProperties aiProperties, AiDataPolicy aiDataPolicy) {
+                             AiCallExecutor aiExecutor, AiProperties aiProperties, AiDataPolicy aiDataPolicy,
+                             DecisionTaskWriter writer) {
         this.snapshots = snapshots;
         this.decisions = decisions;
         this.algorithm = algorithm;
@@ -53,6 +56,7 @@ public class EvaluationService {
         this.aiExecutor = aiExecutor;
         this.aiProperties = aiProperties;
         this.aiDataPolicy = aiDataPolicy;
+        this.writer = writer;
         this.clock = Clock.systemUTC();
     }
 
@@ -70,7 +74,12 @@ public class EvaluationService {
         var evaluation = new Evaluation(
                 decisionId, snapshot.decisionVersion(), snapshot, hash(inputNode),
                 algorithmResult, request.includeLlm(), Instant.now(clock));
-        evaluations.saveAndFlush(evaluation);
+        writer.write(decisionId, parent -> {
+            if (parent.version() != request.expectedVersion()) {
+                throw new ConflictException("Decision version이 변경되었습니다. 최신 draft에서 다시 평가하세요.");
+            }
+            return evaluations.saveAndFlush(evaluation);
+        });
         if (request.includeLlm()) {
             runLlm(evaluation, snapshot);
         }
@@ -87,8 +96,10 @@ public class EvaluationService {
         if (evaluation.llmStatus() == Evaluation.LlmStatus.SUCCEEDED) {
             throw new ConflictException("이미 성공한 LLM 평가는 retry하지 않습니다.");
         }
-        evaluation.llmPending();
-        evaluations.saveAndFlush(evaluation);
+        writer.write(decisionId, parent -> {
+            evaluation.llmPending();
+            return evaluations.saveAndFlush(evaluation);
+        });
         runLlm(evaluation, evaluation.inputSnapshot());
         return response(evaluations.findById(evaluation.id()).orElseThrow());
     }
@@ -96,23 +107,30 @@ public class EvaluationService {
     private void runLlm(Evaluation evaluation, DecisionSnapshot snapshot) {
         var started = Instant.now(clock);
         if (!aiProperties.enabled() || assessor == null) {
-            evaluation.llmFailed("AI가 비활성화되어 있습니다.", aiProperties.provider(), aiProperties.model(),
-                    PROMPT_VERSION, SCHEMA_VERSION, 0);
-            evaluations.saveAndFlush(evaluation);
+            complete(evaluation, item -> item.llmFailed("AI가 비활성화되어 있습니다.", aiProperties.provider(), aiProperties.model(),
+                    PROMPT_VERSION, SCHEMA_VERSION, 0));
             return;
         }
+        AiContracts.AiResult<AiContracts.LlmAssessment> result;
         try {
-            var result = aiExecutor.call(() -> assessor.assess(snapshot));
+            result = aiExecutor.call(() -> assessor.assess(snapshot));
             validateAssessment(result.value(), snapshot);
-            evaluation.llmSucceeded(
-                    result.value(), aiProperties.provider(), aiProperties.model(),
-                    PROMPT_VERSION, SCHEMA_VERSION, Duration.between(started, Instant.now(clock)).toMillis(),
-                    result.inputTokens(), result.outputTokens());
         } catch (RuntimeException exception) {
-            evaluation.llmFailed(safeMessage(exception), aiProperties.provider(), aiProperties.model(),
-                    PROMPT_VERSION, SCHEMA_VERSION, Duration.between(started, Instant.now(clock)).toMillis());
+            complete(evaluation, item -> item.llmFailed(safeMessage(exception), aiProperties.provider(), aiProperties.model(),
+                    PROMPT_VERSION, SCHEMA_VERSION, Duration.between(started, Instant.now(clock)).toMillis()));
+            return;
         }
-        evaluations.saveAndFlush(evaluation);
+        complete(evaluation, item -> item.llmSucceeded(
+                result.value(), aiProperties.provider(), aiProperties.model(),
+                PROMPT_VERSION, SCHEMA_VERSION, Duration.between(started, Instant.now(clock)).toMillis(),
+                result.inputTokens(), result.outputTokens()));
+    }
+
+    private void complete(Evaluation evaluation, java.util.function.Consumer<Evaluation> update) {
+        writer.write(evaluation.decisionId(), parent -> {
+            update.accept(evaluation);
+            return evaluations.saveAndFlush(evaluation);
+        });
     }
 
     private void validateAssessment(AiContracts.LlmAssessment assessment, DecisionSnapshot snapshot) {

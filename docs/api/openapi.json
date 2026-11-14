@@ -773,6 +773,43 @@
         }
       }
     },
+    "/api/v1/decisions/{decisionId}/retention" : {
+      "patch" : {
+        "tags" : [ "decision-retention-controller" ],
+        "operationId" : "change",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RetentionChange"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RetentionItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/decisions/{decisionId}/reminders/{reminderId}" : {
       "patch" : {
         "tags" : [ "reminder-controller" ],
@@ -1050,6 +1087,62 @@
                   "items" : {
                     "$ref" : "#/components/schemas/DecisionSummary"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/recovery-notice" : {
+      "get" : {
+        "tags" : [ "decision-retention-controller" ],
+        "operationId" : "recoveryNotice",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RecoveryNotice"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/decisions/management" : {
+      "get" : {
+        "tags" : [ "decision-retention-controller" ],
+        "operationId" : "list_3",
+        "parameters" : [ {
+          "name" : "view",
+          "in" : "query",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "ARCHIVE", "TRASH" ]
+          }
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 0,
+            "maximum" : 1000000,
+            "minimum" : 0
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RetentionPage"
                 }
               }
             }
@@ -2815,6 +2908,59 @@
           }
         }
       },
+      "RetentionChange" : {
+        "type" : "object",
+        "properties" : {
+          "expectedVersion" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          },
+          "action" : {
+            "type" : "string",
+            "enum" : [ "ARCHIVE", "UNARCHIVE", "RESTORE", "PERSONALIZATION_ON", "PERSONALIZATION_OFF" ]
+          }
+        },
+        "required" : [ "action" ]
+      },
+      "RetentionItem" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "version" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "DRAFT", "CHOSEN", "DEFERRED", "ABANDONED", "ARCHIVED" ]
+          },
+          "archivedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "deletedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "recoverableUntil" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "recoverable" : {
+            "type" : "boolean"
+          },
+          "personalizationEnabled" : {
+            "type" : "boolean"
+          }
+        }
+      },
       "UpdateReminderRequest" : {
         "type" : "object",
         "properties" : {
@@ -3045,6 +3191,33 @@
           "updatedAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "RecoveryNotice" : {
+        "type" : "object",
+        "properties" : {
+          "restoredTo" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "RetentionPage" : {
+        "type" : "object",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RetentionItem"
+            }
+          },
+          "page" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "hasNext" : {
+            "type" : "boolean"
           }
         }
       },

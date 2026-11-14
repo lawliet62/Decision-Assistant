@@ -32,6 +32,7 @@ services:
       context: ..
       dockerfile: deploy/backend.Dockerfile
     environment:
+      DECISION_ASSISTANT_RECOVERY_RESTORED_TO: ${DECISION_ASSISTANT_RECOVERY_RESTORED_TO:-}
       SPRING_PROFILES_ACTIVE: oidc
       SPRING_DOCKER_COMPOSE_ENABLED: "false"
       DECISION_ASSISTANT_SECRETS_MODE: gcp

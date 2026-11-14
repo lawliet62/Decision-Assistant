@@ -41,9 +41,10 @@ docker compose --env-file deploy/.env.example -f deploy/compose.yaml -f deploy/c
 
 - 백업은 암호화·접근 제한된 저장소에 7일 보존한다. 앱에서 영구 삭제된 데이터가 이전 백업에는 남을 수 있음을 안내한다. 이미 전송된 provider 데이터·메일은 앱 삭제가 취소하지 않는다.
 - 별도 격리 DB에 `pg_restore --exit-on-error --no-owner`로 복원하고 Flyway를 적용한다. 운영 DB를 덮어쓰거나 이전 migration을 수정하지 않는다.
-- 복원 snapshot 이후의 `product_event=decision_deleted` 로그를 **현재 시점까지 모두** 확보한다. 유효한 UUID만 검증한 뒤 transaction에서 해당 `decisions` 행을 삭제하고 cascade를 확인한다. 대상 목록은 로그 접근 권한이 있는 운영자만 취급한다. 삭제 로그가 불완전하면 서비스를 다시 공개하지 않는다.
+- 복원 snapshot 이후의 `product_event=decision_deleted`, `decision_trashed`, `decision_retention_changed` 로그를 **현재 시점까지 모두** 확보한다. UUID·시각·action을 검증해 결정별 시간 순으로 재적용한다. `decision_trashed`는 원래 시각으로 deleted_at 설정, RESTORE는 deleted_at 해제, ARCHIVE/UNARCHIVE는 archived_at 설정/해제, PERSONALIZATION_ON/OFF는 활용 설정을 복원한다. `decision_deleted`는 해당 행을 삭제하고 cascade를 확인한다. 재적용 후 만료 휴지통도 정리한다. 모든 상태 변경은 version을 증가시키고 운영 중인 앱과 병행하지 않는다. 대상 목록은 로그 접근 권한이 있는 운영자만 취급한다. 이력이 불완전하면 서비스를 다시 공개하지 않는다.
 - 삭제 audit은 DB commit 뒤 기록하는 로그이며 transactional outbox가 아니다. commit 직후 프로세스/호스트 장애나 외부 로그 수집 손실이 있었다면 누락 가능성이 있다. 해당 기간의 완전성을 입증할 수 없으면 복원 DB 공개를 중지한다. 로컬 복원 smoke는 이 장애 구간의 내구성을 검증하지 않는다.
-- 세션을 무효화하고 외부 기능·예약 알림을 계속 끈 채 소유권·목록·정렬·삭제 결과와 복원 전후 카탈로그/결정 건수를 확인한다. 삭제된 결정과 그 성향 기억이 없는지 SQL로 검증한 뒤 접근을 재개한다.
+- `DECISION_ASSISTANT_RECOVERY_RESTORED_TO`에 실제 복원 기준 시각(예: `2026-11-14T03:00:00Z`)을 넣고 backend를 재기동한다. 홈의 KST 안내와 생성·수정·삭제 영향 문구를 확인한다.
+- 세션을 무효화하고 외부 기능·예약 알림을 계속 끈 채 소유권·목록·정렬·삭제 결과와 복원 전후 카탈로그/결정 건수를 확인한다. 영구 삭제된 결정·성향 기억이 없고 휴지통·활용 중단 기록이 개인화에 쓰이지 않는지 SQL로 검증한 뒤 접근을 재개한다.
 - 현재 migration 이후에는 이전 삭제 정책의 코드로 되돌리지 않는다. 장애 시 proxy를 닫고 기능 flag를 끄며 검증한 새 이미지로 복구한다. `down -v`, 자동 DB 초기화, migration rollback은 운영 절차에 없다.
 
 ## 비용·장애 통제

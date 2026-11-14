@@ -8,7 +8,11 @@
 
 `GET /api/v1/decisions/selection`은 소유자의 지정 `statuses`에 해당하는 결정 summary와 version을 페이지 제한 없이 단일 조회로 반환한다. 생략하면 모든 상태다. 이 응답은 선택 시점의 대상이며 이후 생성된 결정은 포함하지 않는다.
 
-`DELETE /api/v1/decisions/{id}?expectedVersion=N`은 CSRF·소유권·version을 검증한다. 성공은 204, stale version은 409, 타인/미존재/이미 삭제는 404다. 후보·평가·회고·작업·성향 기억의 실제 삭제 범위는 ADR 0018을 따른다. 새 Flyway V16으로 성향 기억 FK와 목록 index를 추가한다.
+기본 목록·건수·전체 선택은 휴지통과 보관함을 제외한다. `DELETE /api/v1/decisions/{id}?expectedVersion=N`은 CSRF·소유권·version을 검증하고 휴지통으로 이동한다. 성공은 204, stale version은 409, 타인/미존재/이미 삭제는 404다. 30일 복구 기한과 영구 삭제 범위는 [ADR 0020](decisions/0020-decision-retention-and-personalization.md)을 따른다.
+
+`GET /api/v1/decisions/management?view=ACTIVE|ARCHIVE|TRASH&page=N`은 소유자별 관리 목록을 10개씩 `items/page/hasNext`로 반환한다. 항목에는 진행 상태·보관/삭제 시각·복구 기한·서버 기준 복구 가능 여부·개인화 활용 설정을 포함한다. `PATCH /api/v1/decisions/{id}/retention`은 `{expectedVersion, action}`을 받으며 action은 `ARCHIVE/UNARCHIVE/RESTORE/PERSONALIZATION_ON/PERSONALIZATION_OFF`다. 보관은 CHOSEN·ABANDONED만 허용한다. 복구 기한 경과·stale version은 409, 허용되지 않은 상태의 보관은 422다. 모든 변경에 소유권·CSRF를 검증한다.
+
+`GET /api/v1/decisions/recovery-notice`는 운영자가 지정한 복원 기준 시각 `restoredTo` 또는 null을 반환한다.
 
 Backend controller와 DTO annotation이 code-first source다. 실행된 integration test가 `/api/openapi` 결과를 `backend/build/generated/openapi.json`에 저장하며, review 가능한 계약은 `docs/api/openapi.json`에 commit한다.
 

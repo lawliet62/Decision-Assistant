@@ -9,7 +9,7 @@
 
 - GCP Secret Manager 초기 로더는 구현했지만 실제 Dev/Prod 프로젝트·IAM·Secret 등록·Data Access 로그와 smoke는 운영자가 검증해야 한다. 단일 GCP VM과 attached Identity를 사용하는 배포 설정은 준비했으며 실제 연결 검증은 아직 수행하지 않았다. SDK/오프라인 테스트 통과를 production 연결 완료로 취급하지 않는다.
 - TLS, CORS/host 정책, backup/restore
-- 결정 삭제 및 백업 7일·로그 14일 정책은 ADR 0018/0019로 승인했고 데이터 이용 안내를 추가했다. 실제 저장소 TTL·삭제 재적용·외부 provider별 보존 범위는 운영 전 검증해야 한다.
+- 보관·30일 휴지통·개인화 활용 통제는 ADR 0020, 백업 7일·로그 14일은 ADR 0018/0019를 따른다. 실제 저장소 TTL·삭제 및 활용 설정 재적용·외부 provider별 보존 범위는 운영 전 검증해야 한다. 상태 변경 로그는 transactional outbox가 아니므로 완전성을 입증하지 못하는 복원본은 공개하지 않는다.
 - rate limit과 AI 비용 한도
 
 ## 사용 데이터가 생긴 뒤 결정

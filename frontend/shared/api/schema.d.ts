@@ -293,6 +293,22 @@ export interface paths {
         patch: operations["confirmValue"];
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/retention": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["change"];
+        trace?: never;
+    };
     "/api/v1/decisions/{decisionId}/reminders/{reminderId}": {
         parameters: {
             query?: never;
@@ -429,6 +445,38 @@ export interface paths {
             cookie?: never;
         };
         get: operations["selection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/recovery-notice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["recoveryNotice"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/management": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_3"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1056,6 +1104,29 @@ export interface components {
             rating?: number;
             disputed?: boolean;
         };
+        RetentionChange: {
+            /** Format: int64 */
+            expectedVersion?: number;
+            /** @enum {string} */
+            action: "ARCHIVE" | "UNARCHIVE" | "RESTORE" | "PERSONALIZATION_ON" | "PERSONALIZATION_OFF";
+        };
+        RetentionItem: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int64 */
+            version?: number;
+            title?: string;
+            /** @enum {string} */
+            status?: "DRAFT" | "CHOSEN" | "DEFERRED" | "ABANDONED" | "ARCHIVED";
+            /** Format: date-time */
+            archivedAt?: string;
+            /** Format: date-time */
+            deletedAt?: string;
+            /** Format: date-time */
+            recoverableUntil?: string;
+            recoverable?: boolean;
+            personalizationEnabled?: boolean;
+        };
         UpdateReminderRequest: {
             action: string;
             /** Format: date-time */
@@ -1139,6 +1210,16 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        RecoveryNotice: {
+            /** Format: date-time */
+            restoredTo?: string;
+        };
+        RetentionPage: {
+            items?: components["schemas"]["RetentionItem"][];
+            /** Format: int32 */
+            page?: number;
+            hasNext?: boolean;
         };
         StatusCount: {
             /** @enum {string} */
@@ -1690,6 +1771,32 @@ export interface operations {
             };
         };
     };
+    change: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetentionChange"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RetentionItem"];
+                };
+            };
+        };
+    };
     updateReminder: {
         parameters: {
             query?: never;
@@ -1907,6 +2014,49 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DecisionSummary"][];
+                };
+            };
+        };
+    };
+    recoveryNotice: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RecoveryNotice"];
+                };
+            };
+        };
+    };
+    list_3: {
+        parameters: {
+            query: {
+                view: "ACTIVE" | "ARCHIVE" | "TRASH";
+                page?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RetentionPage"];
                 };
             };
         };

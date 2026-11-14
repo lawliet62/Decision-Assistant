@@ -1,6 +1,6 @@
 # ADR 0018: 상태별 결정 관리와 연관 데이터 영구 삭제
 
-- 상태: Accepted
+- 상태: 일부 대체됨 — 즉시 영구 삭제·휴지통 미제공 정책은 [ADR 0020](0020-decision-retention-and-personalization.md)이 대체한다. 소유권·version·연쇄 삭제·복원 공개 제한은 유지한다.
 - 날짜: 2026-11-09
 - 승인: human의 목록 UX 계획 승인 및 별도 삭제 정책 선택
 
