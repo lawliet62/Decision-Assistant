@@ -1,5 +1,7 @@
 # 문서 색인
 
+- [CT06 개발 DB 실제 갱신](evaluations/catalog-refresh-2026-11-14/README.md): 기한 도래 직접 HTTP·DB/API 반영·Apple iOS manifest 적용과 예약 보존
+
 - [GitHub 출처 점검 실패 분리](evaluations/source-check-2026-11-14/README.md): 제목 변경·환경별 403·출처 404와 관측 제목 진단
 
 - [Apple iOS 기본 연결 보강](evaluations/apple-ios-2026-11-14/README.md): 모델별 사양 검증·기존 가격 시각 보존과 실제 추천 후보 증가
