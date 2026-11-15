@@ -58,6 +58,10 @@
 - 현재 human 요청, 승인된 spec 또는 Accepted ADR이 아직 결정하지 않은 선택이 제품·핵심 domain 정책, 데이터 의미·수명, 인증·보안·개인정보·외부 전송 경계, runtime·provider·배포 architecture 또는 Accepted ADR을 변경한다면 구현 전에 human의 명시적 결정을 받는다. 세부 기준과 요청 형식은 [Development workflow](docs/development.md#human-decision-gate)를 따른다.
 - 기존 경계 안에서 검증 가능하고 쉽게 되돌릴 수 있는 구현 선택은 재확인을 요청하지 않고 agent가 자율적으로 결정하며, 가장 단순하고 가역적인 선택을 우선한다.
 
+## 범위 밖 개선 기회
+
+- 현재 작업 중 자연스럽게 발견한 범위 밖 개선은 임의로 구현하지 않고, [범위 밖 개선 기회 발견 및 제안](docs/development.md#범위-밖-개선-기회-발견-및-제안)에 따라 최종 보고에 Issue 후보로 제안한다. 즉각적인 대응이 필요한 위험·차단 문제는 즉시 보고하며, Issue 생성과 구현 착수는 각각 사용자의 명시적 승인 또는 요청을 따른다.
+
 ## Code Review Rules
 
 - 리뷰 제목, 개별 리뷰 코멘트, 전체 리뷰 요약은 한국어 존댓말로 작성합니다.
