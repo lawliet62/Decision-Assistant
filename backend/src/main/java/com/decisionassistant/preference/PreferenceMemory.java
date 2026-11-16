@@ -14,6 +14,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "preference_memories")
 public class PreferenceMemory {
+    @Column(name = "superseded_at") private Instant supersededAt;
     public enum Status { PROPOSED, CONFIRMED, DISMISSED }
     public enum Confidence { LOW, MEDIUM, HIGH }
 

@@ -117,6 +117,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 완료된 결정의 기록 수정 또는 재검토 시작 */
+        post: operations["beginRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/{decisionId}/resolutions": {
         parameters: {
             query?: never;
@@ -665,6 +682,14 @@ export interface components {
             discovery?: components["schemas"]["DiscoveryData"];
             productFacts?: components["schemas"]["ProductFactsData"][];
             comparison?: components["schemas"]["Data"];
+            /** @enum {string} */
+            phase?: "COMPARING" | "DEFERRED" | "COMPLETED" | "ARCHIVED";
+            /** @enum {string} */
+            result?: "OPTION_SELECTED" | "NOT_PURCHASED";
+            /** @enum {string} */
+            editMode?: "CORRECTION" | "RECONSIDERATION";
+            /** Format: uuid */
+            currentResolutionId?: string;
         };
         DiscoveryData: {
             /** Format: int64 */
@@ -773,6 +798,8 @@ export interface components {
             disappointedBy?: string;
             /** Format: date-time */
             createdAt?: string;
+            /** Format: uuid */
+            resolutionId?: string;
         };
         PreferenceData: {
             /** Format: uuid */
@@ -851,6 +878,12 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             comparisonSnapshot?: components["schemas"]["Snapshot"];
+            /** @enum {string} */
+            editMode?: "CORRECTION" | "RECONSIDERATION";
+            /** Format: uuid */
+            previousResolutionId?: string;
+            /** Format: date-time */
+            supersededAt?: string;
         };
         Settings: {
             maxBudget?: number;
@@ -871,6 +904,7 @@ export interface components {
             constraintResults?: components["schemas"]["ConstraintResultData"][];
             productFacts?: components["schemas"]["ProductFactsData"][];
             comparison?: components["schemas"]["Data"];
+            title?: string;
         };
         UpdateRequest: {
             /** Format: int64 */
@@ -978,6 +1012,12 @@ export interface components {
             certainty?: string;
             evidenceNote?: string;
         };
+        BeginRevisionRequest: {
+            /** Format: int64 */
+            expectedVersion: number;
+            /** @enum {string} */
+            mode: "CORRECTION" | "RECONSIDERATION";
+        };
         CreateResolutionRequest: {
             /** @enum {string} */
             kind: "CHOSEN" | "DEFERRED" | "ABANDONED";
@@ -999,6 +1039,10 @@ export interface components {
             wouldChooseAgain?: boolean;
             workedWell?: string;
             disappointedBy?: string;
+            /** Format: uuid */
+            resolutionId?: string;
+            /** Format: int64 */
+            expectedVersion?: number;
         };
         CreateEvaluationRequest: {
             /** Format: int64 */
@@ -1210,6 +1254,10 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+            /** @enum {string} */
+            result?: "OPTION_SELECTED" | "NOT_PURCHASED";
+            /** @enum {string} */
+            phase?: "COMPARING" | "DEFERRED" | "COMPLETED" | "ARCHIVED";
         };
         RecoveryNotice: {
             /** Format: date-time */
@@ -1438,6 +1486,32 @@ export interface operations {
         responses: {
             /** @description Created */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    beginRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BeginRevisionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

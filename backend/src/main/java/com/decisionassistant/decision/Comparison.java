@@ -30,10 +30,10 @@ public final class Comparison {
                            List<DecisionDtos.OptionData> options, List<DecisionDtos.CriterionData> criteria,
                            List<DecisionDtos.OptionValueData> values, List<DecisionDtos.ConstraintData> constraints,
                            List<DecisionDtos.ConstraintResultData> constraintResults,
-                           List<DecisionDtos.ProductFactsData> productFacts, Data comparison) {
+                           List<DecisionDtos.ProductFactsData> productFacts, Data comparison, String title) {
         public static Snapshot capture(DecisionDtos.DecisionResponse response, Instant now) {
-            return new Snapshot("comparison-v1", now, response.context(), response.options(), response.criteria(),
-                    response.values(), response.constraints(), response.constraintResults(), response.productFacts(), response.comparison());
+            return new Snapshot("comparison-v2", now, response.context(), response.options(), response.criteria(),
+                    response.values(), response.constraints(), response.constraintResults(), response.productFacts(), response.comparison(), response.title());
         }
     }
     public static State initial(Decision decision, DiscoveryRequest request) {

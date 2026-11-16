@@ -319,6 +319,44 @@
         }
       }
     },
+    "/api/v1/decisions/{decisionId}/revisions" : {
+      "post" : {
+        "tags" : [ "decision-controller" ],
+        "summary" : "완료된 결정의 기록 수정 또는 재검토 시작",
+        "operationId" : "beginRevision",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BeginRevisionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/decisions/{decisionId}/resolutions" : {
       "post" : {
         "tags" : [ "decision-controller" ],
@@ -1632,6 +1670,22 @@
           },
           "comparison" : {
             "$ref" : "#/components/schemas/Data"
+          },
+          "phase" : {
+            "type" : "string",
+            "enum" : [ "COMPARING", "DEFERRED", "COMPLETED", "ARCHIVED" ]
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "OPTION_SELECTED", "NOT_PURCHASED" ]
+          },
+          "editMode" : {
+            "type" : "string",
+            "enum" : [ "CORRECTION", "RECONSIDERATION" ]
+          },
+          "currentResolutionId" : {
+            "type" : "string",
+            "format" : "uuid"
           }
         }
       },
@@ -1940,6 +1994,10 @@
           "createdAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "resolutionId" : {
+            "type" : "string",
+            "format" : "uuid"
           }
         }
       },
@@ -2145,6 +2203,18 @@
           },
           "comparisonSnapshot" : {
             "$ref" : "#/components/schemas/Snapshot"
+          },
+          "editMode" : {
+            "type" : "string",
+            "enum" : [ "CORRECTION", "RECONSIDERATION" ]
+          },
+          "previousResolutionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "supersededAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
@@ -2231,6 +2301,9 @@
           },
           "comparison" : {
             "$ref" : "#/components/schemas/Data"
+          },
+          "title" : {
+            "type" : "string"
           }
         }
       },
@@ -2560,6 +2633,21 @@
           }
         }
       },
+      "BeginRevisionRequest" : {
+        "type" : "object",
+        "properties" : {
+          "expectedVersion" : {
+            "type" : "integer",
+            "format" : "int64",
+            "minimum" : 0
+          },
+          "mode" : {
+            "type" : "string",
+            "enum" : [ "CORRECTION", "RECONSIDERATION" ]
+          }
+        },
+        "required" : [ "expectedVersion", "mode" ]
+      },
       "CreateResolutionRequest" : {
         "type" : "object",
         "properties" : {
@@ -2616,6 +2704,14 @@
           },
           "disappointedBy" : {
             "type" : "string"
+          },
+          "resolutionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "expectedVersion" : {
+            "type" : "integer",
+            "format" : "int64"
           }
         },
         "required" : [ "expectationStatus" ]
@@ -3191,6 +3287,14 @@
           "updatedAt" : {
             "type" : "string",
             "format" : "date-time"
+          },
+          "result" : {
+            "type" : "string",
+            "enum" : [ "OPTION_SELECTED", "NOT_PURCHASED" ]
+          },
+          "phase" : {
+            "type" : "string",
+            "enum" : [ "COMPARING", "DEFERRED", "COMPLETED", "ARCHIVED" ]
           }
         }
       },

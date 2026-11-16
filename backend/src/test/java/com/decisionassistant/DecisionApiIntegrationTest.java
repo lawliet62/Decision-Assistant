@@ -132,6 +132,38 @@ class DecisionApiIntegrationTest {
         org.assertj.core.api.Assertions.assertThat(reminderRepository.findById(reminder.id())).isEmpty();
     }
 
+    @Test @org.junit.jupiter.api.Timeout(15)
+    void aReminderSelectedBeforeReconsiderationCannotSendForTheOldResolution() throws Exception {
+        var created = revisionFixture(); var id = UUID.fromString(created.path("id").asText());
+        var resolved = resolveRevision(id.toString(), "CHOSEN", created.path("options").get(0).path("id").asText());
+        var reminder = reminderRepository.findByDecisionIdOrderByDueAtAsc(id).stream()
+                .filter(r -> r.channel() == com.decisionassistant.notification.OutcomeReminder.Channel.EMAIL).findFirst().orElseThrow();
+        reminder.reschedule(Instant.now().minusSeconds(60)); reminderRepository.saveAndFlush(reminder);
+        var selected = new java.util.concurrent.CountDownLatch(1);
+        var selectedRepository = org.mockito.Mockito.mock(com.decisionassistant.notification.OutcomeReminderRepository.class);
+        org.mockito.Mockito.when(selectedRepository.findTop10ByStatusAndDueAtLessThanEqualOrderByDueAtAsc(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(call -> { selected.countDown(); return List.of(reminder); });
+        org.mockito.Mockito.when(selectedRepository.pendingForDelivery(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(call -> reminderRepository.pendingForDelivery(call.getArgument(0), call.getArgument(1)));
+        var delivery = org.mockito.Mockito.mock(com.decisionassistant.notification.ReminderDeliveryPort.class);
+        var worker = new com.decisionassistant.notification.OutcomeReminderWorker(selectedRepository, decisionRepository, users, delivery,
+                new com.decisionassistant.notification.ReminderProperties(true, "https://example.com", "fixture", "fixture@example.com"), "https://example.com");
+        try (var connection = dataSource.getConnection(); var pool = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            connection.setAutoCommit(false);
+            // 새 선택이 먼저 확정되고 worker는 이전 resolution의 엔티티를 이미 읽은 순서를 재현한다.
+            try (var statement = connection.prepareStatement("update decisions set current_resolution_id = ?, version = version + 1 where id = ?")) {
+                statement.setObject(1, UUID.randomUUID()); statement.setObject(2, id); statement.executeUpdate();
+            }
+            var future = pool.submit(() -> new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(tx -> worker.sendDue()));
+            try { org.assertj.core.api.Assertions.assertThat(selected.await(3, java.util.concurrent.TimeUnit.SECONDS)).isTrue(); }
+            finally { connection.commit(); }
+            future.get(5, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        org.mockito.Mockito.verifyNoInteractions(delivery);
+        org.assertj.core.api.Assertions.assertThat(reminderRepository.findById(reminder.id()).orElseThrow().resolutionId().toString())
+                .isEqualTo(resolved.path("id").asText());
+    }
+
     private int deleteStatus(AppUserPrincipal owner, UUID id, int version) throws Exception {
         return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/decisions/{id}", id)
                 .param("expectedVersion", Integer.toString(version)).with(signedIn(owner)).with(csrf())).andReturn().getResponse().getStatus();
@@ -284,7 +316,9 @@ class DecisionApiIntegrationTest {
                 .param("expectedVersion", "5").with(signedIn(owner)).with(csrf())).andExpect(status().isNoContent());
         assertPersonalizationCount(owner, 0);
         org.assertj.core.api.Assertions.assertThat(preferenceMemories.findAllByOwnerUserIdOrderByUpdatedAtDesc(owner.userId())).isEmpty();
-        jdbc.update("update decisions set deleted_at = now() - interval '30 days' where id = ?", id);
+        // 만료 판정과 같은 애플리케이션 시계를 사용한다. Docker DB 시계와의 차이를 경계 판정에 섞지 않는다.
+        jdbc.update("update decisions set deleted_at = ? where id = ?",
+                java.sql.Timestamp.from(Instant.now().minus(30, java.time.temporal.ChronoUnit.DAYS).minusSeconds(1)), id);
         changeRetention(owner, id, 6, "RESTORE", 409);
     }
 
@@ -305,6 +339,155 @@ class DecisionApiIntegrationTest {
         var id = UUID.randomUUID();
         jdbc.update("insert into decisions(id, owner_user_id, title, template_key, template_version, status, created_at, updated_at) values (?, ?, ?, ?, 'fixture', ?, '2026-01-01', '2026-01-01')", id, owner.userId(), title, template, status);
         return id;
+    }
+
+    @Test
+    void correctionPreservesSnapshotsAndOutcomesAndExcludesOldPersonalization() throws Exception {
+        var created = revisionFixture();
+        var id = created.path("id").asText();
+        var first = resolveRevision(id, "CHOSEN", created.path("options").get(0).path("id").asText());
+        var old = readDecision(id);
+        mvc.perform(post("/api/v1/decisions/{id}/outcome-check-ins", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"satisfaction":4,"expectationStatus":"MET","workedWell":"착용감",
+                 "resolutionId":"%s","expectedVersion":%s}
+                """.formatted(first.path("id").asText(), old.path("version"))))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.resolutionId").value(first.path("id").asText()));
+        var memory = preferenceMemories.findAllByOwnerUserIdOrderByUpdatedAtDesc(TEST_USER_ID).stream()
+                .filter(m -> m.sourceDecisionId().toString().equals(id)).findFirst().orElseThrow();
+        memory.confirm(Instant.now()); preferenceMemories.saveAndFlush(memory);
+        var editing = startRevision(id, "CORRECTION", old.path("version").asLong());
+        org.assertj.core.api.Assertions.assertThat(preferenceMemories.findByOwnerUserIdAndStatusAndTemplateKey(
+                TEST_USER_ID, com.decisionassistant.preference.PreferenceMemory.Status.CONFIRMED,
+                com.decisionassistant.decision.DecisionTypes.TemplateKey.EARBUDS))
+                .noneMatch(m -> m.id().equals(memory.id()));
+        startRevisionStatus(id, "CORRECTION", old.path("version").asLong(), 409);
+        mvc.perform(post("/api/v1/decisions/{id}/resolutions", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"DEFERRED\"}"))
+                .andExpect(status().isConflict());
+        var draft = mapper.createObjectNode();
+        for (var field : List.of("title", "context", "options", "criteria", "values", "constraints", "constraintResults"))
+            draft.set(field, editing.path(field));
+        draft.put("expectedVersion", editing.path("version").asLong());
+        draft.put("title", "정정한 제목");
+        mvc.perform(put("/api/v1/decisions/{id}/draft", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(draft))).andExpect(status().isOk());
+        var corrected = resolveRevision(id, "ABANDONED", null);
+        org.assertj.core.api.Assertions.assertThat(corrected.path("editMode").asText()).isEqualTo("CORRECTION");
+        org.assertj.core.api.Assertions.assertThat(corrected.path("previousResolutionId").asText()).isEqualTo(first.path("id").asText());
+        var finalDecision = readDecision(id);
+        org.assertj.core.api.Assertions.assertThat(finalDecision.path("phase").asText()).isEqualTo("COMPLETED");
+        org.assertj.core.api.Assertions.assertThat(finalDecision.path("result").asText()).isEqualTo("NOT_PURCHASED");
+        var previous = finalDecision.path("resolutions").get(1);
+        org.assertj.core.api.Assertions.assertThat(previous.path("supersededAt").isNull()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(previous.path("comparisonSnapshot")).isEqualTo(first.path("comparisonSnapshot"));
+        org.assertj.core.api.Assertions.assertThat(previous.path("comparisonSnapshot").path("title").asText()).isEqualTo(created.path("title").asText());
+        org.assertj.core.api.Assertions.assertThat(corrected.path("comparisonSnapshot").path("title").asText()).isEqualTo("정정한 제목");
+        org.assertj.core.api.Assertions.assertThat(finalDecision.path("outcomes").get(0).path("resolutionId").asText()).isEqualTo(first.path("id").asText());
+        org.assertj.core.api.Assertions.assertThat(preferenceMemories.findByIdAndOwnerUserId(memory.id(), TEST_USER_ID)).isEmpty();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/preferences/{id}", memory.id())
+                .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"CONFIRM\"}"))
+                .andExpect(status().isNotFound());
+        org.assertj.core.api.Assertions.assertThat(reminderRepository.findByDecisionIdOrderByDueAtAsc(UUID.fromString(id)))
+                .allMatch(r -> r.status() != com.decisionassistant.notification.OutcomeReminder.Status.PENDING);
+        mvc.perform(post("/api/v1/decisions/{id}/resolutions", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"DEFERRED\"}"))
+                .andExpect(status().isConflict());
+        mvc.perform(post("/api/v1/decisions/{id}/outcome-check-ins", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"satisfaction":3,"expectationStatus":"MET","resolutionId":"%s","expectedVersion":%s}
+                """.formatted(first.path("id").asText(), finalDecision.path("version")))).andExpect(status().isConflict());
+        mvc.perform(post("/api/v1/decisions/{id}/outcome-check-ins", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"satisfaction":4,"expectationStatus":"MET","notes":"구매하지 않아도 괜찮았습니다.","resolutionId":"%s","expectedVersion":%s}
+                """.formatted(corrected.path("id").asText(), finalDecision.path("version")))).andExpect(status().isCreated());
+    }
+
+    @Test
+    void reconsiderationPreservesValidHistoryAndCanCompleteWithAnotherOption() throws Exception {
+        var created = revisionFixture(); var id = created.path("id").asText();
+        var first = resolveRevision(id, "ABANDONED", null);
+        var completed = readDecision(id);
+        mvc.perform(post("/api/v1/decisions/{id}/revisions", id).with(signedIn(createOtherUser())).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"mode\":\"RECONSIDERATION\",\"expectedVersion\":0}"))
+                .andExpect(status().isNotFound());
+        startRevisionStatus(id, "RECONSIDERATION", 0, 409);
+        var editing = startRevision(id, "RECONSIDERATION", completed.path("version").asLong());
+        org.assertj.core.api.Assertions.assertThat(editing.path("status").asText()).isEqualTo("DRAFT");
+        org.assertj.core.api.Assertions.assertThat(editing.path("resolutions").get(0).path("comparisonSnapshot")).isEqualTo(first.path("comparisonSnapshot"));
+        resolveRevision(id, "DEFERRED", null);
+        var second = resolveRevision(id, "CHOSEN", created.path("options").get(1).path("id").asText());
+        org.assertj.core.api.Assertions.assertThat(second.path("editMode").asText()).isEqualTo("RECONSIDERATION");
+        org.assertj.core.api.Assertions.assertThat(second.path("previousResolutionId").asText()).isEqualTo(first.path("id").asText());
+        var result = readDecision(id);
+        org.assertj.core.api.Assertions.assertThat(result.path("result").asText()).isEqualTo("OPTION_SELECTED");
+        org.assertj.core.api.Assertions.assertThat(result.path("resolutions").get(2).path("supersededAt").isNull()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(reminderRepository.findByDecisionIdOrderByDueAtAsc(UUID.fromString(id)))
+                .hasSize(4).allMatch(r -> r.resolutionId().toString().equals(second.path("id").asText()));
+    }
+
+    @Test
+    void legacySnapshotsAndUnlinkedOutcomesSurviveCorrectionWithoutRevivingOldReminders() throws Exception {
+        var created = revisionFixture(); var id = created.path("id").asText();
+        var first = resolveRevision(id, "CHOSEN", created.path("options").get(0).path("id").asText());
+        mvc.perform(post("/api/v1/decisions/{id}/outcome-check-ins", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"satisfaction\":4,\"expectationStatus\":\"MET\",\"workedWell\":\"착용감\"}"))
+                .andExpect(status().isCreated());
+        var uuid = UUID.fromString(id);
+        jdbc.update("update decisions set current_resolution_id = null where id = ?", uuid);
+        jdbc.update("update outcome_check_ins set resolution_id = null where decision_id = ?", uuid);
+        jdbc.update("update outcome_reminders set resolution_id = null where decision_id = ?", uuid);
+        jdbc.update("update resolutions set comparison_snapshot = jsonb_set(comparison_snapshot - 'title', '{schemaVersion}', '\"comparison-v1\"') where decision_id = ?", uuid);
+        var before = readDecision(id);
+        org.assertj.core.api.Assertions.assertThat(before.path("currentResolutionId").asText()).isEqualTo(first.path("id").asText());
+        org.assertj.core.api.Assertions.assertThat(before.path("resolutions").get(0).path("comparisonSnapshot").path("title").isNull()).isTrue();
+        startRevision(id, "CORRECTION", before.path("version").asLong());
+        resolveRevision(id, "CHOSEN", created.path("options").get(1).path("id").asText());
+        var after = readDecision(id);
+        org.assertj.core.api.Assertions.assertThat(after.path("outcomes").get(0).path("resolutionId").isNull()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(after.path("resolutions").get(1).path("comparisonSnapshot").path("schemaVersion").asText()).isEqualTo("comparison-v1");
+        org.assertj.core.api.Assertions.assertThat(preferenceMemories.findAllByOwnerUserIdOrderByUpdatedAtDesc(TEST_USER_ID))
+                .noneMatch(m -> uuid.equals(m.sourceDecisionId()));
+        var legacy = reminderRepository.findByDecisionIdOrderByDueAtAsc(uuid).stream().filter(r -> r.resolutionId() == null).findFirst().orElseThrow();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/decisions/{id}/reminders/{reminder}", id, legacy.id())
+                .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"action\":\"RESCHEDULE\",\"dueAt\":\"2030-01-01T00:00:00Z\"}"))
+                .andExpect(status().isConflict());
+    }
+
+    private tools.jackson.databind.JsonNode revisionFixture() throws Exception {
+        return mapper.readTree(mvc.perform(post("/api/v1/decisions").with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"intentText":"결정 정정 검증", "templateKey":"EARBUDS", "webConsent":false,
+                 "selectedSources":[{"url":"https://example.com/alpha", "name":"Alpha"},
+                                    {"url":"https://example.com/beta", "name":"Beta"}]}
+                """)).andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+    }
+
+    private tools.jackson.databind.JsonNode readDecision(String id) throws Exception {
+        return mapper.readTree(mvc.perform(get("/api/v1/decisions/{id}", id).with(signedIn()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    }
+
+    private tools.jackson.databind.JsonNode resolveRevision(String id, String kind, String option) throws Exception {
+        var body = mapper.createObjectNode().put("kind", kind).put("rationale", "기록 " + kind)
+                .put("expectedVersion", readDecision(id).path("version").asLong());
+        if (option != null) body.put("selectedOptionId", option);
+        return mapper.readTree(mvc.perform(post("/api/v1/decisions/{id}/resolutions", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(body)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+    }
+
+    private tools.jackson.databind.JsonNode startRevision(String id, String mode, long version) throws Exception {
+        return mapper.readTree(mvc.perform(post("/api/v1/decisions/{id}/revisions", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"mode\":\"%s\",\"expectedVersion\":%d}".formatted(mode, version)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+    }
+
+    private void startRevisionStatus(String id, String mode, long version, int expected) throws Exception {
+        mvc.perform(post("/api/v1/decisions/{id}/revisions", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"mode\":\"%s\",\"expectedVersion\":%d}".formatted(mode, version)))
+                .andExpect(status().is(expected));
     }
 
     tools.jackson.databind.ObjectMapper mapper = new tools.jackson.databind.ObjectMapper();

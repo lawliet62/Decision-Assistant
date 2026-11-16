@@ -5,11 +5,14 @@ import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { api } from "@/shared/api/client";
 import type { AiCapabilitiesResponse, DecisionResponse, EvaluationResponse, StructureRunResponse, UpdateDraftRequest } from "@/shared/api/types";
 import { EvaluationResultView } from "@/features/evaluation-result/evaluation-result";
+import { ResolutionSnapshots } from "./comparison-workspace";
 
 type Problem = { detail?: string; violations?: string[] };
 
 export function LegacyDecisionEditor({ initialDecision }: { initialDecision: DecisionResponse }) {
   const [decision, setDecision] = useState(initialDecision);
+  const [revisionBusy, setRevisionBusy] = useState(false);
+  const completed = decision.status === "CHOSEN" || decision.status === "ABANDONED";
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
   const [evaluation, setEvaluation] = useState<EvaluationResponse>();
@@ -18,13 +21,13 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
   const [includeLlm, setIncludeLlm] = useState(false);
   const [aiConsent, setAiConsent] = useState(false);
   const [sensitiveDataAcknowledged, setSensitiveDataAcknowledged] = useState(false);
-  const [selectedOptionId, setSelectedOptionId] = useState("");
-  const [rationale, setRationale] = useState("");
+  const [selectedOptionId, setSelectedOptionId] = useState(initialDecision.resolutions?.[0]?.selectedOptionId ?? "");
+  const [rationale, setRationale] = useState(initialDecision.resolutions?.[0]?.rationale ?? "");
   const [satisfaction, setSatisfaction] = useState(4);
   const [expectationStatus, setExpectationStatus] = useState<"MET" | "PARTIALLY_MET" | "NOT_MET" | "TOO_EARLY">("TOO_EARLY");
   const [outcomeNotes, setOutcomeNotes] = useState("");
 
-  const { control, register, handleSubmit, getValues, setValue, reset, formState: { isDirty, isSubmitting } } = useForm<UpdateDraftRequest>({
+  const { control, register, handleSubmit, getValues, setValue, reset, formState: { isDirty, isSubmitting, dirtyFields } } = useForm<UpdateDraftRequest>({
     defaultValues: toDraft(initialDecision),
   });
   const optionsArray = useFieldArray({ control, name: "options", keyName: "formKey" });
@@ -63,6 +66,7 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
 
   function applyDecision(next: DecisionResponse) {
     setDecision(next);
+    setEvaluation(undefined); setProposal(undefined);
     reset(toDraft(next));
   }
 
@@ -158,9 +162,10 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
 
   async function resolveDecision(kind: "CHOSEN" | "DEFERRED" | "ABANDONED") {
     clearFeedback();
+    if (Object.keys(dirtyFields).length > 0) return setError("편집한 내용을 먼저 저장하세요.");
     const { error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/resolutions", {
       params: { path: { decisionId: decision.id! } },
-      body: { kind, selectedOptionId: kind === "CHOSEN" ? selectedOptionId : undefined, rationale },
+      body: { kind, selectedOptionId: kind === "CHOSEN" ? selectedOptionId : undefined, rationale, expectedVersion: decision.version },
     });
     if (apiError) return setError(problemMessage(apiError));
     await refreshDecision();
@@ -171,7 +176,7 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
     clearFeedback();
     const { error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/outcome-check-ins", {
       params: { path: { decisionId: decision.id! } },
-      body: { satisfaction, expectationStatus, notes: outcomeNotes },
+      body: { satisfaction, expectationStatus, notes: outcomeNotes, resolutionId: decision.currentResolutionId, expectedVersion: decision.version },
     });
     if (apiError) return setError(problemMessage(apiError));
     setOutcomeNotes("");
@@ -180,6 +185,20 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
   }
 
   function clearFeedback() { setMessage(undefined); setError(undefined); }
+
+  async function beginRevision(mode: "CORRECTION" | "RECONSIDERATION") {
+    if (revisionBusy) return;
+    clearFeedback(); setRevisionBusy(true);
+    try {
+      const { data, error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/revisions", {
+        params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.version!, mode },
+      });
+      if (apiError || !data) return setError(problemMessage(apiError));
+      applyDecision(data);
+      setMessage(mode === "CORRECTION" ? "기록 수정을 시작했습니다." : "다시 검토를 시작했습니다.");
+    } catch { setError("연결을 확인하고 최신 기록을 다시 불러오세요."); }
+    finally { setRevisionBusy(false); }
+  }
 
   function hasAiDataConsent() {
     if (!aiConsent) {
@@ -197,14 +216,18 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
     <div className="mt-6 space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-emerald-700">{decision.templateKey} · {decision.status} · v{decision.version}</p>
+          <p className="text-sm font-medium text-emerald-700">{decision.templateKey} · {completed ? `결정 완료 · ${decision.status === "CHOSEN" ? "후보 선택" : "구매하지 않음"}` : decision.status === "DEFERRED" ? "보류" : "비교 중"}</p>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight">{decision.title}</h1>
         </div>
-        <button form="decision-form" disabled={isSubmitting || !isDirty} className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">Draft 저장</button>
+        <button form="decision-form" disabled={completed || revisionBusy || isSubmitting || !isDirty} className="rounded-full bg-zinc-950 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">Draft 저장</button>
       </header>
 
       {(message || error) && <div className={`rounded-xl p-4 text-sm ${error ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{error ?? message}</div>}
+      <ResolutionSnapshots decision={decision} />
+      {completed && <Section title="완료한 결정 관리" description="후보 선택은 실제 구매 완료를 뜻하지 않습니다. 기록 수정은 이전 기록을 정정 이력으로 남기고, 다시 검토는 당시 판단을 유효한 기록으로 보존합니다."><button disabled={revisionBusy} className={secondaryButton} onClick={() => beginRevision("CORRECTION")}>기록 수정</button><button disabled={revisionBusy} className={secondaryButton} onClick={() => beginRevision("RECONSIDERATION")}>다시 검토</button></Section>}
+      {decision.editMode && <p role="status">{decision.editMode === "CORRECTION" ? "기록 수정 중 · 수정한 입력을 저장하고 결정 결과를 다시 기록하세요. 이전 기록의 개인화 적용을 중단했습니다." : "다시 검토 중 · 이전 판단과 회고를 보존합니다."}</p>}
 
+      <fieldset disabled={completed || revisionBusy} className="space-y-8">
       <form id="decision-form" onSubmit={handleSubmit(saveDraft)} className="space-y-8">
         <Section title="Context" description="목적과 예산은 추천보다 먼저 확인되는 입력입니다.">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -290,15 +313,16 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
 
       {evaluation && <EvaluationResultView evaluation={evaluation} />}
 
-      <Section title="Actual choice" description="추천과 별개로 사용자의 실제 선택과 당시 이유를 기록합니다.">
-        <div className="grid gap-3 sm:grid-cols-2"><select value={selectedOptionId} onChange={(event) => setSelectedOptionId(event.target.value)} className={inputClass}><option value="">Option 선택</option>{options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select><input value={rationale} onChange={(event) => setRationale(event.target.value)} className={inputClass} placeholder="선택 이유" /></div>
-        <div className="flex flex-wrap gap-2"><button type="button" onClick={() => resolveDecision("CHOSEN")} className={secondaryButton}>선택 기록</button><button type="button" onClick={() => resolveDecision("DEFERRED")} className={secondaryButton}>보류 기록</button><button type="button" onClick={() => resolveDecision("ABANDONED")} className={secondaryButton}>포기 기록</button></div>
+      <Section title="결정 결과" description="후보 선택과 구매하지 않음은 모두 결정 완료이며 실제 구매 완료를 뜻하지 않습니다.">
+        <div className="grid gap-3 sm:grid-cols-2"><select aria-label="실제로 선택한 후보" value={selectedOptionId} onChange={(event) => setSelectedOptionId(event.target.value)} className={inputClass}><option value="">Option 선택</option>{options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select><input aria-label="결정 이유" value={rationale} onChange={(event) => setRationale(event.target.value)} className={inputClass} placeholder="선택 이유" /></div>
+        <div className="flex flex-wrap gap-2"><button type="button" disabled={!selectedOptionId} onClick={() => resolveDecision("CHOSEN")} className={secondaryButton}>선택 기록</button><button type="button" disabled={decision.editMode === "CORRECTION"} onClick={() => resolveDecision("DEFERRED")} className={secondaryButton}>보류 기록</button><button type="button" onClick={() => resolveDecision("ABANDONED")} className={secondaryButton}>구매하지 않음으로 완료</button></div>
       </Section>
+      </fieldset>
 
-      {decision.status === "CHOSEN" && <Section title="Outcome check-in" description="시간이 지난 뒤 만족도와 기대 충족 여부를 반복 기록합니다.">
+      {completed && <Section title="Outcome check-in" description={decision.status === "ABANDONED" ? "구매하지 않기로 한 결정에 대한 만족도와 결과를 기록합니다." : "시간이 지난 뒤 만족도와 기대 충족 여부를 반복 기록합니다."}>
         <div className="grid gap-3 sm:grid-cols-3"><select value={satisfaction} onChange={(event) => setSatisfaction(Number(event.target.value))} className={inputClass}>{[1,2,3,4,5].map((value) => <option key={value} value={value}>만족도 {value}</option>)}</select><select value={expectationStatus} onChange={(event) => setExpectationStatus(event.target.value as typeof expectationStatus)} className={inputClass}><option value="MET">기대 충족</option><option value="PARTIALLY_MET">일부 충족</option><option value="NOT_MET">미충족</option><option value="TOO_EARLY">판단 이른 시점</option></select><input value={outcomeNotes} onChange={(event) => setOutcomeNotes(event.target.value)} className={inputClass} placeholder="사후 메모" /></div>
         <button type="button" onClick={addOutcome} className={secondaryButton}>Check-in 저장</button>
-        <ul className="space-y-2 text-sm text-zinc-600">{decision.outcomes?.map((outcome) => <li key={outcome.id}>{outcome.createdAt?.slice(0,10)} · 만족도 {outcome.satisfaction} · {outcome.expectationStatus} · {outcome.notes}</li>)}</ul>
+        <ul className="space-y-2 text-sm text-zinc-600">{decision.outcomes?.filter(outcome => outcome.resolutionId === decision.currentResolutionId).map((outcome) => <li key={outcome.id}>{outcome.createdAt?.slice(0,10)} · 만족도 {outcome.satisfaction} · {outcome.expectationStatus} · {outcome.notes}</li>)}</ul>
       </Section>}
     </div>
   );

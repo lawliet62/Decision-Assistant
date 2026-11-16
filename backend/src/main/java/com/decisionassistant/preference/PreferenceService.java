@@ -15,9 +15,11 @@ import java.util.UUID;
 public class PreferenceService {
     private final PreferenceMemoryRepository memories;
     private final CurrentUserProvider currentUser;
+    private final com.decisionassistant.decision.DecisionRepository decisions;
     private final Clock clock = Clock.systemUTC();
-    public PreferenceService(PreferenceMemoryRepository memories, CurrentUserProvider currentUser) {
-        this.memories = memories; this.currentUser = currentUser;
+    public PreferenceService(PreferenceMemoryRepository memories, CurrentUserProvider currentUser,
+                             com.decisionassistant.decision.DecisionRepository decisions) {
+        this.memories = memories; this.currentUser = currentUser; this.decisions = decisions;
     }
     @Transactional(readOnly = true)
     public List<PreferenceDtos.PreferenceResponse> list() {
@@ -40,8 +42,15 @@ public class PreferenceService {
         return response(item);
     }
     @Transactional public void delete(UUID id) { memories.delete(required(id)); }
-    private PreferenceMemory required(UUID id) { return memories.findByIdAndOwnerUserId(id, currentUser.current().id())
-            .orElseThrow(() -> new NotFoundException("성향 기억을 찾을 수 없습니다.")); }
+    private PreferenceMemory required(UUID id) {
+        var owner = currentUser.current().id();
+        var item = memories.findByIdAndOwnerUserId(id, owner)
+                .orElseThrow(() -> new NotFoundException("성향 기억을 찾을 수 없습니다."));
+        if (item.sourceDecisionId() != null) decisions.lockByIdAndOwner(item.sourceDecisionId(), owner)
+                .orElseThrow(() -> new NotFoundException("원본 결정을 찾을 수 없습니다."));
+        return memories.findByIdAndOwnerUserId(id, owner)
+                .orElseThrow(() -> new NotFoundException("정정된 기록의 성향 기억은 사용할 수 없습니다."));
+    }
     private PreferenceDtos.PreferenceResponse response(PreferenceMemory item) {
         return new PreferenceDtos.PreferenceResponse(item.id(), item.templateKey(), item.criterionName(),
                 item.statement(), item.strength(), item.status().name(), item.confidence().name(), item.sourceDecisionId());

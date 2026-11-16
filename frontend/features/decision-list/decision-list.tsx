@@ -11,8 +11,10 @@ type Page = components["schemas"]["DecisionPage"];
 type Count = components["schemas"]["StatusCount"];
 type Status = NonNullable<Summary["status"]>;
 type Sort = "UPDATED_AT" | "CREATED_AT" | "TITLE" | "TEMPLATE_KEY";
-const statuses: Status[] = ["DRAFT", "DEFERRED", "CHOSEN", "ABANDONED", "ARCHIVED"];
-const labels: Record<Status, string> = { DRAFT: "비교 중", DEFERRED: "보류", CHOSEN: "선택 완료", ABANDONED: "구매하지 않음", ARCHIVED: "보관됨" };
+const statuses: Status[] = ["DRAFT", "DEFERRED", "CHOSEN", "ARCHIVED"];
+const labels: Record<Status, string> = { DRAFT: "비교 중", DEFERRED: "보류", CHOSEN: "결정 완료", ABANDONED: "결정 완료 · 구매하지 않음", ARCHIVED: "보관됨" };
+const groupStatus = (status?: Status) => status === "ABANDONED" ? "CHOSEN" : status;
+const apiStatuses = (scope: Status[]) => scope.flatMap(s => s === "CHOSEN" ? ["CHOSEN", "ABANDONED"] as Status[] : [s]);
 const categories: Record<string, string> = { LAPTOP: "노트북", PHONE: "휴대폰", TABLET: "태블릿", MONITOR: "모니터", EARBUDS: "무선 이어폰", CUSTOM: "직접 비교" };
 const sorts: Record<Sort, string> = { UPDATED_AT: "수정일", CREATED_AT: "생성일", TITLE: "제목", TEMPLATE_KEY: "제품군" };
 const button = "rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed";
@@ -67,12 +69,12 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
   useEffect(() => {
     const controller = new AbortController();
     api.GET("/api/v1/decisions/counts", { signal: controller.signal }).then(result => {
-      if (!controller.signal.aborted) { if (result.data) setCounts(result.data); else setError(true); }
+      if (!controller.signal.aborted) { if (result.data) setCounts(statuses.map(status => ({ status, count: result.data!.filter(item => groupStatus(item.status) === status).reduce((sum, item) => sum + (item.count ?? 0), 0) }))); else setError(true); }
     }).catch(() => { if (!controller.signal.aborted) setError(true); });
     return () => controller.abort();
   }, [revision]);
-  const selected = params.has("statuses") ? statuses.filter(s => params.get("statuses")!.split(",").includes(s)) : statuses;
-  const opened = (params.get("open") ?? "").split(",");
+  const selected = params.has("statuses") ? statuses.filter(s => params.get("statuses")!.split(",").map(value => value === "ABANDONED" ? "CHOSEN" : value).includes(s)) : statuses;
+  const opened = (params.get("open") ?? "").split(",").map(s => s === "ABANDONED" ? "CHOSEN" : s);
   const rawSort = params.get("sort");
   const sort: Sort = rawSort && Object.hasOwn(sorts, rawSort) ? rawSort as Sort : "UPDATED_AT";
   const direction = params.get("direction") === "ASC" ? "ASC" : "DESC";
@@ -104,7 +106,7 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
     }
     setSelecting(true); setSelectionError("");
     try {
-      const result = await api.GET("/api/v1/decisions/selection", { params: { query: { statuses: scope } } });
+      const result = await api.GET("/api/v1/decisions/selection", { params: { query: { statuses: apiStatuses(scope) } } });
       if (!result.data) {
         setSelectionError(result.response.status === 403 || result.response.status === 404
           ? "선택 요청이 거부되었습니다. 로그인과 앱 서버 버전을 확인하고, 서버를 최신 버전으로 다시 시작한 뒤 시도해 주세요."
@@ -113,7 +115,7 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
       }
       selectItems(result.data);
       const items = result.data;
-      setSnapshots(previous => { const next = { ...previous }; scope.forEach(s => { next[s] = items.filter(item => item.status === s); }); return next; });
+      setSnapshots(previous => { const next = { ...previous }; scope.forEach(s => { next[s] = items.filter(item => groupStatus(item.status) === s); }); return next; });
     } catch { setSelectionError("서버에 연결하지 못했습니다. 연결을 확인하고 다시 시도해 주세요."); }
     finally { setSelecting(false); }
   }
@@ -168,7 +170,7 @@ function DecisionGroup({ onChanged, status, page, sort, direction, onDelete, cho
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    api.GET("/api/v1/decisions", { params: { query: { statuses: [status], page, size: 10, sort, direction } }, signal: controller.signal }).then(({ data }) => {
+    api.GET("/api/v1/decisions", { params: { query: { statuses: apiStatuses([status]), page, size: 10, sort, direction } }, signal: controller.signal }).then(({ data }) => {
       if (controller.signal.aborted) return;
       if (!data) { setError(true); return; }
       setError(false); setResult(data);
@@ -196,7 +198,7 @@ function DecisionGroup({ onChanged, status, page, sort, direction, onDelete, cho
       <input type="checkbox" aria-label={`${d.title} 선택`} disabled={selecting} checked={!!d.id && !!chosen[d.id]} onChange={e => onToggle(d, e.target.checked)} />
       <Link href={`/decisions/${d.id}`} className="min-w-0 flex-1 rounded-md py-1 hover:text-emerald-700">
         <span className="block break-words font-medium">{d.title}</span><span className="mt-1 block text-sm text-zinc-500">{categories[d.templateKey ?? ""] ?? "직접 비교"} · {labels[status]}</span>
-        <span className="mt-1 block text-xs text-zinc-500">생성 {date(d.createdAt)} · 수정 {date(d.updatedAt)}</span>
+        <span className="block text-xs text-zinc-600">{d.status === "CHOSEN" ? "후보 선택" : d.status === "ABANDONED" ? "구매하지 않음" : labels[d.status ?? "DRAFT"]}</span><span className="mt-1 block text-xs text-zinc-500">생성 {date(d.createdAt)} · 수정 {date(d.updatedAt)}</span>
       </Link>{(d.status === "CHOSEN" || d.status === "ABANDONED") && d.id && d.version !== undefined && <ArchiveButton id={d.id} version={d.version} onChanged={onChanged} />}<button className={button + " shrink-0 text-red-700"} aria-label={`${d.title} 삭제`} onClick={() => onDelete(d)}>삭제</button>
     </li>)}</ul>}
     {(result.totalPages ?? 0) > 0 && <nav aria-label={`${labels[status]} 페이지`} className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 pt-4">

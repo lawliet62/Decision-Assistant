@@ -25,6 +25,26 @@ import static com.decisionassistant.decision.DecisionTypes.TemplateKey;
 @Table(name = "decisions")
 public class Decision {
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "edit_mode", length = 30)
+    private DecisionTypes.EditMode editMode;
+    @Column(name = "current_resolution_id")
+    private UUID currentResolutionId;
+    @Column(name = "revision_base_id")
+    private UUID revisionBaseId;
+
+    public DecisionTypes.EditMode editMode() { return editMode; }
+    public UUID currentResolutionId() { return currentResolutionId; }
+    public UUID revisionBaseId() { return revisionBaseId; }
+    public void beginRevision(DecisionTypes.EditMode mode, UUID baseId, Instant now) {
+        editMode = mode; revisionBaseId = baseId; currentResolutionId = null;
+        status = DecisionStatus.DRAFT; archivedAt = null; updatedAt = now;
+    }
+    public void recordResolution(UUID id, boolean completed) {
+        currentResolutionId = id;
+        if (completed) { editMode = null; revisionBaseId = null; }
+    }
+
     @Column(name = "archived_at")
     private Instant archivedAt;
     @Column(name = "deleted_at")

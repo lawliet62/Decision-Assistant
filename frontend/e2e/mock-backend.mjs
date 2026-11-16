@@ -175,6 +175,7 @@ const server = http.createServer(async (request, response) => {
     current = body.discovery ? createDiscovery(body) : create(body);
     if (body.title === "조건 비교 브라우저 검증 (가상제품)") comparisonFixture(current);
     discoveryHistoryCandidates = current.guidance.candidateSuggestions; pendingCandidates = undefined;
+    if (body.legacyFixture) { current.title = body.title; delete current.guidance; }
     if (body.webConsent) current.guidance.evidence = current.options.map(item => ({
       id: randomUUID(), optionId: item.id, url: item.sourceUrl, status: "FAILED", error: "수집 실패", stale: false,
     }));
@@ -245,7 +246,7 @@ const server = http.createServer(async (request, response) => {
   if (request.method === "PUT" && request.url.endsWith("/draft")) {
     if (body.expectedVersion !== current.version) return send(409, { detail: "최신 내용을 다시 불러오세요." });
     Object.assign(current, body, { version: current.version + 1 });
-    current.guidance.readiness = current.values.length === current.options.length * criteria.length ? "VERIFIED_READY" : "PROVISIONAL";
+    if (current.guidance) current.guidance.readiness = current.values.length === current.options.length * criteria.length ? "VERIFIED_READY" : "PROVISIONAL";
     return send(200, current);
   }
   if (request.method === "POST" && request.url.endsWith("/evaluations")) return send(201, {
@@ -255,10 +256,19 @@ const server = http.createServer(async (request, response) => {
     })) },
   });
   if (request.method === "POST" && request.url.endsWith("/resolutions")) {
-    const resolution = { id: randomUUID(), ...body, createdAt: new Date().toISOString() };
-    if (current.comparison) resolution.comparisonSnapshot = structuredClone({ schemaVersion: "comparison-v1", capturedAt: resolution.createdAt, options: current.options, criteria: current.criteria, values: current.values, productFacts: current.productFacts, comparison: current.comparison });
+    const resolution = { id: randomUUID(), ...body, editMode: current.editMode, previousResolutionId: current.revisionBaseId, createdAt: new Date().toISOString() };
+    resolution.comparisonSnapshot = structuredClone({ schemaVersion: "comparison-v2", capturedAt: resolution.createdAt, title: current.title, context: current.context, options: current.options, criteria: current.criteria, values: current.values, productFacts: current.productFacts, comparison: current.comparison });
+    if (current.editMode === "CORRECTION") current.resolutions.find(item => item.id === current.revisionBaseId).supersededAt = resolution.createdAt;
     current.status = body.kind; current.resolutions.unshift(resolution); current.version++;
+    current.currentResolutionId = resolution.id;
+    if (body.kind !== "DEFERRED") { current.editMode = undefined; current.revisionBaseId = undefined; }
     return send(201, resolution);
+  }
+  if (request.method === "POST" && request.url.endsWith("/revisions")) {
+    if (body.expectedVersion !== current.version || !["CHOSEN", "ABANDONED"].includes(current.status)) return send(409, { detail: "최신 기록을 확인하세요." });
+    current.revisionBaseId = current.currentResolutionId;
+    current.currentResolutionId = undefined; current.editMode = body.mode; current.status = "DRAFT"; current.version++;
+    return send(200, current);
   }
   if (request.method === "POST" && request.url.endsWith("/outcome-check-ins")) {
     const outcome = { id: randomUUID(), ...body, createdAt: new Date().toISOString() };
