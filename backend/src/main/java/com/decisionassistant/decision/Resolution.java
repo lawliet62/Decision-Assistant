@@ -16,6 +16,20 @@ import static com.decisionassistant.decision.DecisionTypes.ResolutionKind;
 @Table(name = "resolutions")
 public class Resolution {
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "edit_mode", length = 30)
+    private DecisionTypes.EditMode editMode;
+    @Column(name = "previous_resolution_id")
+    private UUID previousResolutionId;
+    @Column(name = "superseded_at")
+    private Instant supersededAt;
+
+    public DecisionTypes.EditMode editMode() { return editMode; }
+    public UUID previousResolutionId() { return previousResolutionId; }
+    public Instant supersededAt() { return supersededAt; }
+    public void revision(DecisionTypes.EditMode mode, UUID previous) { editMode = mode; previousResolutionId = previous; }
+    public void supersede(Instant now) { supersededAt = now; }
+
     @Id
     private UUID id;
 

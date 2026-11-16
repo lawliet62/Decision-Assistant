@@ -386,7 +386,12 @@ public class DecisionService {
 
     @Transactional
     public ResolutionData resolve(UUID id, CreateResolutionRequest request) {
-        var decision = required(id);
+        var decision = locked(id);
+        ensureEditable(decision);
+        if (decision.editMode() == DecisionTypes.EditMode.CORRECTION && request.kind() == DecisionTypes.ResolutionKind.DEFERRED)
+            throw new ConflictException("기록 수정은 후보 선택 또는 구매하지 않음으로 완료하세요.");
+        if (decision.editMode() != null && request.expectedVersion() == null)
+            throw new ConflictException("기록 수정·재검토는 최신 version으로 완료하세요.");
         if (request.expectedVersion() != null && request.expectedVersion() != decision.version())
             throw new ConflictException("비교가 변경되었습니다. 최신 내용을 확인한 뒤 기록하세요.");
         if (request.kind() == DecisionTypes.ResolutionKind.CHOSEN) {
@@ -400,14 +405,46 @@ public class DecisionService {
         var now = Instant.now(clock);
         var resolution = resolutions.save(new Resolution(
                 id, request.kind(), request.selectedOptionId(), request.rationale(), now, Comparison.Snapshot.capture(response(decision), now)));
+        resolution.revision(decision.editMode(), decision.revisionBaseId());
+        if (decision.editMode() == DecisionTypes.EditMode.CORRECTION) {
+            resolutions.findById(decision.revisionBaseId()).orElseThrow().supersede(now);
+            preferences.supersedeForResolution(id, decision.revisionBaseId(), now);
+        }
         decision.resolve(switch (request.kind()) {
             case CHOSEN -> DecisionTypes.DecisionStatus.CHOSEN;
             case DEFERRED -> DecisionTypes.DecisionStatus.DEFERRED;
             case ABANDONED -> DecisionTypes.DecisionStatus.ABANDONED;
         }, now);
-        if (request.kind() == DecisionTypes.ResolutionKind.CHOSEN) scheduleReminders(id, now);
+        decision.recordResolution(resolution.id(), request.kind() != DecisionTypes.ResolutionKind.DEFERRED);
+        if (request.kind() == DecisionTypes.ResolutionKind.CHOSEN) scheduleReminders(id, resolution.id(), now);
         log.info("product_event=decision_resolved decision_id={} kind={}", id, request.kind());
         return resolutionData(resolution);
+    }
+
+    @Transactional
+    public DecisionResponse beginRevision(UUID id, BeginRevisionRequest request) {
+        var decision = locked(id);
+        if (decision.version() != request.expectedVersion()) throw new ConflictException("결정이 변경되었습니다. 최신 내용을 확인하세요.");
+        if (DecisionTypes.phase(decision.status()) != DecisionTypes.DecisionPhase.COMPLETED)
+            throw new ConflictException("완료된 결정만 기록 수정 또는 다시 검토를 시작할 수 있습니다.");
+        var base = currentResolution(decision);
+        if (base == null) throw new ConflictException("완료 기록을 찾을 수 없습니다.");
+        reminders.findByDecisionIdOrderByDueAtAsc(id).stream()
+                .filter(r -> r.status() == OutcomeReminder.Status.PENDING || r.status() == OutcomeReminder.Status.SENT)
+                .forEach(OutcomeReminder::skip);
+        decision.beginRevision(request.mode(), base.id(), Instant.now(clock));
+        decisions.flush();
+        return response(decision);
+    }
+
+    private Decision locked(UUID id) {
+        return decisions.lockByIdAndOwner(id, currentUser.current().id())
+                .orElseThrow(() -> new NotFoundException("결정을 찾을 수 없습니다."));
+    }
+
+    private Resolution currentResolution(Decision decision) {
+        if (decision.currentResolutionId() != null) return resolutions.findById(decision.currentResolutionId()).orElse(null);
+        return resolutions.findByDecisionIdOrderByCreatedAtDesc(decision.id()).stream().findFirst().orElse(null);
     }
 
     private Comparison.State comparisonState(Decision decision) {
@@ -452,19 +489,28 @@ public class DecisionService {
 
     @Transactional
     public OutcomeData addOutcome(UUID id, CreateOutcomeRequest request) {
-        var decision = required(id);
-        if (decision.status() != DecisionTypes.DecisionStatus.CHOSEN) {
-            throw new ConflictException("Outcome은 실제 Option을 선택한 Decision에만 기록할 수 있습니다.");
+        var decision = locked(id);
+        if (request.expectedVersion() != null && request.expectedVersion() != decision.version())
+            throw new ConflictException("결정이 변경되었습니다. 최신 기록을 확인하세요.");
+        if (DecisionTypes.phase(decision.status()) != DecisionTypes.DecisionPhase.COMPLETED) {
+            throw new ConflictException("회고는 완료된 결정에만 기록할 수 있습니다.");
         }
+        var resolution = currentResolution(decision);
+        if (resolution == null) throw new ConflictException("회고를 연결할 완료 기록을 찾을 수 없습니다.");
+        if (resolution.editMode() != null && (request.resolutionId() == null || request.expectedVersion() == null))
+            throw new ConflictException("정정·재검토 후에는 회고 대상 기록과 최신 version이 필요합니다.");
+        if (request.resolutionId() != null && !request.resolutionId().equals(resolution.id()))
+            throw new ConflictException("회고 대상 결정이 변경되었습니다. 최신 기록을 확인하세요.");
         var outcome = outcomes.save(new OutcomeCheckIn(
                 id, request.satisfaction(), request.expectationStatus(), request.notes(), request.wouldChooseAgain(),
                 request.workedWell(), request.disappointedBy(), Instant.now(clock)));
+        outcome.resolution(resolution.id());
         var activeReminders = reminders.findByDecisionIdOrderByDueAtAsc(id).stream()
                 .filter(item -> item.status() == OutcomeReminder.Status.PENDING || item.status() == OutcomeReminder.Status.SENT)
                 .toList();
         activeReminders.stream().map(OutcomeReminder::dueAt).min(Instant::compareTo).ifPresent(firstDue ->
                 activeReminders.stream().filter(item -> item.dueAt().equals(firstDue)).forEach(OutcomeReminder::complete));
-        proposeMemories(decision, outcome, request);
+        if (decision.status() == DecisionTypes.DecisionStatus.CHOSEN) proposeMemories(decision, outcome, request);
         log.info("product_event=outcome_recorded decision_id={} outcome_id={}", id, outcome.id());
         return outcomeData(outcome);
     }
@@ -658,11 +704,14 @@ public class DecisionService {
                                 item.bestAnchor(), item.unit(), item.active())));
     }
 
-    private void scheduleReminders(UUID decisionId, Instant now) {
+    private void scheduleReminders(UUID decisionId, UUID resolutionId, Instant now) {
         for (var days : List.of(14L, 60L)) {
             var due = now.plus(days, ChronoUnit.DAYS);
-            reminders.save(new OutcomeReminder(decisionId, due, OutcomeReminder.Channel.IN_APP, now));
-            reminders.save(new OutcomeReminder(decisionId, due, OutcomeReminder.Channel.EMAIL, now));
+            for (var channel : OutcomeReminder.Channel.values()) {
+                var reminder = new OutcomeReminder(decisionId, due, channel, now);
+                reminder.resolution(resolutionId);
+                reminders.save(reminder);
+            }
         }
     }
 
@@ -731,7 +780,11 @@ public class DecisionService {
                                 suggestions.stream().filter(item -> item.discovered() && item.generation() == round.generation()).sorted(DiscoveryRanking.byPrice())
                                         .map(item -> candidateData(decision, selected, item, discoveryBudget)).toList())).toList()),
                 productFacts, decision.templateKey() == DecisionTypes.TemplateKey.EARBUDS
-                        ? Comparison.calculate(comparisonState(decision), productFacts, Instant.now(clock)) : null);
+                        ? Comparison.calculate(comparisonState(decision), productFacts, Instant.now(clock)) : null,
+                DecisionTypes.phase(decision.status()), DecisionTypes.result(decision.status()), decision.editMode(),
+                decision.currentResolutionId() != null ? decision.currentResolutionId() :
+                        (DecisionTypes.phase(decision.status()) == DecisionTypes.DecisionPhase.COMPLETED && currentResolution(decision) != null
+                                ? currentResolution(decision).id() : null));
     }
 
     private List<DiscoveryContracts.RequirementCheck> requirementChecks(Decision decision, java.util.Map<String, String> selected,
@@ -741,13 +794,14 @@ public class DecisionService {
 
     private ResolutionData resolutionData(Resolution resolution) {
         return new ResolutionData(resolution.id(), resolution.kind(), resolution.selectedOptionId(),
-                resolution.rationale(), resolution.createdAt(), resolution.comparisonSnapshot());
+                resolution.rationale(), resolution.createdAt(), resolution.comparisonSnapshot(),
+                resolution.editMode(), resolution.previousResolutionId(), resolution.supersededAt());
     }
 
     private OutcomeData outcomeData(OutcomeCheckIn outcome) {
         return new OutcomeData(outcome.id(), outcome.satisfaction(), outcome.expectationStatus(),
                 outcome.notes(), outcome.wouldChooseAgain(), outcome.workedWell(), outcome.disappointedBy(),
-                outcome.createdAt());
+                outcome.createdAt(), outcome.resolutionId());
     }
 
     private GuidanceData guidance(Decision decision, List<CandidateSuggestion> suggestions, List<EvidenceImport> evidence,

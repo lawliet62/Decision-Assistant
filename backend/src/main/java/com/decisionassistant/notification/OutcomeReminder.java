@@ -13,6 +13,9 @@ import java.util.UUID;
 @Entity
 @Table(name = "outcome_reminders")
 public class OutcomeReminder {
+    @Column(name = "resolution_id") private UUID resolutionId;
+    public UUID resolutionId() { return resolutionId; }
+    public void resolution(UUID id) { resolutionId = id; }
     public enum Status { PENDING, SENT, COMPLETED, SKIPPED, FAILED }
     public enum Channel { EMAIL, IN_APP }
 

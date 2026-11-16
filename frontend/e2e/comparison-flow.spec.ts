@@ -50,7 +50,7 @@ test("같은 후보에서 조건 복원·직접 확인·보류·결정 기록을
   await page.getByRole("button", { name: "선택 기록", exact: true }).click();
   await page.reload();
   await page.getByRole("button", { name: "3. 선택 기록", exact: true }).click();
-  await page.getByText("선택 · 4만원을 더 내고 ANC 지원, iOS는 직접 확인", { exact: false }).click();
+  await page.locator("summary").filter({ hasText: "선택 · 결정 기록 · 4만원을 더 내고 ANC 지원, iOS는 직접 확인" }).click();
   await expect(page.getByRole("heading", { name: "결정 당시 기록" })).toBeVisible();
   await expect(page.getByText("당시 근거를 보존한 기록입니다.", { exact: false })).toBeVisible();
   await expect(beta).toContainText("확인한 사양상 충족");

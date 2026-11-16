@@ -118,6 +118,13 @@ public class DecisionController {
         return service.resolve(decisionId, request);
     }
 
+    @PostMapping("/{decisionId}/revisions")
+    @Operation(summary = "완료된 결정의 기록 수정 또는 재검토 시작")
+    public DecisionResponse beginRevision(@PathVariable UUID decisionId,
+                                          @Valid @RequestBody BeginRevisionRequest request) {
+        return service.beginRevision(decisionId, request);
+    }
+
     @PutMapping("/{decisionId}/comparison")
     public DecisionResponse comparison(@PathVariable UUID decisionId, @Valid @RequestBody Comparison.UpdateRequest request) {
         return service.updateComparison(decisionId, request);

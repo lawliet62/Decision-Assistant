@@ -16,6 +16,11 @@ import static com.decisionassistant.decision.DecisionTypes.ExpectationStatus;
 @Table(name = "outcome_check_ins")
 public class OutcomeCheckIn {
 
+    @Column(name = "resolution_id")
+    private UUID resolutionId;
+    public UUID resolutionId() { return resolutionId; }
+    public void resolution(UUID id) { resolutionId = id; }
+
     @Id
     private UUID id;
 

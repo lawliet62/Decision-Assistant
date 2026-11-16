@@ -9,6 +9,27 @@ public final class DecisionTypes {
 
     public enum DecisionStatus { DRAFT, CHOSEN, DEFERRED, ABANDONED, ARCHIVED }
 
+    public enum DecisionPhase { COMPARING, DEFERRED, COMPLETED, ARCHIVED }
+    public enum DecisionResult { OPTION_SELECTED, NOT_PURCHASED }
+    public enum EditMode { CORRECTION, RECONSIDERATION }
+
+    public static DecisionPhase phase(DecisionStatus status) {
+        return switch (status) {
+            case CHOSEN, ABANDONED -> DecisionPhase.COMPLETED;
+            case DRAFT -> DecisionPhase.COMPARING;
+            case DEFERRED -> DecisionPhase.DEFERRED;
+            case ARCHIVED -> DecisionPhase.ARCHIVED;
+        };
+    }
+
+    public static DecisionResult result(DecisionStatus status) {
+        return switch (status) {
+            case CHOSEN -> DecisionResult.OPTION_SELECTED;
+            case ABANDONED -> DecisionResult.NOT_PURCHASED;
+            default -> null;
+        };
+    }
+
     public enum CriterionKind { NUMERIC_UTILITY, RATING_1_TO_5 }
 
     public enum PreferenceDirection { HIGHER_BETTER, LOWER_BETTER, NOT_APPLICABLE }

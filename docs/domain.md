@@ -10,6 +10,8 @@
 
 ## Aggregate와 lifecycle
 
+진행 단계(`phase`)와 완료 결과(`result`)를 구분한다. 후보 선택과 구매하지 않음은 모두 결정 완료이며 구매 실행 여부를 의미하지 않는다. 완료 후 기록 수정과 재검토는 [ADR 0021](decisions/0021-decision-completion-and-revisions.md)을 따른다. 새 resolution은 원본 기록과 편집 목적을 보존하고 회고·알림은 해당 resolution에 귀속한다. 정정은 이전 기록을 대체하지만 재검토는 과거 판단의 유효성을 유지한다.
+
 `Decision`이 수정 가능한 aggregate root다. Context, Option, Criterion, OptionValue, Constraint, ConstraintResult를 소유하며 optimistic `version`을 가진다.
 
 `ApplicationUser`는 외부 인증 identity와 domain ownership을 분리하는 로컬 사용자다. Auth0 `(issuer, subject)`는 `ExternalIdentity`로 연결하며 이메일은 identity key로 사용하지 않는다. Decision만 `ownerUserId`를 직접 가지고 Evaluation, StructureRun, Resolution, OutcomeCheckIn은 자신의 `decisionId`를 통해 같은 ownership을 상속한다. Template은 모든 사용자에게 공통이다.

@@ -53,6 +53,8 @@ public final class DecisionDtos {
             Instant createdAt,
             Instant updatedAt
     ) {
+        public DecisionTypes.DecisionPhase getPhase() { return DecisionTypes.phase(status); }
+        public DecisionTypes.DecisionResult getResult() { return DecisionTypes.result(status); }
     }
 
     public record DecisionPage(List<DecisionSummary> items, int page, int size, long totalElements, int totalPages) {}
@@ -80,7 +82,11 @@ public final class DecisionDtos {
             Instant updatedAt,
             DiscoveryData discovery,
             List<ProductFactsData> productFacts,
-            Comparison.Data comparison
+            Comparison.Data comparison,
+            DecisionTypes.DecisionPhase phase,
+            DecisionTypes.DecisionResult result,
+            DecisionTypes.EditMode editMode,
+            UUID currentResolutionId
     ) {
     }
 
@@ -169,13 +175,18 @@ public final class DecisionDtos {
     ) {
     }
 
+    public record BeginRevisionRequest(@NotNull @Min(0) Long expectedVersion, @NotNull DecisionTypes.EditMode mode) {}
+
     public record ResolutionData(
             UUID id,
             DecisionTypes.ResolutionKind kind,
             UUID selectedOptionId,
             String rationale,
             Instant createdAt,
-            Comparison.Snapshot comparisonSnapshot
+            Comparison.Snapshot comparisonSnapshot,
+            DecisionTypes.EditMode editMode,
+            UUID previousResolutionId,
+            Instant supersededAt
     ) {
     }
 
@@ -185,8 +196,14 @@ public final class DecisionDtos {
             String notes,
             Boolean wouldChooseAgain,
             String workedWell,
-            String disappointedBy
+            String disappointedBy,
+            UUID resolutionId,
+            Long expectedVersion
     ) {
+        public CreateOutcomeRequest(int satisfaction, DecisionTypes.ExpectationStatus expectationStatus, String notes,
+                                    Boolean wouldChooseAgain, String workedWell, String disappointedBy) {
+            this(satisfaction, expectationStatus, notes, wouldChooseAgain, workedWell, disappointedBy, null, null);
+        }
     }
 
     public record OutcomeData(
@@ -197,7 +214,8 @@ public final class DecisionDtos {
             Boolean wouldChooseAgain,
             String workedWell,
             String disappointedBy,
-            Instant createdAt
+            Instant createdAt,
+            UUID resolutionId
     ) {
     }
 

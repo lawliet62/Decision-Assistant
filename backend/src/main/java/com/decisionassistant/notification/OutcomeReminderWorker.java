@@ -36,9 +36,13 @@ public class OutcomeReminderWorker {
                 .forEach(item -> send(item, now));
     }
     private void send(OutcomeReminder reminder, Instant now) {
+        var decision = decisions.lockById(reminder.decisionId()).orElse(null);
+        if (decision == null) return;
+        // 부모 잠금 전에 선택한 알림도 정정·재검토가 먼저 확정되었다면 보내지 않는다.
+        if (decision.status() != com.decisionassistant.decision.DecisionTypes.DecisionStatus.CHOSEN
+                || reminders.pendingForDelivery(reminder.id(), now).isEmpty()
+                || !java.util.Objects.equals(reminder.resolutionId(), decision.currentResolutionId())) return;
         try {
-            var decision = decisions.lockById(reminder.decisionId()).orElse(null);
-            if (decision == null) return;
             var user = users.findById(decision.ownerUserId()).orElseThrow();
             if (!user.reminderEmailsEnabled()) { reminder.skip(); return; }
             var link = publicBaseUrl + "/decisions/" + decision.id() + "#outcome";
