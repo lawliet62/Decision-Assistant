@@ -38,6 +38,9 @@ frontend/*.tsbuildinfo
 frontend/test-results/
 frontend/playwright-report/
 
+# Git Worktrees
+/.worktrees/
+
 # Environment and local files
 **/.env*
 !**/.env.example
