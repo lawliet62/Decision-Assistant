@@ -50,3 +50,56 @@ for (const mode of ["generate", "edit", "failure"] as const) {
     expect(calls).toBe(mode === "edit" ? 0 : 1);
   });
 }
+
+for (const scenario of ["generate", "apply", "comparison", "legacy"] as const) {
+  test(`미저장 변경이 있으면 AI 해석 생성·적용을 막는다: ${scenario}`, async ({ page, request }) => {
+    const created = await request.post("http://127.0.0.1:18080/api/v1/decisions", { data: {
+      title: scenario === "comparison" ? "조건 비교 브라우저 검증 (가상제품)" : "저장 상태 검증",
+      intentText: "저장 상태 검증", templateKey: "EARBUDS", legacyFixture: scenario === "legacy",
+      selectedSources: [{ name: "Alpha", url: "https://example.com/alpha" }],
+    } });
+    const decision = await created.json();
+    let calls = 0;
+    await page.route("**/api/v1/decisions/*/memories", route => route.fulfill({ json: [source] }));
+    await page.route("**/api/v1/decisions/*/memories/*/insight", async route => {
+      const saved = await (await request.get(`http://127.0.0.1:18080/api/v1/decisions/${decision.id}`)).json();
+      if (route.request().method() === "GET") return route.fulfill({ json: {
+        available: true, provider: "fixture", model: "fixture-model", input: { currentTitle: saved.title },
+        inputHash: `version-${saved.version}`, saved: scenario === "generate" ? null : result,
+      } });
+      calls++;
+      expect(route.request().postDataJSON().expectedInputHash).toBe(`version-${saved.version}`);
+      return route.fulfill({ json: result });
+    });
+    await page.goto(`/decisions/${decision.id}`);
+    const generate = page.getByRole("button", { name: "요약과 관련 이유 생성", exact: true });
+    const apply = page.getByRole("button", { name: "이번에도 중요함", exact: true });
+    const edit = page.getByRole("button", { name: "해석 수정", exact: true });
+    const applyEdited = page.getByRole("button", { name: "수정한 내용 참고", exact: true });
+    const consent = page.getByRole("checkbox", { name: "표시된 과거 기록과 현재 조건의 AI 전송에 동의하며, 민감정보가 없음을 확인합니다." });
+    if (scenario === "generate") { await consent.check(); await expect(generate).toBeEnabled(); }
+    else { await expect(apply).toBeEnabled(); await edit.click(); }
+
+    if (scenario === "comparison") {
+      await page.getByRole("button", { name: "2. 비교·평가", exact: true }).click();
+      await page.getByLabel("ANC 지원 필수", { exact: true }).uncheck();
+    } else await page.getByLabel("제목", { exact: true }).fill("저장할 새 제목");
+    await expect(page.getByText("변경한 조건을 먼저 저장하세요.", { exact: false })).toBeVisible();
+    if (scenario === "generate") { await expect(generate).toBeDisabled(); await expect(consent).toBeDisabled(); }
+    else { await expect(apply).toBeDisabled(); await expect(edit).toBeDisabled(); await expect(applyEdited).toBeDisabled(); }
+    expect(calls).toBe(0);
+
+    await page.getByRole("button", { name: scenario === "legacy" ? "Draft 저장" : scenario === "comparison" ? "조건 적용" : "변경 저장", exact: true }).click();
+    await expect(page.getByText("변경한 조건을 먼저 저장하세요.", { exact: false })).toHaveCount(0);
+    if (scenario === "generate") {
+      await consent.check(); await generate.click();
+      await expect(apply).toBeEnabled(); expect(calls).toBe(1);
+    } else {
+      await expect(apply).toBeEnabled(); await expect(edit).toBeEnabled();
+      if (scenario !== "comparison") {
+        await apply.click();
+        await expect(page.getByLabel(scenario === "legacy" ? "상황과 추가 메모" : "메모", { exact: true })).toHaveValue(/AI 해석을 이번 결정에서 확인함/);
+      }
+    }
+  });
+}

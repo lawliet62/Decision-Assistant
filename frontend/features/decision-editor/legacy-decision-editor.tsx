@@ -314,7 +314,7 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
 
       {evaluation && <EvaluationResultView evaluation={evaluation} />}
 
-      <PastDecisions key={decision.version} id={decision.id!} onApply={note => setValue("context.notes", [getValues("context.notes"), note].filter(Boolean).join("\n"), { shouldDirty: true })} /><ReasonPicker key={decision.editMode === "CORRECTION" ? decision.revisionBaseId : "new"} initialResolution={decision.editMode === "CORRECTION" ? decision.resolutions?.find(r => r.id === decision.revisionBaseId) : undefined} options={options} onComplete={(kind, option, note, ids, primary) => resolveDecision(kind, option, note, ids, primary)} />
+      <PastDecisions hasUnsavedChanges={Object.keys(dirtyFields).length > 0} key={decision.version} id={decision.id!} onApply={note => setValue("context.notes", [getValues("context.notes"), note].filter(Boolean).join("\n"), { shouldDirty: true })} /><ReasonPicker key={decision.editMode === "CORRECTION" ? decision.revisionBaseId : "new"} initialResolution={decision.editMode === "CORRECTION" ? decision.resolutions?.find(r => r.id === decision.revisionBaseId) : undefined} options={options} onComplete={(kind, option, note, ids, primary) => resolveDecision(kind, option, note, ids, primary)} />
       </fieldset>
 
       {completed && <Section title="Outcome check-in" description={decision.status === "ABANDONED" ? "구매하지 않기로 한 결정에 대한 만족도와 결과를 기록합니다." : "시간이 지난 뒤 만족도와 기대 충족 여부를 반복 기록합니다."}>
