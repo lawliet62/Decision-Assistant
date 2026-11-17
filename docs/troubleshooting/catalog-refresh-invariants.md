@@ -20,6 +20,8 @@ Sony는 OPTION_LIST_CHANGED였지만 당시 옵션 개수와 라벨별 일치 �
 
 다음 정상 예약에서 목록 개수·고유 개수·기존 라벨 일치 개수를 기록하도록 로그를 보강했다. 원문과 임의 라벨은 남기지 않고 수용 조건도 유지한다. Marshall의 UNAVAILABLE·PRICE_CONTEXT_MISSING 역시 추가 근거 없이 단종·품절·파서 오류로 단정하지 않는다.
 
+Marshall의 `marshall_visible_price_check`는 기존 전용 구매 영역 대조가 통과하지 못했을 때 고정 SKU, 단계, 일치하는 정상 가격 영역 수와 구매 영역 수만 기록한다. `REGULAR_PRICE_AREA`는 구조화 가격과 일치하는 정상 가격 영역의 누락·중복, `PURCHASE_AREA`는 구매 영역의 누락·중복, `PURCHASE_PRICE_MISMATCH`는 구매 영역 금액 불일치, `BUTTON_PRICE_OR_LABEL_MISMATCH`는 버튼 금액·라벨 불일치, `BUTTON_DISABLED`는 버튼 비활성을 구분한다. 첫 불일치 단계이므로 후속 조건까지 정상이라는 의미는 아니다. 이 로그는 전용 분기의 진단이며, 이후 공통 검증과 worker의 최종 outcome도 함께 확인한다. `UNAVAILABLE`처럼 구매 영역 대조 전에 거절된 응답에는 이 진단이 없을 수 있다. 실제 품절·단종 여부나 Firecrawl 응답의 실패 원인을 로그 부재로 추정하지 않는다.
+
 ## 원본 DB와 API 검증 분리
 
 최신 서버 기동에는 현재 작업과 다른 migration·정리 스케줄도 포함될 수 있다. 가격 갱신만 확인하는 이번 작업에서는 기존 worker와 CatalogProduct JPA만 실행하고 schema validate를 사용했다. 사양 예약·실제 clock·기존 결정 데이터 보존을 별도로 대조했다.
