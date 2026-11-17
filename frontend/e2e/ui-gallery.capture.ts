@@ -47,6 +47,8 @@ test("개발자 문서용 화면 모음 촬영", async ({ page, request }) => {
     discoveryPolicy: { version: "catalog-v1", scope: "CURATED_EARBUDS", priceBasis: "OBSERVED_KRW_PRICE" },
   } }));
   await page.route("**/api/v1/ai/capabilities", route => route.fulfill({ json: { enabled: false } }));
+  // 원문 모음의 AI 비활성 상태도 명시한다. 뒤의 전용 AI 장면에서만 가상 응답으로 교체한다.
+  await page.route("**/api/v1/decisions/*/memories/*/insight", route => route.fulfill({ json: { available: false } }));
   // 일반 E2E mock은 결과별 이유를 1개로 축약한다. 문서는 현재 backend 템플릿 전체를 표시한다.
   const reasonSource = await readFile(path.join(root, "backend/src/main/java/com/decisionassistant/decision/DecisionReasons.java"), "utf8");
   const reasons = [...reasonSource.matchAll(/new Reason\("([^"]+)", "([^"]+)", DecisionTypes\.ResolutionKind\.(\w+)\)/g)]
@@ -217,12 +219,84 @@ test("개발자 문서용 화면 모음 촬영", async ({ page, request }) => {
   await expect(page.getByRole("button", { name: "다음 결정에 적용", exact: true })).toBeVisible();
   await capture("reflection/12-preferences", "성향 제안의 명시적 확인과 회고 email 설정");
 
+  // 실제 AI 호출 없이 PR #75의 전송 확인·해석·수정·실패 UI를 재현한다.
+  const aiTitle = "AI 기록 활용 예시 (가상제품)";
+  await request.post("http://127.0.0.1:18080/api/v1/decisions", { data: {
+    intentText: aiTitle, templateKey: "EARBUDS", webConsent: false,
+    selectedSources: [{ name: "가상 Alpha", url: "https://example.com/alpha" }],
+  } });
+  const source = {
+    decisionId: "77777777-7777-7777-7777-777777777777", resolutionId: "88888888-8888-8888-8888-888888888888",
+    title: "과거 이어폰 선택 (가상 기록)", kind: "CHOSEN", selectedName: "가상 이전 제품",
+    reasonIds: ["budget"], primaryReasonId: "budget", rationale: "예산을 우선해 선택했지만 착용감도 다시 살펴볼 필요가 있었음",
+    purchaseStatus: "UNRECORDED", decidedAt: "2026-11-01T00:00:00Z",
+    context: { intendedUse: "출퇴근", budget: 100000, currency: "KRW", notes: null }, conditions: null,
+    outcomes: [{ id: "past-outcome", notes: "오래 착용할 때 귀가 불편했음 (가상 회고)", satisfaction: 3 }],
+  };
+  const interpretation = {
+    sourceDecisionId: source.decisionId, resolutionId: source.resolutionId,
+    provider: "fixture", model: "fixture-model", promptVersion: "contextual-memory-v1", createdAt: "2026-11-17T00:00:00Z",
+    insight: { summary: "예산을 우선해 선택했고 구매 상태는 미기록입니다. 회고에는 장시간 착용 시 불편함이 남아 있습니다.",
+      relevance: "이번에도 장시간 착용한다면 예산과 함께 착용감을 직접 확인할 이유로 참고할 수 있습니다.",
+      conditions: ["이번 사용 시간과 예산이 당시와 비슷한지 확인하세요.", "현재 후보의 착용감은 직접 확인하세요."],
+      uncertainty: "선택 사실만으로 구매나 만족을 확정할 수 없고, 현재 후보 사양도 별도로 확인해야 합니다." },
+  };
+  let saved: typeof interpretation | null = null;
+  let insightCalls = 0;
+  let failInsight = false;
+  await page.route("**/api/v1/decisions/*/memories", route => route.fulfill({ json: [source] }));
+  await page.route("**/api/v1/decisions/*/memories/*/insight", route => {
+    if (route.request().method() === "GET") return route.fulfill({ json: {
+      available: true, provider: "fixture", model: "fixture-model", dataNotice: "문서 촬영용 가상 provider 고지 · 실제 외부 전송 없음",
+      input: { currentTitle: aiTitle, currentContext: { intendedUse: aiTitle, currency: "KRW", notes: null }, currentConditions: null,
+        source, reasonLabels: reasons.filter(reason => source.reasonIds.includes(reason.id)) },
+      inputHash: "fixture-input-hash", saved,
+    } });
+    expect(route.request().postDataJSON()).toEqual({ aiConsent: true, sensitiveDataAcknowledged: true, expectedInputHash: "fixture-input-hash" });
+    insightCalls++;
+    if (failInsight) return route.fulfill({ status: 422, json: { detail: "문서용 가상 provider 실패" } });
+    saved = interpretation;
+    return route.fulfill({ json: interpretation });
+  });
+  await page.goto(`/decisions/${decision.id}`);
+  const generate = page.getByRole("button", { name: "요약과 관련 이유 생성", exact: true });
+  const consent = page.getByRole("checkbox", { name: "표시된 과거 기록과 현재 조건의 AI 전송에 동의하며, 민감정보가 없음을 확인합니다." });
+  await expect(generate).toBeDisabled();
+  await page.getByText("AI에 보낼 내용 보기", { exact: true }).click();
+  await expect(page.getByText("문서 촬영용 가상 provider 고지 · 실제 외부 전송 없음", { exact: true })).toBeVisible();
+  expect(insightCalls).toBe(0);
+  await capture("reflection/21-ai-preview", "전송 입력·provider 고지·명시적 동의 확인 · 생성 전 외부 호출 없음");
+  await consent.check();
+  await generate.click();
+  await expect(page.getByText(interpretation.insight.summary, { exact: false })).toBeVisible();
+  await capture("reflection/22-ai-insight", "AI 해석의 요약·조건부 관련성·확인 조건·불확실성·원본 링크");
+  await page.getByRole("button", { name: "해석 수정", exact: true }).click();
+  await page.getByLabel("과거 이유 해석 수정").fill("이번에는 통근 시간이 길어졌으므로 예산 외에 장시간 착용감을 직접 확인하겠습니다.");
+  await capture("reflection/23-ai-edit", "AI 해석을 사용자가 수정 · 원본 판단이나 장기 성향을 변경하지 않음");
+  await page.getByRole("button", { name: "수정한 내용 참고", exact: true }).click();
+  await expect(page.getByLabel("메모", { exact: true })).toHaveValue(/사용자가 수정한 해석/);
+  await expect(page.getByRole("button", { name: "이번에도 중요함", exact: true })).toBeDisabled();
+  await capture("reflection/24-ai-applied", "출처 포함 현재 메모에 적용 · 미저장 변경은 추가 AI 생성·적용 차단");
+  await page.getByRole("button", { name: "변경 저장", exact: true }).click();
+  await page.reload();
+  await expect(page.getByLabel("메모", { exact: true })).toHaveValue(/사용자가 수정한 해석/);
+  await expect(page.getByText(interpretation.insight.summary, { exact: false })).toBeVisible();
+  expect(insightCalls).toBe(1);
+  // 실패는 별도 fixture 상태다. 실제 서버의 hash 무효화나 cache를 검증하는 장면이 아니다.
+  saved = null; failInsight = true;
+  await page.reload();
+  await consent.check();
+  await generate.click();
+  await expect(page.getByRole("alert").filter({ hasText: "요약을 생성하지 못했습니다" })).toBeVisible();
+  await expect(page.getByText(`당시 메모: ${source.rationale}`, { exact: true })).toBeVisible();
+  await capture("reflection/25-ai-failure", "AI 실패 후 원문 유지·전송 재확인 안내 · 자동 재시도 없음");
+
   // 모든 장면이 성공한 뒤에만 문서 자산을 갱신한다. 실패 시 기존 모음을 유지한다.
   await cp(directory, path.join(root, "docs/ui/screenshots"), { recursive: true });
   await writeFile(path.join(root, "docs/ui/capture-manifest.json"), JSON.stringify({
     capturedAt: new Date().toISOString(),
     applicationCommit: execFileSync("git", ["-C", root, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
-    data: "기존 E2E mock backend의 가상 데이터. 이유 템플릿은 현재 backend 소스에서 읽으며 성향·알림 설정·원문 기록 조회는 고정 응답.",
+    data: "기존 E2E mock backend의 가상 데이터. 이유 템플릿은 backend 소스에서 읽고 성향·알림 설정·원문 조회·AI 입력/결과/실패는 촬영용 응답. 실제 AI 호출 없음.",
     command: "npm.cmd --prefix frontend run test:e2e -- --config playwright.docs.config.ts",
     browser: "chromium", locale: "ko-KR", timezone: "Asia/Seoul", fullPage: true,
     hidden: "Next.js 개발 도구 overlay만 숨김. 제품 화면 내용은 그대로 촬영.",

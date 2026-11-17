@@ -1,7 +1,7 @@
 {
-  "capturedAt": "2026-11-17T11:57:46.956Z",
-  "applicationCommit": "7afc1ffe51481417e012ac26acb01d38671cf3e4",
-  "data": "기존 E2E mock backend의 가상 데이터. 이유 템플릿은 현재 backend 소스에서 읽으며 성향·알림 설정·원문 기록 조회는 고정 응답.",
+  "capturedAt": "2026-11-17T13:17:46.268Z",
+  "applicationCommit": "1c86ff57df1b9e96a85f1862789693685a0167f9",
+  "data": "기존 E2E mock backend의 가상 데이터. 이유 템플릿은 backend 소스에서 읽고 성향·알림 설정·원문 조회·AI 입력/결과/실패는 촬영용 응답. 실제 AI 호출 없음.",
   "command": "npm.cmd --prefix frontend run test:e2e -- --config playwright.docs.config.ts",
   "browser": "chromium",
   "locale": "ko-KR",
@@ -364,6 +364,96 @@
       "file": "reflection/12-preferences-mobile.png",
       "route": "/preferences",
       "state": "성향 제안의 명시적 확인과 회고 email 설정",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "reflection/21-ai-preview-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "전송 입력·provider 고지·명시적 동의 확인 · 생성 전 외부 호출 없음",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "reflection/21-ai-preview-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "전송 입력·provider 고지·명시적 동의 확인 · 생성 전 외부 호출 없음",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "reflection/22-ai-insight-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "AI 해석의 요약·조건부 관련성·확인 조건·불확실성·원본 링크",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "reflection/22-ai-insight-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "AI 해석의 요약·조건부 관련성·확인 조건·불확실성·원본 링크",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "reflection/23-ai-edit-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "AI 해석을 사용자가 수정 · 원본 판단이나 장기 성향을 변경하지 않음",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "reflection/23-ai-edit-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "AI 해석을 사용자가 수정 · 원본 판단이나 장기 성향을 변경하지 않음",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "reflection/24-ai-applied-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "출처 포함 현재 메모에 적용 · 미저장 변경은 추가 AI 생성·적용 차단",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "reflection/24-ai-applied-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "출처 포함 현재 메모에 적용 · 미저장 변경은 추가 AI 생성·적용 차단",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "reflection/25-ai-failure-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "AI 실패 후 원문 유지·전송 재확인 안내 · 자동 재시도 없음",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "reflection/25-ai-failure-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "AI 실패 후 원문 유지·전송 재확인 안내 · 자동 재시도 없음",
       "viewport": {
         "width": 390,
         "height": 844
