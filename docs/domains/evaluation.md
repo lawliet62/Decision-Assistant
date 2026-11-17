@@ -18,6 +18,8 @@
 
 Evaluation과 Resolution은 서로 다른 고정본이다. Evaluation은 평가 입력·결과를, Resolution은 판단 시점의 비교 조건·근거까지 보존한다. 사용자가 알고리즘 추천과 다른 후보를 선택할 수 있다.
 
+과거 판단의 선택적 AI 요약·현재 조건에 따른 설명은 Evaluation이나 StructureRun과 별개인 [MemoryInsight](history-reuse.md)다. 과거 기록 하나를 해석하고 현재 메모에 선택 적용하며 평가 점수·weight·사양을 자동 변경하지 않는다.
+
 ## 입력 준비와 계산
 
 1. 최신 expectedVersion의 수정 가능한 Decision인지 확인한다.
