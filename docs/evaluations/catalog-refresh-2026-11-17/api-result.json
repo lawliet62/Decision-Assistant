@@ -1,0 +1,385 @@
+{
+  "checkedAt": "2026-11-17T10:06:08.404Z",
+  "database": "isolated catalog copy",
+  "externalFeaturesEnabled": false,
+  "batches": [
+    [
+      {
+        "name": "QCY T13PRO ANC 블르투스 6.0 무선  커널형 이어폰",
+        "url": "https://qcystore.co.kr/product/qcy-t13pro-anc-%EB%B8%94%EB%A5%B4%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%BB%A4%EB%84%90%ED%98%95-%EC%9D%B4%EC%96%B4%ED%8F%B0/1033/category/134/display/1/",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://qcystore.co.kr/product/qcy-t13pro-anc-%EB%B8%94%EB%A5%B4%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%BB%A4%EB%84%90%ED%98%95-%EC%9D%B4%EC%96%B4%ED%8F%B0/1033/category/134/display/1/",
+          "seller": "QCY 공식몰",
+          "price": 22900,
+          "currency": "KRW",
+          "imageUrl": "https://qcystore.co.kr/web/product/big/202609/4b27f894699ed2a02c3d666cf4c93020.jpg",
+          "fetchedAt": "2026-11-17T09:43:50.162255100Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "QCY HT20 멜로버즈 블루투스 무선 이어폰 노이즈캔슬링 AI마이크 C타입 커널형 게이밍",
+        "url": "https://qcystore.co.kr/product/detail.html?product_no=1028",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=1028",
+          "seller": "QCY 공식몰",
+          "price": 25900,
+          "currency": "KRW",
+          "imageUrl": "https://qcystore.co.kr/web/product/big/202606/6de30b93b64c1bc4e73ec645a8770278.jpg",
+          "fetchedAt": "2026-11-17T09:43:44.314854100Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "QCY T29 APP 블루투스이어폰 오픈형 13mm 드라이버",
+        "url": "https://qcystore.co.kr/product/detail.html?product_no=709",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=709",
+          "seller": "QCY 공식몰",
+          "price": 28900,
+          "currency": "KRW",
+          "imageUrl": "https://qcystore.co.kr/web/product/big/202408/f707cba77f2c76d2f0c745a741983560.jpg",
+          "fetchedAt": "2026-11-17T09:43:55.581460Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "QCY T17APP 블루투스이어폰 커널형 무선이어폰 저지연 큐씨와이 초경량 블루투스5.3버전",
+        "url": "https://qcystore.co.kr/product/qcy-t17app-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%BB%A4%EB%84%90%ED%98%95-%EB%AC%B4%EC%84%A0%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%A0%80%EC%A7%80%EC%97%B0-%ED%81%90%EC%94%A8%EC%99%80%EC%9D%B4-%EC%B4%88%EA%B2%BD%EB%9F%89-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A453%EB%B2%84%EC%A0%84-%EB%B8%94%EB%9E%99/563/",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://qcystore.co.kr/product/qcy-t17app-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%BB%A4%EB%84%90%ED%98%95-%EB%AC%B4%EC%84%A0%EC%9D%B4%EC%96%B4%ED%8F%B0-%EC%A0%80%EC%A7%80%EC%97%B0-%ED%81%90%EC%94%A8%EC%99%80%EC%9D%B4-%EC%B4%88%EA%B2%BD%EB%9F%89-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A453%EB%B2%84%EC%A0%84-%EB%B8%94%EB%9E%99/563/",
+          "seller": "QCY 공식몰",
+          "price": 29900,
+          "currency": "KRW",
+          "imageUrl": "https://qcystore.co.kr/web/product/big/202211/55ea82c00048dc372c8a06d6cacd9b92.jpg",
+          "fetchedAt": "2026-11-17T09:44:06.931265500Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "QCY HT16 멜로버즈 무선 블루투스 이어폰 ANC 노이즈캔슬링",
+        "url": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%9E%99/990/",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://qcystore.co.kr/product/qcy-ht16-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%AC%B4%EC%84%A0-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-%EC%9D%B4%EC%96%B4%ED%8F%B0-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EB%B8%94%EB%9E%99/990/",
+          "seller": "QCY 공식몰",
+          "price": 31800,
+          "currency": "KRW",
+          "imageUrl": "https://qcystore.co.kr/web/product/big/202509/f8f776f8ab0c6a26b2f3b4c6a79553b1.jpg",
+          "fetchedAt": "2026-11-17T09:44:01.061724400Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      }
+    ],
+    [
+      {
+        "name": "앤커 사운드코어 P31i(R60i NC) 노이즈캔슬링 무선 블루투스 이어폰 D1202",
+        "url": "https://ankerkorea.co.kr/product/detail.html?product_no=43",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=43",
+          "seller": "앤커코리아 공식 스토어",
+          "price": 39900,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:44:55.244768200Z",
+          "priceBasis": "공식 상품의 색상·할인 판매가와 구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "QCY HT08 멜로버즈 프로 플러스 블루투스 이어폰 노이즈캔슬링 / 블랙",
+        "url": "https://qcystore.co.kr/product/detail.html?product_no=977",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=977",
+          "seller": "QCY 공식몰",
+          "price": 43900,
+          "currency": "KRW",
+          "imageUrl": "https://qcystore.co.kr/web/product/big/202506/3b233de9ca50f2e70f331365d0498ed8.jpg",
+          "fetchedAt": "2026-11-17T09:43:34.086418100Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "QCY CT06 오픈형 귀찌 무선 블루투스 이어폰 러닝 자전거 운동용 이어커프",
+        "url": "https://qcystore.co.kr/product/detail.html?product_no=994",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://qcystore.co.kr/product/detail.html?product_no=994",
+          "seller": "QCY 공식몰",
+          "price": 46900,
+          "currency": "KRW",
+          "imageUrl": "https://qcystore.co.kr/web/product/big/202511/63f6bb5a6464a5c0db2ec7be13948c2a.jpg",
+          "fetchedAt": "2026-11-17T09:46:14.866208500Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "QCY HT19 멜로버즈 듀얼 블루투스 무선 이어폰 ANC 노이즈캔슬링 고음질 LDAC",
+        "url": "https://qcystore.co.kr/product/qcy-ht19-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%9D%B4%EC%96%B4%ED%8F%B0-%EA%B2%8C%EC%9D%B4%EB%B0%8D-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EA%B3%A0%EC%9D%8C%EC%A7%88/1012/",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://qcystore.co.kr/product/qcy-ht19-%EB%A9%9C%EB%A1%9C%EB%B2%84%EC%A6%88-%EB%B8%94%EB%A3%A8%ED%88%AC%EC%8A%A4-60-%EB%AC%B4%EC%84%A0-%EC%9D%B4%EC%96%B4%ED%8F%B0-%EA%B2%8C%EC%9D%B4%EB%B0%8D-anc-%EB%85%B8%EC%9D%B4%EC%A6%88%EC%BA%94%EC%8A%AC%EB%A7%81-%EA%B3%A0%EC%9D%8C%EC%A7%88/1012/",
+          "seller": "QCY 공식몰",
+          "price": 48500,
+          "currency": "KRW",
+          "imageUrl": "https://qcystore.co.kr/web/product/big/202603/b6e0c7e941fe1d3971b74895b5f90eae.jpg",
+          "fetchedAt": "2026-11-17T09:44:13.382176600Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "앤커 사운드코어 P41i 노이즈캔슬링 블루투스이어폰 A3937",
+        "url": "https://ankerkorea.co.kr/product/detail.html?product_no=91",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=91",
+          "seller": "앤커코리아 공식 스토어",
+          "price": 69900,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:45:00.720405100Z",
+          "priceBasis": "공식 단일 상품의 재고·할인 판매가와 구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      }
+    ],
+    [
+      {
+        "name": "JBL TUNE BEAM 2 블랙",
+        "url": "https://www.samsung.com/sec/harman-life-style-audio/jbl-earphone-tunebeam2-d2c/JBLTBEAM2BLKAS/",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://www.samsung.com/sec/harman-life-style-audio/jbl-earphone-tunebeam2-d2c/JBLTBEAM2BLKAS/",
+          "seller": "삼성닷컴 JBL 공식 판매",
+          "price": 99000,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:45:48.925727400Z",
+          "priceBasis": "공식 블랙 SKU 1개의 기준가·일반 구매 금액을 대조한 가격",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "앤커 사운드코어 리버티5 노이즈캔슬링 블루투스 이어폰 A3957",
+        "url": "https://ankerkorea.co.kr/product/detail.html?product_no=40",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=40",
+          "seller": "앤커코리아 공식 스토어",
+          "price": 99900,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:44:43.058463800Z",
+          "priceBasis": "공식 상품의 색상·할인 판매가와 구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "오디오테크니카 ATH-AC5TW",
+        "url": "https://audio-technica.co.kr/product/ath-ac5tw/921/",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://audio-technica.co.kr/product/ath-ac5tw/921/",
+          "seller": "오디오테크니카 공식 스토어",
+          "price": 119000,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:44:27.612912Z",
+          "priceBasis": "공식 상품 색상별 가격·재고와 구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "오디오테크니카 ATH-SQ1TW2NC",
+        "url": "https://audio-technica.co.kr/product/ath-sq1tw2nc/955/",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://audio-technica.co.kr/product/ath-sq1tw2nc/955/",
+          "seller": "오디오테크니카 공식 스토어",
+          "price": 119000,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:44:20.053189400Z",
+          "priceBasis": "공식 상품 색상별 가격·재고와 구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "앤커 사운드코어 에어로클립 오픈형 블루투스이어폰 A3388",
+        "url": "https://ankerkorea.co.kr/product/detail.html?product_no=45",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=45",
+          "seller": "앤커코리아 공식 스토어",
+          "price": 129900,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:44:34.318885400Z",
+          "priceBasis": "공식 상품의 색상·할인 판매가와 구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      }
+    ],
+    [
+      {
+        "name": "앤커 사운드코어 리버티 5 프로 무선 블루투스 이어폰 D1203",
+        "url": "https://ankerkorea.co.kr/product/detail.html?product_no=154",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://ankerkorea.co.kr/product/detail.html?product_no=154",
+          "seller": "앤커코리아 공식 스토어",
+          "price": 214900,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:44:49.562481800Z",
+          "priceBasis": "공식 상품의 색상·할인 판매가와 구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "삼성 갤럭시 버즈4 화이트",
+        "url": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://www.samsung.com/sec/buds/galaxy-buds4/buy/?modelCode=SM-R540NZWAKOO",
+          "seller": "삼성닷컴",
+          "price": 220200,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:46:14.324804800Z",
+          "priceBasis": "공식 화이트 SKU 1개의 즉시 할인·카드 미적용 금액을 대조한 가격",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "AirPods 5 무선 충전 케이스 모델",
+        "url": "https://www.apple.com/kr/shop/buy-airpods/airpods-5/%EB%AC%B4%EC%84%A0-%EC%B6%A9%EC%A0%84-%EC%BC%80%EC%9D%B4%EC%8A%A4-%ED%8F%AC%ED%95%A8",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://www.apple.com/kr/shop/buy-airpods/airpods-5/%EB%AC%B4%EC%84%A0-%EC%B6%A9%EC%A0%84-%EC%BC%80%EC%9D%B4%EC%8A%A4-%ED%8F%AC%ED%95%A8",
+          "seller": "Apple 공식 스토어",
+          "price": 229000,
+          "currency": "KRW",
+          "imageUrl": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/airpods-5-wcc-select-202609?wid=976&hei=916&fmt=jpeg&qlt=90&.v=1787009771195",
+          "fetchedAt": "2026-11-17T09:45:21.918708400Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "[New Launch] BOSE 보스 QC 이어버드(New)(아이스 블루)",
+        "url": "https://www.bose.co.kr/357/?idx=307",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://www.bose.co.kr/357/?idx=307",
+          "seller": "BOSE 공식 온라인 스토어",
+          "price": 229000,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:45:08.431512Z",
+          "priceBasis": "공식 상품의 단일 색상·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "AirPods Pro 3",
+        "url": "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://www.apple.com/kr/shop/buy-airpods/airpods-pro-3",
+          "seller": "Apple 공식 스토어",
+          "price": 369000,
+          "currency": "KRW",
+          "imageUrl": "https://store.storeimages.cdn-apple.com/1/as-images.apple.com/is/airpods-pro-3-hero-select-202509?wid=976&hei=916&fmt=jpeg&qlt=90&.v=1758077264484",
+          "fetchedAt": "2026-11-17T09:45:33.196260Z",
+          "priceBasis": "상품 구조화 데이터·구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      }
+    ],
+    [
+      {
+        "name": "모멘텀 트루 와이어리스 5",
+        "url": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+        "group": "RECOMMENDED",
+        "offer": {
+          "purchaseUrl": "https://kr.sennheiser-hearing.com/product/detail.html?product_no=731",
+          "seller": "젠하이저 공식 스토어",
+          "price": 429000,
+          "currency": "KRW",
+          "imageUrl": null,
+          "fetchedAt": "2026-11-17T09:45:29.544754Z",
+          "priceBasis": "공식 상품 색상별 가격과 구매 영역을 대조한 판매가",
+          "policyVersion": "catalog-v1"
+        },
+        "priceStatus": "VERIFIED"
+      },
+      {
+        "name": "MINOR IV",
+        "url": "https://www.marshall.com/kr/ko/product/minor-iv?pid=1006653",
+        "group": "UNKNOWN",
+        "offer": null,
+        "priceStatus": "UNVERIFIED"
+      },
+      {
+        "name": "MOTIF II A.N.C.",
+        "url": "https://www.marshall.com/kr/ko/product/motif-ii-anc?pid=1006450",
+        "group": "UNKNOWN",
+        "offer": null,
+        "priceStatus": "UNVERIFIED"
+      },
+      {
+        "name": "QCY HT10 Hi-Res ANC APP 노이즈캔슬링 블루투스 이어폰 LDAC / 블랙",
+        "url": "https://qcystore.co.kr/product/detail.html?product_no=924",
+        "group": "UNKNOWN",
+        "offer": null,
+        "priceStatus": "UNVERIFIED"
+      },
+      {
+        "name": "소니 WF-C710N 글래스 블루",
+        "url": "https://store.sony.co.kr/product-view/128838586",
+        "group": "UNKNOWN",
+        "offer": null,
+        "priceStatus": "UNVERIFIED"
+      }
+    ]
+  ],
+  "candidateCount": 25,
+  "recommendedCount": 21,
+  "temporaryDecisionDeleteStatus": 204,
+  "sourcePriceAndTimestampMatches": true
+}

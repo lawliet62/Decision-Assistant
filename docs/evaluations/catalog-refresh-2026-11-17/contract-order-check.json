@@ -1,0 +1,30 @@
+{
+  "localFullCheck": "failed at scripts/check-contract.mjs",
+  "semanticJsonEqual": true,
+  "orderDifferencePath": "/components/schemas/DecisionSummary/properties",
+  "committedOrder": [
+    "id",
+    "version",
+    "title",
+    "templateKey",
+    "status",
+    "createdAt",
+    "updatedAt",
+    "result",
+    "phase"
+  ],
+  "generatedOrder": [
+    "id",
+    "version",
+    "title",
+    "templateKey",
+    "status",
+    "createdAt",
+    "updatedAt",
+    "phase",
+    "result"
+  ],
+  "baselineCommit": "62a58b19ae5228d0fc5e14e61c775c532f879c73",
+  "baselineCiRun": 43847751434,
+  "baselineCiConclusion": "success"
+}

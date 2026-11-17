@@ -1,0 +1,152 @@
+[
+  {
+    "id": "anker-aeroclip-a3388",
+    "price": 129900,
+    "fetchedAt": "2026-11-17T09:44:34.318885400Z",
+    "fresh": true
+  },
+  {
+    "id": "anker-liberty5-a3957",
+    "price": 99900,
+    "fetchedAt": "2026-11-17T09:44:43.058463800Z",
+    "fresh": true
+  },
+  {
+    "id": "anker-liberty5-pro-d1203",
+    "price": 214900,
+    "fetchedAt": "2026-11-17T09:44:49.562481800Z",
+    "fresh": true
+  },
+  {
+    "id": "anker-p31i-d1202",
+    "price": 39900,
+    "fetchedAt": "2026-11-17T09:44:55.244768200Z",
+    "fresh": true
+  },
+  {
+    "id": "anker-p41i-a3937",
+    "price": 69900,
+    "fetchedAt": "2026-11-17T09:45:00.720405100Z",
+    "fresh": true
+  },
+  {
+    "id": "apple-airpods-5-wireless",
+    "price": 229000,
+    "fetchedAt": "2026-11-17T09:45:21.918708400Z",
+    "fresh": true
+  },
+  {
+    "id": "apple-airpods-pro-3",
+    "price": 369000,
+    "fetchedAt": "2026-11-17T09:45:33.196260Z",
+    "fresh": true
+  },
+  {
+    "id": "audio-technica-ac5tw",
+    "price": 119000,
+    "fetchedAt": "2026-11-17T09:44:27.612912Z",
+    "fresh": true
+  },
+  {
+    "id": "audio-technica-sq1tw2nc",
+    "price": 119000,
+    "fetchedAt": "2026-11-17T09:44:20.053189400Z",
+    "fresh": true
+  },
+  {
+    "id": "bose-qc-earbuds-ice-blue",
+    "price": 229000,
+    "fetchedAt": "2026-11-17T09:45:08.431512Z",
+    "fresh": true
+  },
+  {
+    "id": "jbl-tune-beam2-black",
+    "price": 99000,
+    "fetchedAt": "2026-11-17T09:45:48.925727400Z",
+    "fresh": true
+  },
+  {
+    "id": "marshall-minor-iv-black",
+    "price": null,
+    "fetchedAt": null,
+    "fresh": false
+  },
+  {
+    "id": "marshall-motif-ii-anc",
+    "price": null,
+    "fetchedAt": null,
+    "fresh": false
+  },
+  {
+    "id": "qcy-ct06",
+    "price": 46900,
+    "fetchedAt": "2026-11-17T09:46:14.866208500Z",
+    "fresh": true
+  },
+  {
+    "id": "qcy-ht08-pro-plus",
+    "price": 43900,
+    "fetchedAt": "2026-11-17T09:43:34.086418100Z",
+    "fresh": true
+  },
+  {
+    "id": "qcy-ht10-hires",
+    "price": null,
+    "fetchedAt": null,
+    "fresh": false
+  },
+  {
+    "id": "qcy-ht16",
+    "price": 31800,
+    "fetchedAt": "2026-11-17T09:44:01.061724400Z",
+    "fresh": true
+  },
+  {
+    "id": "qcy-ht19",
+    "price": 48500,
+    "fetchedAt": "2026-11-17T09:44:13.382176600Z",
+    "fresh": true
+  },
+  {
+    "id": "qcy-ht20",
+    "price": 25900,
+    "fetchedAt": "2026-11-17T09:43:44.314854100Z",
+    "fresh": true
+  },
+  {
+    "id": "qcy-t13-pro",
+    "price": 22900,
+    "fetchedAt": "2026-11-17T09:43:50.162255100Z",
+    "fresh": true
+  },
+  {
+    "id": "qcy-t17-app",
+    "price": 29900,
+    "fetchedAt": "2026-11-17T09:44:06.931265500Z",
+    "fresh": true
+  },
+  {
+    "id": "qcy-t29-app",
+    "price": 28900,
+    "fetchedAt": "2026-11-17T09:43:55.581460Z",
+    "fresh": true
+  },
+  {
+    "id": "samsung-galaxy-buds4-white",
+    "price": 220200,
+    "fetchedAt": "2026-11-17T09:46:14.324804800Z",
+    "fresh": true
+  },
+  {
+    "id": "sennheiser-momentum-tw5",
+    "price": 429000,
+    "fetchedAt": "2026-11-17T09:45:29.544754Z",
+    "fresh": true
+  },
+  {
+    "id": "sony-wf-c710n-glass-blue",
+    "price": null,
+    "fetchedAt": null,
+    "fresh": false
+  }
+]
