@@ -1,5 +1,7 @@
 # 문서 색인
 
+- [11월 17일 카탈로그 반복 갱신](evaluations/catalog-refresh-2026-11-17/README.md): 25회 시도·21개 유효 가격·격리 API 대조·주간 출처 점검 결과
+
 - [결정 완료와 기록 정정·재검토](decisions/0021-decision-completion-and-revisions.md): 완료 결과 분리, 과거 근거·회고 보존과 개인화 연결
 
 - [결정 보관·휴지통과 개인화 활용](decisions/0020-decision-retention-and-personalization.md): 30일 복구·만료 삭제·복원 안내
