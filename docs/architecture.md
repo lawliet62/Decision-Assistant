@@ -1,5 +1,7 @@
 # System architecture
 
+[도메인 개요](domain.md)는 제품 흐름과 모델의 의미를, 이 문서는 실행 단위·패키지 책임·의존 방향·데이터와 외부 호출 경계를 설명한다. [도메인 상세](domain.md#도메인-지도)와 [UI 화면 모음](ui/README.md)을 함께 참고한다.
+
 ## 현재 구조
 
 ```text
@@ -15,7 +17,52 @@ Browser
       → Resend API (outcome reminder email, optional)
 ```
 
-단일 backend 배포 단위 안에서 `decision`, `template`, `evaluation`, `ai` feature package를 사용한다. message broker, cache, vector database, microservice는 현재 문제에 필요하지 않다.
+단일 backend 배포 단위 안에서 아래 feature package를 사용한다. message broker, cache, vector database, microservice는 도입하지 않는다. 문서의 도메인 구분과 Java package는 일대일 대응하지 않는다. 예를 들어 `guidance`는 카탈로그·추천·근거를 함께 구현하며, 회고는 `decision`, 알림은 `notification`, 성향은 `preference`에 나뉘어 있다.
+
+## 코드 구성과 의존 방향
+
+| backend package | 현재 책임과 주요 연결 |
+|---|---|
+| `decision` | aggregate·비교·완료·회고·보관/삭제 API를 조정한다. template·guidance·evaluation·preference·notification 모델과 협력하며 `DecisionTaskWriter`로 외부 작업 결과 쓰기를 보호한다. |
+| `template` | 제품군별 versioned 초기 기준·조건과 intake 선택지를 제공한다. |
+| `evaluation` | 입력 준비·snapshot·순수 Java 점수 계산·평가 이력을 담당한다. 선택적 AI 평가는 ai port를 사용한다. |
+| `ai` | 구조화 proposal·AI 정책·provider port/adapter·실행 metadata를 관리한다. 외부 호출 결과는 보호된 결과 쓰기로 저장한다. |
+| `guidance` | 공유 카탈로그 등록·갱신, 조건 탐색, 후보·근거·질문, 사양·호환성 판정과 worker를 담당한다. |
+| `lookup` | 동기 제품명 검색과 Serper adapter·durable 검색 한도를 담당한다. guidance의 검색 port를 구현하며 실시간 탐색과 한도를 공유한다. |
+| `identity` | Auth0 로그인·세션·CSRF·사용자 provision·현재 내부 사용자 해석을 담당한다. 개인 API는 이 사용자로 소유권을 제한한다. |
+| `notification` | 회고 알림 설정·상태·scheduled email worker·Resend adapter를 담당한다. Decision 소유권과 현재 Resolution을 확인한다. |
+| `preference` | 성향 기억의 사용자 확인·수정·제외·삭제와 원본 수명에 따른 적용 가능 조회를 담당한다. |
+| `secrets` | backend 초기 설정 시 환경 identity로 Secret Manager 값을 읽는다. domain 데이터 저장소나 frontend API가 아니다. |
+| `common` | HTTP 오류 변환과 작은 공통 예외를 제공한다. |
+
+frontend의 `app/`은 route·server composition, `features/`는 사용자 흐름, `shared/api/`는 generated OpenAPI 타입과 얇은 client다. 브라우저는 같은 origin의 Next.js `/api` rewrite를 통해 Spring에 접근한다. `/oauth2`, `/login/oauth2`, `/logout`도 backend로 전달하며 인증 token을 frontend에 복제하지 않는다.
+
+```mermaid
+flowchart LR
+    UI[Next.js app·features] --> API[Spring feature API]
+    API --> Identity[identity: 현재 사용자·소유권]
+    API --> Services[feature service와 domain 모델]
+    Services --> DB[(PostgreSQL)]
+    Services --> Ports[AI·검색·수집·메일 port]
+    Ports --> Adapters[provider adapter]
+    Adapters --> Providers[외부 서비스]
+    Workers[동일 backend의 scheduled worker] --> Services
+```
+
+이는 주요 실행 방향이며 package 간 의존을 정적으로 강제하는 모듈 경계도는 아니다. controller·service·entity·repository는 feature 안에 가까이 두며 별도 배포 단위나 최상위 layer module을 추가하지 않는다.
+
+## 대표 요청과 비동기 실행
+
+| 과정 | 실행 흐름과 보존 경계 |
+|---|---|
+| 카탈로그 추천 | UI → Decision 생성 → DB CatalogProduct 조회 → 개인 CandidateSuggestion 복사. 추천 요청 중 외부 호출은 없다. |
+| 후보 승인·조건 비교 | 사용자가 후보를 Option에 연결 → 현재 comparison_state 저장 → 판정 표시. 수집 사양·사용자 확인·평가 입력을 구분한다. |
+| 평가·완료 | 최신 version 검증 → Evaluation 입력·결과 고정 → 선택적으로 독립 LLM 평가. 완료는 별도로 Resolution의 comparison_snapshot을 고정한다. |
+| 회고·개인화 | Resolution에 회고 추가 → PROPOSED 성향 → 사용자 확인 → 같은 제품군의 새 Decision 기본값에 반영한다. |
+| 기존 실시간 탐색·근거 | 상태 행 생성 → scheduled worker claim → 외부 검색·수집·AI → 실행 식별자·version·부모 존재/삭제 재확인 후 결과 저장. |
+| 운영 갱신·알림·삭제 | 카탈로그 고정 URL 예약 갱신, 회고 email 발송, 휴지통 만료 purge를 같은 backend의 scheduler가 수행한다. |
+
+모든 worker의 transaction 경계가 같은 것은 아니다. 탐색·카탈로그 갱신은 예약/claim과 외부 호출·결과 쓰기를 분리한다. 알림은 부모 잠금과 현재 Resolution 확인으로 정정·삭제와 발송 순서를 보장한다. 이미 외부 전송된 요청·메일까지 취소할 수 있다는 뜻은 아니다.
 
 ## 데이터 경계
 

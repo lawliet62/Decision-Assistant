@@ -1,0 +1,265 @@
+{
+  "capturedAt": "2026-11-17T10:14:08.087Z",
+  "applicationCommit": "62a58b19ae5228d0fc5e14e61c775c532f879c73",
+  "data": "기존 E2E mock backend의 가상 데이터. 성향 API는 capture script의 고정 응답.",
+  "command": "npm.cmd --prefix frontend run test:e2e -- --config playwright.docs.config.ts",
+  "browser": "chromium",
+  "locale": "ko-KR",
+  "timezone": "Asia/Seoul",
+  "fullPage": true,
+  "hidden": "Next.js 개발 도구 overlay만 숨김. 제품 화면 내용은 그대로 촬영.",
+  "images": [
+    {
+      "file": "discovery/01-intake-desktop.png",
+      "route": "/decisions/new",
+      "state": "카탈로그 추천 조건 선택 · 출퇴근·20만원·ANC",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "discovery/01-intake-mobile.png",
+      "route": "/decisions/new",
+      "state": "카탈로그 추천 조건 선택 · 출퇴근·20만원·ANC",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "discovery/02-candidates-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "가상 추천 후보 · 충족·미달·미확인 구분",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "discovery/02-candidates-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "가상 추천 후보 · 충족·미달·미확인 구분",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "comparison/03-conditions-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "현재 비교 조건과 후보별 충족·미달·미확인",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "comparison/03-conditions-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "현재 비교 조건과 후보별 충족·미달·미확인",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "comparison/04-confirmation-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "수집 근거와 구분한 사용자 직접 확인 입력",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "comparison/04-confirmation-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "수집 근거와 구분한 사용자 직접 확인 입력",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "completion/05-resolution-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "후보 선택·보류·구매하지 않음 기록 전",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "completion/05-resolution-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "후보 선택·보류·구매하지 않음 기록 전",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "reflection/06-outcome-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "선택한 완료 기록의 사용 후 회고",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "reflection/06-outcome-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "선택한 완료 기록의 사용 후 회고",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "completion/07-correction-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "원본 완료 기록을 보존하는 정정 · 보류 비활성",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "completion/07-correction-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "원본 완료 기록을 보존하는 정정 · 보류 비활성",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "completion/08-not-purchased-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "구매하지 않음도 결정 완료 · 결정에 대한 회고",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "completion/08-not-purchased-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "구매하지 않음도 결정 완료 · 결정에 대한 회고",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "comparison/13-evaluation-input-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "사양과 별개인 예상 만족도·가격 평가 입력",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "comparison/13-evaluation-input-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "사양과 별개인 예상 만족도·가격 평가 입력",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "comparison/14-evaluation-result-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "고정 입력에 대한 평가 결과 · mock 점수는 알고리즘 검증 자료가 아님",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "comparison/14-evaluation-result-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "고정 입력에 대한 평가 결과 · mock 점수는 알고리즘 검증 자료가 아님",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "decision-list/09-list-desktop.png",
+      "route": "/?open=DRAFT,CHOSEN",
+      "state": "진행·완료 그룹과 소유자 목록 관리",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "decision-list/09-list-mobile.png",
+      "route": "/?open=DRAFT,CHOSEN",
+      "state": "진행·완료 그룹과 소유자 목록 관리",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "decision-list/10-archive-desktop.png",
+      "route": "/?open=DRAFT,CHOSEN",
+      "state": "완료 상태·개인화 활용을 유지하는 보관함",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "decision-list/10-archive-mobile.png",
+      "route": "/?open=DRAFT,CHOSEN",
+      "state": "완료 상태·개인화 활용을 유지하는 보관함",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "decision-list/11-trash-desktop.png",
+      "route": "/?open=DRAFT,CHOSEN",
+      "state": "30일 복구 유예와 개인화 활용 제외 안내",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "decision-list/11-trash-mobile.png",
+      "route": "/?open=DRAFT,CHOSEN",
+      "state": "30일 복구 유예와 개인화 활용 제외 안내",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "reflection/12-preferences-desktop.png",
+      "route": "/preferences",
+      "state": "성향 제안의 명시적 확인과 회고 email 설정",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "reflection/12-preferences-mobile.png",
+      "route": "/preferences",
+      "state": "성향 제안의 명시적 확인과 회고 email 설정",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ]
+}

@@ -6,6 +6,8 @@
 
 ## 사례와 진단 방법
 
+- [UI 촬영 성공과 화면 준비 완료의 구분](ui-gallery-capture.md): 목록 로딩·viewport 변경 중 전체 페이지 높이와 hydration 지연 확인
+
 - [GitHub 출처 점검 실패 분리](../evaluations/source-check-2026-11-14/README.md): 로컬 성공과 클라우드 접근의 구분, 제목 변경을 제한적으로 처리한 사례
 - [Windows 임시 worktree에서 로컬 명령이 실패하는 경우](windows-worktree-permissions.md): Hook 점유, 실행기 오류 740, Git 소유권, 실제 파일 접근 실패의 구분
 

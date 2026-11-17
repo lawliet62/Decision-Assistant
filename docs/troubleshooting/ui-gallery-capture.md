@@ -1,0 +1,21 @@
+# UI 촬영 성공과 화면 준비 완료의 구분
+
+## 증상과 실행 조건
+
+Windows의 Next.js 개발 서버와 기존 Playwright mock backend로 [UI 화면 모음](../ui/README.md)을 촬영할 때, 성공한 전체 페이지 이미지에서도 결정 목록의 하단이 잘린 사례가 있었다. Chromium, 데스크톱 1440×1000에서 초기 목록 이미지는 1440×1951이었고 데이터·레이아웃 대기 후에는 1440×3676으로 전체 항목과 footer를 포함했다.
+
+화면 모음은 실제 frontend 배치를 보여 주므로 screenshot 호출 성공뿐 아니라 해당 상태의 데이터가 모두 표시되어야 한다. 실제 backend·provider 동작의 검증과는 별개다.
+
+## 확인된 사실과 판단
+
+- 첫 촬영은 목록 region 표시만 확인했다. 이는 비동기 목록 항목과 페이지 높이가 준비됐다는 증거가 아니었다.
+- 별도 재실행에서 region 대기가 실패했을 때 화면은 ‘결정 목록을 불러오는 중’이었고 trace의 모든 network 파일에 counts 요청이 없었다. API 오류 응답과는 구분해야 하며 정확한 hydration 지연 원인은 확정하지 않았다.
+- 예상 목록 항목 수, 네트워크 idle, font 준비와 viewport 변경 후 두 animation frame을 기다린 촬영은 성공했고 전체 목록과 footer를 직접 확인했다. 제품 코드·기존 테스트 assertion은 변경하지 않았다.
+
+## 해결과 재검증
+
+[촬영 시나리오](../../frontend/e2e/ui-gallery.capture.ts)는 목록 준비를 항목 수로 확인하고 화면 크기별 렌더링을 기다린다. 목록의 최초 region 대기는 개발 서버 hydration을 고려해 최대 30초다. 일반 E2E timeout이나 품질 gate는 변경하지 않는다. 모든 장면이 성공하기 전에는 임시 test output에만 촬영하고, 성공한 뒤 문서 자산과 manifest를 갱신한다.
+
+[문서 전용 설정](../../frontend/playwright.docs.config.ts)은 기존 서버를 재사용하지 않는다. 3100·18080 포트 사용 오류가 나면 소유 프로세스를 먼저 확인하며 다른 세션의 서버를 임의로 종료하지 않는다.
+
+증상이 재발하면 failure trace와 화면을 함께 보고 브라우저 API 요청 전 정체, 오류 응답, 정상 응답 뒤 미완료 렌더링을 구분한다. 명시적인 기대 항목·문구와 이미지 하단을 확인하며 screenshot 성공이나 network idle 하나만으로 정상 완료를 판단하지 않는다. Windows 실행 경로 문제는 [기존 진단](windows-worktree-permissions.md)을 따른다.
