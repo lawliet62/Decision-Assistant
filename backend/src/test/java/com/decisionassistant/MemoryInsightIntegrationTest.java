@@ -78,12 +78,17 @@ class MemoryInsightIntegrationTest {
     }
     @Test void consentCacheMetadataAndInvalidation() throws Exception {
         var hash = hash();
+        when(interpreter.interpret(any())).thenAnswer(call -> {
+            assertThat(jdbc.queryForObject("select count(*) from memory_insight_inputs where decision_id=?", Integer.class, current)).isEqualTo(1);
+            return result();
+        });
         mvc.perform(post(url()).with(owner).with(csrf()).contentType("application/json").content("{\"expectedInputHash\":\"" + hash + "\"}"))
                 .andExpect(status().isBadRequest());
         verifyNoInteractions(interpreter);
         generate(hash).andExpect(status().isOk()).andExpect(jsonPath("$.insight.summary").isNotEmpty());
         generate(hash).andExpect(status().isOk()); verify(interpreter, times(1)).interpret(any());
         assertThat(jdbc.queryForObject("select input_tokens from memory_insights where decision_id=?", Long.class, current)).isEqualTo(100);
+        assertThat(jdbc.queryForObject("select snapshot -> 'source' ->> 'rationale' from memory_insight_inputs where decision_id=?", String.class, current)).isEqualTo("사용하던 휴대폰과 연동");
         mvc.perform(get(url()).with(owner)).andExpect(jsonPath("$.saved.provider").value("fixture"));
         jdbc.update("update resolutions set rationale='변경된 이유' where id=?", resolution);
         mvc.perform(get(url()).with(owner)).andExpect(jsonPath("$.saved").doesNotExist());
@@ -96,6 +101,7 @@ class MemoryInsightIntegrationTest {
         when(interpreter.interpret(any())).thenAnswer(call -> { jdbc.update("delete from decisions where id=?", source); return result(); });
         generate(hash).andExpect(status().isNotFound());
         assertThat(jdbc.queryForObject("select count(*) from memory_insights where decision_id=?", Integer.class, current)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from memory_insight_inputs where decision_id=?", Integer.class, current)).isZero();
     }
     @Test void sourceOptOutDuringProviderCallCannotStoreSummary() throws Exception {
         var hash = hash();
@@ -106,6 +112,7 @@ class MemoryInsightIntegrationTest {
         generate(hash()).andExpect(status().isOk());
         jdbc.update("delete from decisions where id=?", source);
         assertThat(jdbc.queryForObject("select count(*) from memory_insights where decision_id=?", Integer.class, current)).isZero();
+        assertThat(jdbc.queryForObject("select count(*) from memory_insight_inputs where decision_id=?", Integer.class, current)).isZero();
     }
     @Test void foreignOwnerAndMalformedOutputAreRejected() throws Exception {
         var foreignId = UUID.randomUUID(); var email = foreignId + "@example.com";

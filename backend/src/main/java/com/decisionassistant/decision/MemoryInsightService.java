@@ -49,29 +49,41 @@ public class MemoryInsightService {
         if (!preview.available()) throw new InvalidDecisionException(List.of("AI 요약이 현재 비활성입니다. 원문 기록을 참고하세요."));
         var input = preview.input();
         var fingerprint = hash(input);
+        var owner = user.current().id();
+        var frozen = tx.execute(status -> {
+            lockParents(id, input.source().decisionId(), owner);
+            if (!hash(input(id, resolution)).equals(fingerprint))
+                throw new ConflictException("전송 대상이 변경되었습니다. 전송 내용을 다시 확인하세요.");
+            var snapshot = new MemoryInsightInput(id, fingerprint, input);
+            em.persist(snapshot);
+            em.flush();
+            return snapshot;
+        });
         long start = System.nanoTime();
         final AiContracts.AiResult<Insight> result;
-        try { result = executor.call(() -> interpreter.interpret(input)); }
+        try { result = executor.call(() -> interpreter.interpret(frozen.snapshot)); }
         catch (RuntimeException failure) {
             throw new InvalidDecisionException(List.of("AI 요약을 생성하지 못했습니다. 원문은 그대로 참고할 수 있습니다."));
         }
         validate(result.value());
-        var owner = user.current().id();
         return tx.execute(status -> {
             // 외부 호출 동안 잠금을 보유하지 않는다. 삭제·정정과 같은 부모 잠금으로 결과 쓰기만 직렬화한다.
-            java.util.stream.Stream.of(id, input.source().decisionId()).distinct().sorted().forEach(key ->
-                    repository.lockByIdAndOwner(key, owner).orElseThrow(() -> new NotFoundException("근거 결정을 찾을 수 없습니다.")));
-            em.clear();
+            lockParents(id, input.source().decisionId(), owner);
             if (!hash(input(id, resolution)).equals(fingerprint))
                 throw new ConflictException("현재 결정 또는 과거 기록이 변경되었습니다. 내용을 확인하고 다시 요청하세요.");
             var existing = saved(id, resolution, fingerprint);
             if (existing != null) return existing;
-            var row = new MemoryInsight(id, input.source().decisionId(), resolution, fingerprint, result.value(),
+            var row = new MemoryInsight(id, input.source().decisionId(), resolution, frozen.id, fingerprint, result.value(),
                     properties.provider(), properties.model(), result.inputTokens(), result.outputTokens(),
                     (System.nanoTime() - start) / 1_000_000);
             em.persist(row);
             return response(row);
         });
+    }
+    private void lockParents(UUID current, UUID source, UUID owner) {
+        java.util.stream.Stream.of(current, source).distinct().sorted().forEach(key ->
+                repository.lockByIdAndOwner(key, owner).orElseThrow(() -> new NotFoundException("근거 결정을 찾을 수 없습니다.")));
+        em.clear();
     }
     private Input input(UUID id, UUID resolution) {
         var current = decisions.get(id);

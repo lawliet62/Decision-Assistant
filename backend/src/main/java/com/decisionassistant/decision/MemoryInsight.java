@@ -13,6 +13,7 @@ public class MemoryInsight {
     @Column(name = "decision_id", nullable = false) UUID decisionId;
     @Column(name = "source_decision_id", nullable = false) UUID sourceDecisionId;
     @Column(name = "resolution_id", nullable = false) UUID resolutionId;
+    @Column(name = "input_id") UUID inputId;
     @Column(name = "input_hash", nullable = false) String inputHash;
     @JdbcTypeCode(SqlTypes.JSON) @Column(nullable = false, columnDefinition = "jsonb") MemoryInsightContracts.Insight result;
     @Column(nullable = false) String provider;
@@ -24,9 +25,10 @@ public class MemoryInsight {
     @Column(name = "latency_ms", nullable = false) long latencyMs;
     @Column(name = "created_at", nullable = false) Instant createdAt;
     protected MemoryInsight() {}
-    MemoryInsight(UUID decisionId, UUID source, UUID resolution, String hash, MemoryInsightContracts.Insight result,
+    MemoryInsight(UUID decisionId, UUID source, UUID resolution, UUID inputId, String hash, MemoryInsightContracts.Insight result,
                   String provider, String model, long inputTokens, long outputTokens, long latencyMs) {
         id = UUID.randomUUID(); this.decisionId = decisionId; sourceDecisionId = source; resolutionId = resolution;
+        this.inputId = inputId;
         inputHash = hash; this.result = result; this.provider = provider; this.model = model;
         this.inputTokens = inputTokens; this.outputTokens = outputTokens; this.latencyMs = latencyMs;
         promptVersion = MemoryInsightContracts.PROMPT_VERSION; schemaVersion = "memory-insight-v1"; createdAt = Instant.now();
