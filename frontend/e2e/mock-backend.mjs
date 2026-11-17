@@ -194,6 +194,8 @@ const server = http.createServer(async (request, response) => {
     return send(200, current);
   }
   if (request.url === "/api/v1/ai/capabilities") return send(200, { enabled: true, provider: "gemini", model: "test", requiresSensitiveDataAcknowledgement: true });
+  if (request.url.endsWith("/reason-templates")) return send(200, [{id:"budget",label:"예산에 적합함",kind:"CHOSEN"},{id:"information",label:"추가 정보가 필요함",kind:"DEFERRED"},{id:"no_match",label:"조건에 맞는 제품이 없음",kind:"ABANDONED"}]);
+  if (request.url.endsWith("/memories")) return send(200, []);
   if (!current) return send(404, { detail: "Not found" });
   if (request.method === "PUT" && request.url.endsWith("/comparison")) {
     if (body.expectedVersion !== current.version) return send(409, { detail: "최신 비교를 확인하세요." });
@@ -261,11 +263,18 @@ const server = http.createServer(async (request, response) => {
     if (current.editMode === "CORRECTION") current.resolutions.find(item => item.id === current.revisionBaseId).supersededAt = resolution.createdAt;
     current.status = body.kind; current.resolutions.unshift(resolution); current.version++;
     current.currentResolutionId = resolution.id;
-    if (body.kind !== "DEFERRED") { current.editMode = undefined; current.revisionBaseId = undefined; }
+    current.editMode = undefined; current.revisionBaseId = undefined;
     return send(201, resolution);
   }
+  if (request.method === "POST" && request.url.endsWith("/revisions/cancel")) {
+    const version = current.version + 1; current = current.revisionDraft; current.version = version; return send(200,current);
+  }
+  if (request.method === "PUT" && request.url.endsWith("/purchase")) {
+    current.resolutions.find(r => r.id === body.resolutionId).purchaseStatus = body.status; current.version++; return send(200,current);
+  }
   if (request.method === "POST" && request.url.endsWith("/revisions")) {
-    if (body.expectedVersion !== current.version || !["CHOSEN", "ABANDONED"].includes(current.status)) return send(409, { detail: "최신 기록을 확인하세요." });
+    if (body.expectedVersion !== current.version || !["CHOSEN", "DEFERRED", "ABANDONED"].includes(current.status)) return send(409, { detail: "최신 기록을 확인하세요." });
+    current.revisionDraft = structuredClone(current);
     current.revisionBaseId = current.currentResolutionId;
     current.currentResolutionId = undefined; current.editMode = body.mode; current.status = "DRAFT"; current.version++;
     return send(200, current);

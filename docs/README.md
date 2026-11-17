@@ -1,5 +1,6 @@
 # 문서 색인
 
+- [결정 이유와 재사용 기록](decisions/0022-decision-reasons-and-reusable-history.md): 이유 GUI·구매 상태·구매 전 재검토·AI 없는 과거 기록 활용
 - [11월 17일 카탈로그 반복 갱신](evaluations/catalog-refresh-2026-11-17/README.md): 25회 시도·21개 유효 가격·격리 API 대조·주간 출처 점검 결과
 
 - [결정 완료와 기록 정정·재검토](decisions/0021-decision-completion-and-revisions.md): 완료 결과 분리, 과거 근거·회고 보존과 개인화 연결

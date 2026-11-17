@@ -42,6 +42,7 @@ public class CandidateSuggestion {
     }
     public void accept() { status = Status.ACCEPTED; }
     public void accept(UUID optionId) { accept(); this.optionId = optionId; }
+    public void restoreSelection(Status status, UUID optionId) { this.status = status; this.optionId = optionId; }
     public void discovered(java.util.List<DiscoveryContracts.ProductFact> facts) { this.facts = java.util.List.copyOf(facts); discovered = true; }
     public java.util.List<DiscoveryContracts.ProductFact> facts() { return facts; }
     public UUID optionId() { return optionId; }

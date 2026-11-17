@@ -58,7 +58,7 @@ public class DecisionRetentionService {
             if (d.deletedAt() != null) throw new NotFoundException("휴지통의 결정은 먼저 복구해야 합니다.");
             switch (request.action()) {
                 case ARCHIVE -> {
-                    if (d.status() != DecisionTypes.DecisionStatus.CHOSEN && d.status() != DecisionTypes.DecisionStatus.ABANDONED)
+                    if (DecisionTypes.phase(d.status()) != DecisionTypes.DecisionPhase.COMPLETED)
                         throw new InvalidDecisionException(List.of("종료된 결정만 보관할 수 있습니다."));
                     d.archive(true, now);
                 }

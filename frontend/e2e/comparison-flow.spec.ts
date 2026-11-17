@@ -47,7 +47,7 @@ test("같은 후보에서 조건 복원·직접 확인·보류·결정 기록을
   await page.getByRole("button", { name: "실제 선택 기록으로 이동" }).click();
   await page.getByLabel("실제로 선택한 후보", { exact: true }).selectOption({ label: "가상 Beta" });
   await page.getByPlaceholder("결정 이유").fill("4만원을 더 내고 ANC 지원, iOS는 직접 확인");
-  await page.getByRole("button", { name: "선택 기록", exact: true }).click();
+  await page.getByRole("button", { name: "결정 완료", exact: true }).click();
   await page.reload();
   await page.getByRole("button", { name: "3. 선택 기록", exact: true }).click();
   await page.locator("summary").filter({ hasText: "선택 · 결정 기록 · 4만원을 더 내고 ANC 지원, iOS는 직접 확인" }).click();

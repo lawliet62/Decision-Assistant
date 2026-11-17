@@ -1,5 +1,7 @@
 # Domain model
 
+현재 완료 의미는 [결정 이유·구매 상태 ADR](decisions/0022-decision-reasons-and-reusable-history.md)이 우선한다. DEFERRED도 완료이며 재검토 없이 직접 수정하지 않는다. Resolution은 이유 ID·대표 이유·자유 설명과 별도 구매 상태를 가진다. 구매함 이전까지 새 검토를 시작하고 취소할 수 있으며 과거 근거를 보존한다. 과거 판단은 고정 취향이나 검증된 제품 사양으로 자동 변환하지 않는다.
+
 ## 사전 검토 제품 목록
 
 `CatalogProduct`는 운영자가 등록한 공개 제품·공식 사양·최근 판매 관측이다. 사용자와 무관한 공유 데이터이며 `Decision`의 소유권 경계를 확장하지 않는다. 사양의 출처·인용·확인 시각·점검 주기, 모델 identity와 등록 revision을 보존한다. `catalog_observations`와 `catalog_monthly_usage`는 고정 URL 수집 결과와 호출 한도를 기록하며 사용자 조건을 저장하지 않는다.
@@ -43,7 +45,7 @@ Decision draft ──evaluate──> Evaluation(snapshot + results)
 - Resolution: 사용자가 선택·보류·포기한 사실과 이유. 신규 기록은 당시 조건·후보·입력·근거·판정의 immutable comparison snapshot을 함께 가진다. 이전 기록의 snapshot은 없을 수 있다.
 - OutcomeCheckIn: 시간이 지난 뒤 만족도와 기대 충족 여부를 여러 번 기록한다.
 - PreferenceMemory: resolution/outcome에서 제안된 category별 성향 projection이다. `PROPOSED`는 평가에 쓰지 않고 사용자가 확인한 `CONFIRMED`만 다음 Decision의 명시적 기본값이 된다.
-- OutcomeReminder: 선택 후 14일·60일 회고를 앱 또는 이메일로 요청하는 일정이다.
+- OutcomeReminder: 이전 버전에서 예약한 회고를 앱 또는 이메일로 요청하는 일정이다. 신규 완료에서는 자동 예약하지 않는다.
 - ApplicationUser: Decision ownership의 안정적인 로컬 UUID. 외부 IdP 교체나 identity 추가가 domain FK를 바꾸지 않게 한다.
 - ExternalIdentity: Auth0 issuer와 subject의 유일한 조합. 같은 이메일만으로 다른 identity를 자동 연결하지 않는다.
 

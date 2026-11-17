@@ -1,4 +1,6 @@
 "use client";
+import { ReasonPicker, PastDecisions } from "./decision-reasons";
+
 
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/shared/api/client";
@@ -33,7 +35,7 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
   const [optionDraft, setOptionDraft] = useState(initialDecision.options ?? []);
   const [values, setValues] = useState<DraftValue[]>(() => initialDecision.values ?? []);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [stage, setStage] = useState(["CHOSEN", "ABANDONED"].includes(initialDecision.status ?? "") ? 2 : 0);
+  const [stage, setStage] = useState(["CHOSEN", "ABANDONED", "DEFERRED"].includes(initialDecision.status ?? "") ? 2 : 0);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const dirtyRef = useRef(false);
@@ -50,21 +52,29 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
   const [evaluation, setEvaluation] = useState<EvaluationResponse>();
   const [capabilities, setCapabilities] = useState<AiCapabilitiesResponse>();
   const [includeLlm, setIncludeLlm] = useState(false);
-  const [selectedOptionId, setSelectedOptionId] = useState(initialDecision.resolutions?.[0]?.selectedOptionId ?? "");
-  const [rationale, setRationale] = useState(initialDecision.resolutions?.[0]?.rationale ?? "");
   const [satisfaction, setSatisfaction] = useState(4);
   const [expectationStatus, setExpectationStatus] = useState<"MET" | "PARTIALLY_MET" | "NOT_MET" | "TOO_EARLY">("TOO_EARLY");
   const [wouldChooseAgain, setWouldChooseAgain] = useState<boolean>();
   const [workedWell, setWorkedWell] = useState("");
   const [disappointedBy, setDisappointedBy] = useState("");
   const [outcomeNotes, setOutcomeNotes] = useState("");
+  const [notPurchased, setNotPurchased] = useState(false);
+  const currentRecord = decision.resolutions?.find(r => r.id === decision.currentResolutionId) ?? decision.resolutions?.[0];
+  async function cancelRevision() {
+    const { data, error } = await api.POST("/api/v1/decisions/{decisionId}/revisions/cancel", { params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.version! } });
+    if (!data || error) { setError(problemMessage(error)); return; } apply(data); setStage(2);
+  }
+  async function recordPurchase(status: "UNRECORDED" | "PLANNED" | "PURCHASED" | "NOT_PURCHASED") {
+    const { data, error } = await api.PUT("/api/v1/decisions/{decisionId}/purchase", { params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.version!, resolutionId: currentRecord!.id!, status } });
+    if (!data || error) { setError(problemMessage(error)); return; } apply(data);
+  }
 
   const guidance = decision.guidance;
   const options = optionDraft;
-  const completed = decision.status === "CHOSEN" || decision.status === "ABANDONED";
+  const completed = ["CHOSEN", "DEFERRED", "ABANDONED"].includes(decision.status ?? "");
   const criteria = criterionDraft.filter((item) => item.active);
-  const pending = (guidance?.processingStatus === "IMPORTING" || ["PENDING", "RUNNING"].includes(decision.discovery?.status ?? "")) && (decision.status === "DRAFT" || decision.status === "DEFERRED");
-  const editable = decision.status === "DRAFT" || decision.status === "DEFERRED";
+  const pending = (guidance?.processingStatus === "IMPORTING" || ["PENDING", "RUNNING"].includes(decision.discovery?.status ?? "")) && (decision.status === "DRAFT");
+  const editable = decision.status === "DRAFT";
   const llmAvailable = Boolean(capabilities?.enabled) && (!guidance || guidance.aiConsent);
 
   useEffect(() => { api.GET("/api/v1/ai/capabilities").then(({ data }) => setCapabilities(data)).catch(() => {}); }, []);
@@ -200,25 +210,23 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
     setEvaluation(data);
   }
 
-  async function resolveDecision(kind: "CHOSEN" | "DEFERRED" | "ABANDONED") {
+  async function resolveDecision(kind: "CHOSEN" | "DEFERRED" | "ABANDONED", selectedOptionId: string, rationale: string, reasonIds: string[], primaryReasonId?: string) {
     if (comparisonDirtyRef.current) { setError("비교 조건을 먼저 저장하세요."); return; }
     clearFeedback();
     const { error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/resolutions", {
-      params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.version, kind, selectedOptionId: kind === "CHOSEN" ? selectedOptionId : undefined, rationale },
+      params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.version, kind, reasonIds, primaryReasonId, selectedOptionId: kind === "CHOSEN" ? selectedOptionId : undefined, rationale },
     });
     if (apiError) return setError(problemMessage(apiError));
-    await refreshDecision(); setStage(kind === "DEFERRED" ? 2 : 3); setMessage("선택 상태를 기록했습니다.");
+    await refreshDecision(); setStage(2); setMessage("선택 상태를 기록했습니다.");
   }
 
   async function beginRevision(mode: "CORRECTION" | "RECONSIDERATION") {
     clearFeedback();
     const { data, error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/revisions", {
-      params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.version!, mode },
+      params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.version!, mode, notPurchased: true },
     });
     if (apiError || !data) return setError(problemMessage(apiError));
-    apply(data); setStage(0);
-    setRationale(decision.resolutions?.[0]?.rationale ?? "");
-    setSelectedOptionId(decision.resolutions?.[0]?.selectedOptionId ?? "");
+    apply(data); setNotPurchased(false); setStage(0);
     setMessage(mode === "CORRECTION" ? "기록 수정을 시작했습니다. 수정 후 결정 결과를 다시 저장하세요." : "다시 검토를 시작했습니다. 이전 결정 기록은 그대로 남습니다.");
   }
 
@@ -235,17 +243,23 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
   return <fieldset disabled={busy} className="mt-6 min-w-0 space-y-6">
     <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-medium text-emerald-700">{templateLabels[decision.templateKey ?? "CUSTOM"]} · {statusLabels[decision.status ?? "DRAFT"]}</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">{decision.title}</h1></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${guidance?.readiness === "VERIFIED_READY" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{guidance?.readiness === "VERIFIED_READY" ? "검증 준비됨" : "잠정 비교"}</span></header>
     {(message || error) && <div className={`rounded-xl p-4 text-sm ${error ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{error ?? message}</div>}
-    {completed && <Section title="완료한 결정 관리" description="후보 선택은 구매 완료 확인을 뜻하지 않습니다. 잘못 입력한 기록은 수정하고, 판단이 달라졌다면 다시 검토하세요."><div className="flex flex-wrap gap-3"><button className={secondaryButton} onClick={() => run(() => beginRevision("CORRECTION"))}>기록 수정</button><button className={secondaryButton} onClick={() => run(() => beginRevision("RECONSIDERATION"))}>다시 검토</button></div><p className="text-sm text-zinc-600">기록 수정은 이전 기록을 정정 이력으로 남깁니다. 다시 검토는 당시 판단을 유효한 이력으로 보존합니다. 편집을 시작하면 기존 회고 알림을 중단합니다.</p></Section>}
+    {completed && <Section title="결정을 완료했습니다" description="필수 절차는 여기서 끝납니다. 구매 기록과 회고는 원할 때 남길 수 있습니다.">
+<Link href="/" className={primarySmall}>내 결정으로 돌아가기</Link>
+{decision.status === "CHOSEN" && <div className="space-y-2"><p>구매 상태: {({ UNRECORDED: "미기록", PLANNED: "구매 예정", PURCHASED: "구매함", NOT_PURCHASED: "구매하지 않기로 함" })[currentRecord?.purchaseStatus ?? "UNRECORDED"]}</p>{currentRecord?.purchaseStatus !== "PURCHASED" && <div className="flex flex-wrap gap-2"><button className={secondaryButton} onClick={() => run(() => recordPurchase("PLANNED"))}>구매 예정</button><button className={secondaryButton} onClick={() => run(() => recordPurchase("PURCHASED"))}>구매함</button><button className={secondaryButton} onClick={() => run(() => recordPurchase("NOT_PURCHASED"))}>구매하지 않기로 함</button></div>}</div>}
+{currentRecord?.purchaseStatus !== "PURCHASED" && <><label className="flex gap-2"><input type="checkbox" checked={notPurchased} onChange={e => setNotPurchased(e.target.checked)} />아직 구매하지 않아 다시 검토합니다</label><div className="flex flex-wrap gap-3"><button disabled={!notPurchased} className={secondaryButton} onClick={() => run(() => beginRevision("CORRECTION"))}>기록 수정</button><button disabled={!notPurchased} className={secondaryButton} onClick={() => run(() => beginRevision("RECONSIDERATION"))}>다시 검토</button></div></>}
+</Section>}
+{decision.editMode && <button className={secondaryButton} disabled={comparisonDirty} onClick={() => run(cancelRevision, true)}>재검토 취소 · 이전 결론 유지</button>}
+{editable && <PastDecisions id={decision.id!} onApply={note => { markDirty(); setDraftContext({ ...draftContext, notes: [draftContext.notes, note].filter(Boolean).join("\n") }); setMessage("과거 기록을 이번 메모에 추가했습니다. 변경 저장으로 보존하세요."); }} />}
     {decision.editMode && <p role="status" className="rounded-xl bg-amber-50 p-4">{decision.editMode === "CORRECTION" ? "기록 수정 중 · 변경 내용을 저장한 뒤 후보 선택 또는 구매하지 않음으로 완료하세요. 이전 기록에 기반한 개인화는 잠시 중단됩니다." : "다시 검토 중 · 이전 판단과 회고를 보존하면서 새 결정을 준비합니다."}</p>}
 
-    <nav aria-label="비교 단계" className="flex flex-wrap gap-2">{["1. 비교 준비", "2. 비교·평가", "3. 선택 기록", "4. 사용 후 회고"].map((label, index) => <button key={label} disabled={dirty || comparisonDirty || (index === 3 && !completed)} aria-current={stage === index ? "step" : undefined} onClick={() => setStage(index)} className={stage === index ? primarySmall : secondaryButton}>{label}</button>)}</nav>
+    <nav aria-label="비교 단계" className="flex flex-wrap gap-2">{["1. 비교 준비", "2. 비교·평가", "3. 선택 기록", "선택 사항 · 회고"].map((label, index) => <button key={label} disabled={dirty || comparisonDirty || (index === 3 && !completed)} aria-current={stage === index ? "step" : undefined} onClick={() => setStage(index)} className={stage === index ? primarySmall : secondaryButton}>{label}</button>)}</nav>
     {dirty && <div role="status" className="rounded-xl bg-amber-50 p-3 text-sm">저장하지 않은 변경이 있습니다. 자동 갱신은 잠시 멈췄습니다. <button onClick={() => run(saveComparison, true)} className={primarySmall}>변경 저장</button> <button onClick={() => run(refreshDecision, true)} className={secondaryButton}>변경 취소·최신 내용 불러오기</button></div>}
     {stage === 0 && <>
     {editable && <Section title="기본 기록 수정" description="제목, 조건과 후보 이름의 입력 실수를 정정할 수 있습니다.">
       <label className="block text-sm">제목<input className={inputClass + " w-full"} value={draftTitle} onChange={e => { markDirty(); setDraftTitle(e.target.value); }} /></label>
       <label className="block text-sm">사용 목적<input className={inputClass + " w-full"} value={draftContext.intendedUse ?? ""} onChange={e => { markDirty(); setDraftContext({ ...draftContext, intendedUse: e.target.value }); }} /></label>
       <label className="block text-sm">예산 메모<input type="number" min="0" className={inputClass} value={draftContext.budget ?? ""} onChange={e => { markDirty(); setDraftContext({ ...draftContext, budget: e.target.value === "" ? undefined : Number(e.target.value) }); }} /></label>
-      <label className="block text-sm">메모<textarea className={inputClass + " w-full"} value={draftContext.notes ?? ""} onChange={e => { markDirty(); setDraftContext({ ...draftContext, notes: e.target.value }); }} /></label>
+      <label className="block text-sm">메모<textarea aria-label="메모" className={inputClass + " w-full"} value={draftContext.notes ?? ""} onChange={e => { markDirty(); setDraftContext({ ...draftContext, notes: e.target.value }); }} /></label>
       {options.map(option => <label key={option.id} className="block text-sm">후보 이름<input className={inputClass + " w-full"} value={option.name ?? ""} onChange={e => { markDirty(); setOptionDraft(options.map(item => item.id === option.id ? { ...item, name: e.target.value } : item)); }} /></label>)}
     </Section>}
     {decision.discovery && <Section title="추천 제품" description="조건에 맞춰 찾은 후보입니다. 주요 정보와 출처를 확인하고 비교할 제품을 선택하세요.">
@@ -324,10 +338,11 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
     {editable && decision.comparison && <Section title="기록할 비교 내용" description="현재 조건과 미확인 사항도 결정 이유와 함께 보존됩니다."><ComparisonSummary data={decision.comparison} options={decision.options} products={decision.productFacts} /></Section>}
     {(decision.resolutions?.length ?? 0) > 0 && <p className="text-sm text-zinc-600">최근 기록: {decision.resolutions?.[0]?.rationale ?? statusLabels[decision.status ?? "DRAFT"]}</p>}
     <fieldset disabled={!editable}>
-    <Section title="결정 결과" description="후보를 선택하거나 구매하지 않기로 결정하면 모두 결정 완료로 기록합니다."><div className="grid gap-3 sm:grid-cols-2"><select aria-label="실제로 선택한 후보" value={selectedOptionId} onChange={(event) => setSelectedOptionId(event.target.value)} className={inputClass}><option value="">후보 선택</option>{options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select><input aria-label="결정 이유" value={rationale} onChange={(event) => setRationale(event.target.value)} className={inputClass} placeholder="결정 이유" /></div><div className="flex flex-wrap gap-2"><button disabled={!selectedOptionId || comparisonDirty} onClick={() => run(() => resolveDecision("CHOSEN"))} className={primarySmall}>선택 기록</button><button disabled={decision.editMode === "CORRECTION" || comparisonDirty} onClick={() => run(() => resolveDecision("DEFERRED"))} className={secondaryButton}>보류</button><button disabled={comparisonDirty} onClick={() => run(() => resolveDecision("ABANDONED"))} className={secondaryButton}>구매하지 않음으로 완료</button></div></Section>
+
 
     </fieldset></>}
 
+    {editable && <fieldset hidden={stage !== 2} disabled={busy || dirty || comparisonDirty}><ReasonPicker key={decision.editMode === "CORRECTION" ? decision.revisionBaseId : "new"} initialResolution={decision.editMode === "CORRECTION" ? decision.resolutions?.find(r => r.id === decision.revisionBaseId) : undefined} options={options} onComplete={(kind, option, note, ids, primary) => run(() => resolveDecision(kind, option, note, ids, primary))} /></fieldset>}
     {stage === 3 && completed && <Section title={decision.status === "ABANDONED" ? "결정 후 회고" : "사용 후 회고"} description={decision.status === "ABANDONED" ? "구매하지 않기로 한 결정에 만족하는지, 예상과 달랐던 점을 남깁니다." : "실제로 써본 만족도와 예상과 달랐던 점을 남깁니다."}><div id="outcome" className="grid gap-3 sm:grid-cols-2"><select value={satisfaction} onChange={(event) => setSatisfaction(Number(event.target.value))} className={inputClass}>{[1,2,3,4,5].map((value) => <option key={value} value={value}>만족도 {value}</option>)}</select><select value={expectationStatus} onChange={(event) => setExpectationStatus(event.target.value as typeof expectationStatus)} className={inputClass}><option value="MET">기대 충족</option><option value="PARTIALLY_MET">일부 충족</option><option value="NOT_MET">미충족</option><option value="TOO_EARLY">아직 판단하기 이른 시점</option></select><select value={wouldChooseAgain === undefined ? "" : String(wouldChooseAgain)} onChange={(event) => setWouldChooseAgain(event.target.value === "" ? undefined : event.target.value === "true")} className={inputClass}><option value="">다시 선택할지</option><option value="true">다시 선택함</option><option value="false">다른 선택을 함</option></select><select hidden={decision.status !== "CHOSEN"} value={workedWell} onChange={(event) => setWorkedWell(event.target.value)} className={inputClass}><option value="">실제로 잘 맞은 기준</option>{decision.status === "CHOSEN" && criteria.map((item) => <option key={item.id}>{item.name}</option>)}</select><select hidden={decision.status !== "CHOSEN"} value={disappointedBy} onChange={(event) => setDisappointedBy(event.target.value)} className={inputClass}><option value="">더 엄격히 볼 기준</option>{decision.status === "CHOSEN" && criteria.map((item) => <option key={item.id}>{item.name}</option>)}</select><input value={outcomeNotes} onChange={(event) => setOutcomeNotes(event.target.value)} className={inputClass} placeholder="예상과 달랐던 점" /></div><button onClick={() => run(addOutcome)} className={primarySmall}>회고 저장</button>{(guidance?.reminders?.length ?? 0) > 0 && <ul className="space-y-1 text-xs text-zinc-500">{guidance?.reminders?.map((item) => <li key={item.id} className="flex items-center gap-2">{new Date(item.dueAt!).toLocaleDateString("ko-KR")} · {item.channel} · {item.status}{item.status === "PENDING" && <button onClick={() => run(() => skipReminder(item.id!))} className="text-red-600 underline">건너뛰기</button>}</li>)}</ul>}{(decision.outcomes?.length ?? 0) > 0 && <ul className="space-y-2 border-t border-zinc-100 pt-4 text-sm text-zinc-600">{decision.outcomes?.filter(item => item.resolutionId === decision.currentResolutionId).map((item) => <li key={item.id}>{item.createdAt?.slice(0,10)} · 만족도 {item.satisfaction} · {item.expectationStatus} {item.notes && `· ${item.notes}`}</li>)}</ul>}</Section>}
   </fieldset>;
 }
@@ -339,5 +354,5 @@ const inputClass = "min-w-0 flex-1 rounded-xl border border-zinc-300 bg-white px
 const secondaryButton = "rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-800 hover:border-zinc-500 disabled:opacity-40";
 const primarySmall = "rounded-full bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-40";
 const templateLabels = { LAPTOP: "노트북", PHONE: "휴대폰", TABLET: "태블릿", MONITOR: "모니터", EARBUDS: "무선 이어폰", CUSTOM: "직접 비교" };
-const statusLabels = { DRAFT: "비교 중", DEFERRED: "보류", CHOSEN: "결정 완료 · 후보 선택", ABANDONED: "결정 완료 · 구매하지 않음", ARCHIVED: "보관됨" };
+const statusLabels = { DRAFT: "비교 중", DEFERRED: "결정 완료 · 보류", CHOSEN: "결정 완료 · 후보 선택", ABANDONED: "결정 완료 · 구매하지 않음", ARCHIVED: "보관됨" };
 const evidenceLabels: Record<string, string> = { PENDING: "수집 대기", RUNNING: "수집 중", SUCCEEDED: "수집 완료", FAILED: "수집 실패" };

@@ -24,6 +24,21 @@ import static com.decisionassistant.decision.DecisionTypes.TemplateKey;
 @Entity
 @Table(name = "decisions")
 public class Decision {
+    public record RevisionCandidateState(UUID id, com.decisionassistant.guidance.CandidateSuggestion.Status status, UUID optionId) {}
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "revision_candidates", columnDefinition = "jsonb")
+    private List<RevisionCandidateState> revisionCandidates;
+    public List<RevisionCandidateState> revisionCandidates() { return revisionCandidates; }
+    public void revisionCandidates(List<RevisionCandidateState> states) { revisionCandidates = List.copyOf(states); }
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "revision_draft", columnDefinition = "jsonb")
+    private DecisionDtos.DecisionResponse revisionDraft;
+    public DecisionDtos.DecisionResponse revisionDraft() { return revisionDraft; }
+    public void revisionDraft(DecisionDtos.DecisionResponse snapshot) { revisionDraft = snapshot; }
+    public void cancelRevision(Instant now) {
+        status = revisionDraft.status(); currentResolutionId = revisionBaseId;
+        editMode = null; revisionBaseId = null; revisionDraft = null; revisionCandidates = null; updatedAt = now;
+    }
 
     @Enumerated(EnumType.STRING)
     @Column(name = "edit_mode", length = 30)
@@ -42,7 +57,7 @@ public class Decision {
     }
     public void recordResolution(UUID id, boolean completed) {
         currentResolutionId = id;
-        if (completed) { editMode = null; revisionBaseId = null; }
+        if (completed) { editMode = null; revisionBaseId = null; revisionDraft = null; revisionCandidates = null; }
     }
 
     @Column(name = "archived_at")
