@@ -49,7 +49,8 @@ test("product search, explicit selection, editing, evaluation, choice and outcom
   await expect(page.getByRole("heading", { name: "평가 결과", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "3. 선택 기록", exact: true }).click();
   await page.getByLabel("실제로 선택한 후보").selectOption({ label: "Buds Pro" });
-  await page.getByRole("button", { name: "선택 기록", exact: true }).click();
+  await page.getByRole("button", { name: "결정 완료", exact: true }).click();
+  await page.getByRole("button", { name: "선택 사항 · 회고", exact: true }).click();
   await expect(page.getByRole("heading", { name: "사용 후 회고", exact: true })).toBeVisible();
   await page.getByPlaceholder("예상과 달랐던 점").fill("오래 착용해도 편안했어요");
   await page.getByRole("button", { name: "회고 저장", exact: true }).click();

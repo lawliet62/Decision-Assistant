@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
 import type { DecisionResponse } from "@/shared/api/types";
@@ -149,7 +149,7 @@ export function ResolutionSnapshots({ decision }: { decision: DecisionResponse }
   if (!decision.resolutions?.length) return null;
   return <section className="space-y-3 rounded-3xl border bg-white p-5"><h2 className="text-xl font-semibold">결정 당시 기록</h2>{decision.resolutions.map(resolution => {
     const snapshot: Snapshot | undefined = resolution.comparisonSnapshot;
-    return <details key={resolution.id} className="rounded-xl border p-4"><summary className="cursor-pointer font-medium">{resolution.createdAt?.slice(0, 10)} · {resolution.kind === "CHOSEN" ? "선택" : resolution.kind === "DEFERRED" ? "보류" : "구매하지 않음"} · {resolution.supersededAt ? "정정된 이전 기록" : resolution.editMode === "CORRECTION" ? "기록 수정" : resolution.editMode === "RECONSIDERATION" ? "재검토 결과" : "결정 기록"} · {resolution.rationale || "이유 미입력"}</summary><div className="mt-4 space-y-3">{decision.outcomes?.filter(outcome => outcome.resolutionId === resolution.id).map(outcome => <p key={outcome.id} className="text-sm">이 기록의 회고 · 만족도 {outcome.satisfaction} · {outcome.notes}</p>)}{snapshot ? <>
+    return <details key={resolution.id} className="rounded-xl border p-4"><summary className="cursor-pointer font-medium">{resolution.createdAt?.slice(0, 10)} · {resolution.kind === "CHOSEN" ? "선택" : resolution.kind === "DEFERRED" ? "보류" : "구매하지 않음"} · {resolution.supersededAt ? "정정된 이전 기록" : resolution.editMode === "CORRECTION" ? "기록 수정" : resolution.editMode === "RECONSIDERATION" ? "재검토 결과" : "결정 기록"} · {resolution.rationale || "이유 미입력"}</summary><div className="mt-4 space-y-3"><RecordedReasons ids={resolution.reasonIds} primary={resolution.primaryReasonId} />{decision.outcomes?.filter(outcome => outcome.resolutionId === resolution.id).map(outcome => <p key={outcome.id} className="text-sm">이 기록의 회고 · 만족도 {outcome.satisfaction} · {outcome.notes}</p>)}{snapshot ? <>
       <p className="text-sm">{snapshot.options?.find(option => option.id === resolution.selectedOptionId)?.name ?? "선택한 후보 없음"} · 당시 근거를 보존한 기록입니다.</p>
       {snapshot.title && <p className="text-sm">당시 제목: {snapshot.title}</p>}
       {snapshot.context && <p className="whitespace-pre-wrap text-sm">당시 목적: {snapshot.context.intendedUse || "미입력"} · 예산 메모: {snapshot.context.budget ?? "미입력"} {snapshot.context.currency}<br />{snapshot.context.notes}</p>}
@@ -157,4 +157,10 @@ export function ResolutionSnapshots({ decision }: { decision: DecisionResponse }
       <details><summary className="cursor-pointer text-sm">당시 입력한 평가 기준과 값</summary><ul className="mt-2 space-y-2 text-sm">{snapshot.options?.map(option => <li key={option.id}>{option.name}: {snapshot.criteria?.filter(criterion => criterion.active).map(criterion => { const value = snapshot.values?.find(value => value.optionId === option.id && value.criterionId === criterion.id); return `${criterion.name} ${value?.numericValue ?? value?.rating ?? "미확인"} (중요도 ${criterion.weight})`; }).join(" · ")}</li>)}</ul></details>
     </> : <p className="text-sm text-zinc-500">이전 버전의 기록으로 당시 조건과 근거의 고정본이 없습니다.</p>}</div></details>;
   })}{decision.outcomes?.filter(outcome => !outcome.resolutionId).map(outcome => <p key={outcome.id} className="text-sm text-zinc-500">이전 버전의 회고 · 연결된 결정 기록 확인 불가 · 만족도 {outcome.satisfaction} · {outcome.notes}</p>)}</section>;
+}
+
+function RecordedReasons({ ids, primary }: { ids?: string[]; primary?: string }) {
+  const [templates, setTemplates] = useState<components["schemas"]["Reason"][]>([]);
+  useEffect(() => { api.GET("/api/v1/decisions/reason-templates").then(r => setTemplates(r.data ?? [])).catch(() => {}); }, []);
+  return <ul className="text-sm">{ids?.map(id => <li key={id}>{templates.find(r => r.id === id)?.label ?? id}{primary === id ? " · 가장 중요한 이유" : ""}</li>)}</ul>;
 }

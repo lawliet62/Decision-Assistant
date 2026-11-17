@@ -1,0 +1,14 @@
+{
+  "specClockInstantsUnchanged": true,
+  "specReservationsUnchanged": true,
+  "decisionsUnchanged": true,
+  "schemaVersionUnchanged": true,
+  "observationsAdded": 25,
+  "serializationOnlyFacts": [
+    "jbl-tune-beam2-black"
+  ],
+  "serializationOnlyReviews": [
+    "sony-wf-c710n-glass-blue"
+  ],
+  "jblNumericNormalizationMatchesBeforeHash": true
+}

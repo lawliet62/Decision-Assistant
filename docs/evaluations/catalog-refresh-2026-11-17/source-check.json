@@ -1,0 +1,13 @@
+{
+  "runId": 43859149400,
+  "event": "schedule",
+  "createdAt": "2026-11-16T11:35:55Z",
+  "conclusion": "failure",
+  "rows": 38,
+  "quotePresent": 35,
+  "attention": [
+    "- qcy-ht10-hires / ANC 지원: UNAVAILABLE (HTTP_404), 제목 UNAVAILABLE, 점검 기한 2027-01-28T17:26:00.000Z · https://qcystore.co.kr/product/detail.html?product_no=924",
+    "- sony-wf-c710n-glass-blue / ANC 지원: UNAVAILABLE (HTTP_403), 제목 UNAVAILABLE, 점검 기한 2027-02-11T11:13:35.839Z · https://www.sony.co.kr/headphones/products/wf-c710n",
+    "- sony-wf-c710n-glass-blue / 호환성: UNAVAILABLE (HTTP_403), 제목 UNAVAILABLE, 점검 기한 2026-12-13T11:13:37.475Z · https://www.sony.co.kr/electronics/support/software/00369642"
+  ]
+}

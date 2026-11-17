@@ -3,10 +3,10 @@ import { expect, test } from "@playwright/test";
 test("구매하지 않음의 이전 필터 링크도 완료 그룹으로 열고 접을 수 있다", async ({ page }) => {
   await page.goto("/?statuses=ABANDONED&open=ABANDONED");
   const completed = page.getByRole("region", { name: "결정 완료", exact: true });
-  await expect(completed.getByRole("listitem")).toHaveCount(3);
+  await expect(completed.getByRole("listitem")).toHaveCount(4);
   await expect(completed.getByText("구매하지 않음", { exact: true })).toBeVisible();
-  await completed.getByRole("button", { name: "결정 완료 3건" }).click();
-  await expect(completed.getByRole("button", { name: "결정 완료 3건" })).toHaveAttribute("aria-expanded", "false");
+  await completed.getByRole("button", { name: "결정 완료 4건" }).click();
+  await expect(completed.getByRole("button", { name: "결정 완료 4건" })).toHaveAttribute("aria-expanded", "false");
 });
 
 test("완료 결정을 보관하고 활용을 끈 뒤 삭제·복구한다", async ({ page }) => {
@@ -141,16 +141,16 @@ test("표시 상태 전체 선택은 모든 페이지와 접힌 그룹을 포함
   const draft = page.getByRole("region", { name: "비교 중", exact: true });
   await expect(draft.getByRole("listitem")).toHaveCount(10);
   await page.locator('[aria-label="결정 선택"]').getByRole("button", { name: "선택한 상태 결정 모두 선택" }).click();
-  await expect(page.getByText("14개 선택", { exact: false })).toBeVisible();
+  await expect(page.getByText("15개 선택", { exact: false })).toBeVisible();
   await page.getByRole("checkbox", { name: "결정 완료", exact: true }).uncheck();
-  await expect(page.getByText("현재 화면에 없는 결정 4개", { exact: false })).toBeVisible();
+  await expect(page.getByText("현재 화면에 없는 결정 5개", { exact: false })).toBeVisible();
   await page.locator('[aria-label="결정 선택"]').getByRole("button", { name: "선택 삭제" }).click();
-  await expect(page.getByRole("dialog")).toContainText("14개");
+  await expect(page.getByRole("dialog")).toContainText("15개");
   await page.getByRole("dialog").getByRole("button", { name: "취소" }).click();
-  await expect(page.getByText("14개 선택", { exact: false })).toBeVisible();
+  await expect(page.getByText("15개 선택", { exact: false })).toBeVisible();
   await page.locator('[aria-label="결정 선택"]').getByRole("button", { name: "선택 삭제" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "휴지통으로 이동" }).click();
-  await expect(page.getByRole("dialog")).toContainText("14개 삭제 또는 이미 삭제됨");
+  await expect(page.getByRole("dialog")).toContainText("15개 삭제 또는 이미 삭제됨");
   await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
   await expect(page.getByRole("button", { name: "비교 중 0건" })).toBeVisible();
 });
@@ -210,13 +210,13 @@ test("상태 그룹은 기본 접힘이며 복수 선택과 그룹별 페이지�
   await expect(draft.getByRole("listitem")).toHaveCount(1);
   await expect(draft.getByText("2 / 2 페이지 · 11건")).toBeVisible();
   const chosen = page.getByRole("region", { name: "결정 완료", exact: true });
-  await chosen.getByRole("button", { name: "결정 완료 3건" }).click();
-  await expect(chosen.getByRole("listitem")).toHaveCount(3);
+  await chosen.getByRole("button", { name: "결정 완료 4건" }).click();
+  await expect(chosen.getByRole("listitem")).toHaveCount(4);
   await draft.getByRole("link").click();
   await expect(page).toHaveURL(/\/decisions\/999/);
   await page.goBack();
   await expect(draft.getByText("2 / 2 페이지 · 11건")).toBeVisible();
-  await expect(chosen.getByRole("listitem")).toHaveCount(3);
+  await expect(chosen.getByRole("listitem")).toHaveCount(4);
   await page.reload();
   await expect(draft.getByRole("listitem")).toHaveCount(1);
   expect(lists.every(url => new URL(url).searchParams.get("size") === "10")).toBe(true);

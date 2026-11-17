@@ -15,9 +15,8 @@ public final class DecisionTypes {
 
     public static DecisionPhase phase(DecisionStatus status) {
         return switch (status) {
-            case CHOSEN, ABANDONED -> DecisionPhase.COMPLETED;
+            case CHOSEN, ABANDONED, DEFERRED -> DecisionPhase.COMPLETED;
             case DRAFT -> DecisionPhase.COMPARING;
-            case DEFERRED -> DecisionPhase.DEFERRED;
             case ARCHIVED -> DecisionPhase.ARCHIVED;
         };
     }

@@ -97,8 +97,7 @@ public class EvidenceWorkflowWorker {
     }
 
     private boolean editable(Decision decision) {
-        return decision.status() == DecisionTypes.DecisionStatus.DRAFT
-                || decision.status() == DecisionTypes.DecisionStatus.DEFERRED;
+        return decision.status() == DecisionTypes.DecisionStatus.DRAFT;
     }
 
     private void finish(Decision decision) {

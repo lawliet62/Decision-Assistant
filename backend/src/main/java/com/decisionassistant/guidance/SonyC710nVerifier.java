@@ -65,7 +65,13 @@ final class SonyC710nVerifier {
                 || !amounts.first().text().replaceAll("\\s+", "").equals(raw + "원")) return rejected("SELECTED_LABEL_QUANTITY_OR_PRICE");
         var choices = doc.select("a.opt_list");
         var expected = Set.of(OPTION, "WF-C710N / 블랙", "WF-C710N / 화이트", "WF-C710N / 핑크");
-        if (choices.size() != 4 || !Set.copyOf(choices.eachText()).equals(expected)) return rejected("OPTION_LIST_CHANGED");
+        if (choices.size() != 4 || !Set.copyOf(choices.eachText()).equals(expected)) {
+            org.slf4j.LoggerFactory.getLogger(SonyC710nVerifier.class).warn(
+                    "sony_c710n_option_list count={} distinct={} expectedMatches={}", choices.size(),
+                    choices.eachText().stream().distinct().count(),
+                    choices.stream().filter(e -> expected.contains(e.text())).count());
+            return rejected("OPTION_LIST_CHANGED");
+        }
         var chosen = choices.stream().filter(e -> OPTION.equals(e.text())).findFirst().orElseThrow();
         if (unavailable(chosen.className() + " " + chosen.text()) || chosen.hasAttr("disabled")
                 || "true".equals(chosen.attr("aria-disabled"))) return rejected("SELECTED_OPTION_UNAVAILABLE");

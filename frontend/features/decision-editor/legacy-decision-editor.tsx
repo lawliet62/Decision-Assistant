@@ -5,6 +5,8 @@ import { useFieldArray, useForm, useWatch } from "react-hook-form";
 import { api } from "@/shared/api/client";
 import type { AiCapabilitiesResponse, DecisionResponse, EvaluationResponse, StructureRunResponse, UpdateDraftRequest } from "@/shared/api/types";
 import { EvaluationResultView } from "@/features/evaluation-result/evaluation-result";
+import { DecisionEditor } from "./decision-editor";
+import { ReasonPicker, PastDecisions } from "./decision-reasons";
 import { ResolutionSnapshots } from "./comparison-workspace";
 
 type Problem = { detail?: string; violations?: string[] };
@@ -12,7 +14,7 @@ type Problem = { detail?: string; violations?: string[] };
 export function LegacyDecisionEditor({ initialDecision }: { initialDecision: DecisionResponse }) {
   const [decision, setDecision] = useState(initialDecision);
   const [revisionBusy, setRevisionBusy] = useState(false);
-  const completed = decision.status === "CHOSEN" || decision.status === "ABANDONED";
+  const completed = ["CHOSEN", "DEFERRED", "ABANDONED"].includes(decision.status ?? "");
   const [message, setMessage] = useState<string>();
   const [error, setError] = useState<string>();
   const [evaluation, setEvaluation] = useState<EvaluationResponse>();
@@ -21,8 +23,6 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
   const [includeLlm, setIncludeLlm] = useState(false);
   const [aiConsent, setAiConsent] = useState(false);
   const [sensitiveDataAcknowledged, setSensitiveDataAcknowledged] = useState(false);
-  const [selectedOptionId, setSelectedOptionId] = useState(initialDecision.resolutions?.[0]?.selectedOptionId ?? "");
-  const [rationale, setRationale] = useState(initialDecision.resolutions?.[0]?.rationale ?? "");
   const [satisfaction, setSatisfaction] = useState(4);
   const [expectationStatus, setExpectationStatus] = useState<"MET" | "PARTIALLY_MET" | "NOT_MET" | "TOO_EARLY">("TOO_EARLY");
   const [outcomeNotes, setOutcomeNotes] = useState("");
@@ -160,12 +160,12 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
     setEvaluation(data);
   }
 
-  async function resolveDecision(kind: "CHOSEN" | "DEFERRED" | "ABANDONED") {
+  async function resolveDecision(kind: "CHOSEN" | "DEFERRED" | "ABANDONED", selectedOptionId: string, rationale: string, reasonIds: string[], primaryReasonId?: string) {
     clearFeedback();
     if (Object.keys(dirtyFields).length > 0) return setError("편집한 내용을 먼저 저장하세요.");
     const { error: apiError } = await api.POST("/api/v1/decisions/{decisionId}/resolutions", {
       params: { path: { decisionId: decision.id! } },
-      body: { kind, selectedOptionId: kind === "CHOSEN" ? selectedOptionId : undefined, rationale, expectedVersion: decision.version },
+      body: { reasonIds, primaryReasonId, kind, selectedOptionId: kind === "CHOSEN" ? selectedOptionId : undefined, rationale, expectedVersion: decision.version },
     });
     if (apiError) return setError(problemMessage(apiError));
     await refreshDecision();
@@ -212,6 +212,7 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
     return true;
   }
 
+  if (completed) return <DecisionEditor initialDecision={decision} />;
   return (
     <div className="mt-6 space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -313,10 +314,7 @@ export function LegacyDecisionEditor({ initialDecision }: { initialDecision: Dec
 
       {evaluation && <EvaluationResultView evaluation={evaluation} />}
 
-      <Section title="결정 결과" description="후보 선택과 구매하지 않음은 모두 결정 완료이며 실제 구매 완료를 뜻하지 않습니다.">
-        <div className="grid gap-3 sm:grid-cols-2"><select aria-label="실제로 선택한 후보" value={selectedOptionId} onChange={(event) => setSelectedOptionId(event.target.value)} className={inputClass}><option value="">Option 선택</option>{options.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}</select><input aria-label="결정 이유" value={rationale} onChange={(event) => setRationale(event.target.value)} className={inputClass} placeholder="선택 이유" /></div>
-        <div className="flex flex-wrap gap-2"><button type="button" disabled={!selectedOptionId} onClick={() => resolveDecision("CHOSEN")} className={secondaryButton}>선택 기록</button><button type="button" disabled={decision.editMode === "CORRECTION"} onClick={() => resolveDecision("DEFERRED")} className={secondaryButton}>보류 기록</button><button type="button" onClick={() => resolveDecision("ABANDONED")} className={secondaryButton}>구매하지 않음으로 완료</button></div>
-      </Section>
+      <PastDecisions hasUnsavedChanges={Object.keys(dirtyFields).length > 0} key={decision.version} id={decision.id!} onApply={note => setValue("context.notes", [getValues("context.notes"), note].filter(Boolean).join("\n"), { shouldDirty: true })} /><ReasonPicker key={decision.editMode === "CORRECTION" ? decision.revisionBaseId : "new"} initialResolution={decision.editMode === "CORRECTION" ? decision.resolutions?.find(r => r.id === decision.revisionBaseId) : undefined} options={options} onComplete={(kind, option, note, ids, primary) => resolveDecision(kind, option, note, ids, primary)} />
       </fieldset>
 
       {completed && <Section title="Outcome check-in" description={decision.status === "ABANDONED" ? "구매하지 않기로 한 결정에 대한 만족도와 결과를 기록합니다." : "시간이 지난 뒤 만족도와 기대 충족 여부를 반복 기록합니다."}>
