@@ -6,6 +6,10 @@
 
 ## 사례와 진단 방법
 
+- [OpenAPI property 순서 drift](openapi-property-order.md): record와 getter의 출력 순서가 바뀌는 경우의 범위 확인과 명시적 순서
+
+- [겹친 Gradle 테스트의 결과 파일 충돌](parallel-gradle-test-output.md): 동일 build 디렉터리의 EOF·결과 파일 유실과 순차 검증
+
 - [GitHub 출처 점검 실패 분리](../evaluations/source-check-2026-11-14/README.md): 로컬 성공과 클라우드 접근의 구분, 제목 변경을 제한적으로 처리한 사례
 - [Windows 임시 worktree에서 로컬 명령이 실패하는 경우](windows-worktree-permissions.md): Hook 점유, 실행기 오류 740, Git 소유권, 실제 파일 접근 실패의 구분
 

@@ -1,5 +1,13 @@
 # API contract
 
+## 결정 이유·구매·재검토
+
+- `GET /api/v1/decisions/reason-templates`: 결과별 이유 ID·라벨. 완료 요청의 `reasonIds`, `primaryReasonId`는 optional이며 결과별 유효 조합만 허용한다. 자유 설명은 기존 `rationale`이다.
+- `DEFERRED`도 `COMPLETED` phase다. 직접 draft 수정을 거절하고 기존 revisions API로 재개한다. revisions 요청에 `notPurchased: true`가 필요하며 구매한 기록은 거절한다.
+- `POST /api/v1/decisions/{id}/revisions/cancel`: `{expectedVersion}`으로 새 검토 시작 전의 draft·결론을 복원한다. 이전 버전에서 시작한 검토는 복원본이 없을 수 있다.
+- `PUT /api/v1/decisions/{id}/purchase`: `{expectedVersion,resolutionId,status}`로 현재 CHOSEN의 구매 상태를 기록한다. `UNRECORDED|PLANNED|PURCHASED|NOT_PURCHASED`. PURCHASED 이후 변경은 거절한다.
+- `GET /api/v1/decisions/{id}/memories`: 현재 결정과 같은 제품군의 소유자 기록을 최대 3개, 연결 회고를 각 2개 반환한다. 삭제·활용 제외·정정된 기록은 제외하고 외부 요청 없이 원문을 반환한다.
+
 ## 결정 목록·삭제
 
 `GET /api/v1/decisions`는 배열 대신 `items/page/size/totalElements/totalPages`를 반환한다. frontend와 backend를 같은 release로 갱신한다. `statuses`는 복수 enum(생략 시 전체), `page`는 0부터 1,000,000까지, `size`는 1~50(기본 10), `sort`는 `UPDATED_AT/CREATED_AT/TITLE/TEMPLATE_KEY`, `direction`은 `ASC/DESC`다. 정렬은 소유자·상태로 제한한 전체 결과에 적용하며 ID 오름차순을 보조키로 쓴다. 제품군은 enum 코드 순서, 제목은 DB collation 순서다. 범위를 벗어난 페이지는 마지막 유효 페이지로 보정한다.

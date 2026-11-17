@@ -125,6 +125,14 @@ public class DecisionController {
         return service.beginRevision(decisionId, request);
     }
 
+
+    @PostMapping("/{decisionId}/revisions/cancel")
+    public DecisionResponse cancelRevision(@PathVariable UUID decisionId, @Valid @RequestBody VersionRequest request) { return service.cancelRevision(decisionId, request); }
+    @PutMapping("/{decisionId}/purchase")
+    public DecisionResponse purchase(@PathVariable UUID decisionId, @Valid @RequestBody PurchaseRequest request) { return service.purchase(decisionId, request); }
+    @GetMapping("/reason-templates")
+    public List<DecisionReasons.Reason> reasons() { return DecisionReasons.templates(); }
+
     @PutMapping("/{decisionId}/comparison")
     public DecisionResponse comparison(@PathVariable UUID decisionId, @Valid @RequestBody Comparison.UpdateRequest request) {
         return service.updateComparison(decisionId, request);

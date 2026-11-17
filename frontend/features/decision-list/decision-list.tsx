@@ -11,10 +11,10 @@ type Page = components["schemas"]["DecisionPage"];
 type Count = components["schemas"]["StatusCount"];
 type Status = NonNullable<Summary["status"]>;
 type Sort = "UPDATED_AT" | "CREATED_AT" | "TITLE" | "TEMPLATE_KEY";
-const statuses: Status[] = ["DRAFT", "DEFERRED", "CHOSEN", "ARCHIVED"];
-const labels: Record<Status, string> = { DRAFT: "비교 중", DEFERRED: "보류", CHOSEN: "결정 완료", ABANDONED: "결정 완료 · 구매하지 않음", ARCHIVED: "보관됨" };
-const groupStatus = (status?: Status) => status === "ABANDONED" ? "CHOSEN" : status;
-const apiStatuses = (scope: Status[]) => scope.flatMap(s => s === "CHOSEN" ? ["CHOSEN", "ABANDONED"] as Status[] : [s]);
+const statuses: Status[] = ["DRAFT", "CHOSEN", "ARCHIVED"];
+const labels: Record<Status, string> = { DRAFT: "비교 중", DEFERRED: "결정 완료 · 보류", CHOSEN: "결정 완료", ABANDONED: "결정 완료 · 구매하지 않음", ARCHIVED: "보관됨" };
+const groupStatus = (status?: Status) => (status === "ABANDONED" || status === "DEFERRED") ? "CHOSEN" : status;
+const apiStatuses = (scope: Status[]) => scope.flatMap(s => s === "CHOSEN" ? ["CHOSEN", "ABANDONED", "DEFERRED"] as Status[] : [s]);
 const categories: Record<string, string> = { LAPTOP: "노트북", PHONE: "휴대폰", TABLET: "태블릿", MONITOR: "모니터", EARBUDS: "무선 이어폰", CUSTOM: "직접 비교" };
 const sorts: Record<Sort, string> = { UPDATED_AT: "수정일", CREATED_AT: "생성일", TITLE: "제목", TEMPLATE_KEY: "제품군" };
 const button = "rounded-lg border border-zinc-300 px-3 py-2 text-sm hover:bg-zinc-100 disabled:opacity-40 disabled:cursor-not-allowed";
@@ -73,8 +73,8 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
     }).catch(() => { if (!controller.signal.aborted) setError(true); });
     return () => controller.abort();
   }, [revision]);
-  const selected = params.has("statuses") ? statuses.filter(s => params.get("statuses")!.split(",").map(value => value === "ABANDONED" ? "CHOSEN" : value).includes(s)) : statuses;
-  const opened = (params.get("open") ?? "").split(",").map(s => s === "ABANDONED" ? "CHOSEN" : s);
+  const selected = params.has("statuses") ? statuses.filter(s => params.get("statuses")!.split(",").map(value => (value === "ABANDONED" || value === "DEFERRED") ? "CHOSEN" : value).includes(s)) : statuses;
+  const opened = (params.get("open") ?? "").split(",").map(s => (s === "ABANDONED" || s === "DEFERRED") ? "CHOSEN" : s);
   const rawSort = params.get("sort");
   const sort: Sort = rawSort && Object.hasOwn(sorts, rawSort) ? rawSort as Sort : "UPDATED_AT";
   const direction = params.get("direction") === "ASC" ? "ASC" : "DESC";
@@ -199,7 +199,7 @@ function DecisionGroup({ onChanged, status, page, sort, direction, onDelete, cho
       <Link href={`/decisions/${d.id}`} className="min-w-0 flex-1 rounded-md py-1 hover:text-emerald-700">
         <span className="block break-words font-medium">{d.title}</span><span className="mt-1 block text-sm text-zinc-500">{categories[d.templateKey ?? ""] ?? "직접 비교"} · {labels[status]}</span>
         <span className="block text-xs text-zinc-600">{d.status === "CHOSEN" ? "후보 선택" : d.status === "ABANDONED" ? "구매하지 않음" : labels[d.status ?? "DRAFT"]}</span><span className="mt-1 block text-xs text-zinc-500">생성 {date(d.createdAt)} · 수정 {date(d.updatedAt)}</span>
-      </Link>{(d.status === "CHOSEN" || d.status === "ABANDONED") && d.id && d.version !== undefined && <ArchiveButton id={d.id} version={d.version} onChanged={onChanged} />}<button className={button + " shrink-0 text-red-700"} aria-label={`${d.title} 삭제`} onClick={() => onDelete(d)}>삭제</button>
+      </Link>{(d.status === "CHOSEN" || d.status === "ABANDONED" || d.status === "DEFERRED") && d.id && d.version !== undefined && <ArchiveButton id={d.id} version={d.version} onChanged={onChanged} />}<button className={button + " shrink-0 text-red-700"} aria-label={`${d.title} 삭제`} onClick={() => onDelete(d)}>삭제</button>
     </li>)}</ul>}
     {(result.totalPages ?? 0) > 0 && <nav aria-label={`${labels[status]} 페이지`} className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 pt-4">
       <button className={button} disabled={!result.page} onClick={() => changeQuery(p => p.set(`page.${status}`, String((result.page ?? 0) - 1)))}>이전</button>

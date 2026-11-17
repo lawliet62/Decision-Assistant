@@ -24,6 +24,15 @@ import static com.decisionassistant.decision.DecisionTypes.TemplateKey;
 @Entity
 @Table(name = "decisions")
 public class Decision {
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "revision_draft", columnDefinition = "jsonb")
+    private DecisionDtos.DecisionResponse revisionDraft;
+    public DecisionDtos.DecisionResponse revisionDraft() { return revisionDraft; }
+    public void revisionDraft(DecisionDtos.DecisionResponse snapshot) { revisionDraft = snapshot; }
+    public void cancelRevision(Instant now) {
+        status = revisionDraft.status(); currentResolutionId = revisionBaseId;
+        editMode = null; revisionBaseId = null; revisionDraft = null; updatedAt = now;
+    }
 
     @Enumerated(EnumType.STRING)
     @Column(name = "edit_mode", length = 30)
@@ -42,7 +51,7 @@ public class Decision {
     }
     public void recordResolution(UUID id, boolean completed) {
         currentResolutionId = id;
-        if (completed) { editMode = null; revisionBaseId = null; }
+        if (completed) { editMode = null; revisionBaseId = null; revisionDraft = null; }
     }
 
     @Column(name = "archived_at")

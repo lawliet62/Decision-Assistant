@@ -44,6 +44,7 @@ public final class DecisionDtos {
                                    com.decisionassistant.guidance.OfficialStorePolicy.SourceKind sourceKind,
                                    com.decisionassistant.guidance.DiscoveryContracts.RequirementCheck compatibilityCheck) {}
 
+    @com.fasterxml.jackson.annotation.JsonPropertyOrder({"id", "version", "title", "templateKey", "status", "createdAt", "updatedAt", "phase", "result"})
     public record DecisionSummary(
             UUID id,
             long version,
@@ -171,11 +172,20 @@ public final class DecisionDtos {
             @NotNull DecisionTypes.ResolutionKind kind,
             UUID selectedOptionId,
             String rationale,
-            Long expectedVersion
+            Long expectedVersion,
+            @Size(max = 8) List<@NotBlank String> reasonIds,
+            @Size(max = 40) String primaryReasonId
     ) {
+        public CreateResolutionRequest(DecisionTypes.ResolutionKind kind, UUID selectedOptionId, String rationale, Long expectedVersion) {
+            this(kind, selectedOptionId, rationale, expectedVersion, null, null);
+        }
     }
 
-    public record BeginRevisionRequest(@NotNull @Min(0) Long expectedVersion, @NotNull DecisionTypes.EditMode mode) {}
+    public record BeginRevisionRequest(@NotNull @Min(0) Long expectedVersion, @NotNull DecisionTypes.EditMode mode, Boolean notPurchased) {
+        public BeginRevisionRequest(Long version, DecisionTypes.EditMode mode) { this(version, mode, null); }
+    }
+    public record VersionRequest(@NotNull @Min(0) Long expectedVersion) {}
+    public record PurchaseRequest(@NotNull @Min(0) Long expectedVersion, @NotNull UUID resolutionId, @NotNull Resolution.PurchaseStatus status) {}
 
     public record ResolutionData(
             UUID id,
@@ -186,7 +196,8 @@ public final class DecisionDtos {
             Comparison.Snapshot comparisonSnapshot,
             DecisionTypes.EditMode editMode,
             UUID previousResolutionId,
-            Instant supersededAt
+            Instant supersededAt,
+            List<String> reasonIds, String primaryReasonId, Resolution.PurchaseStatus purchaseStatus, Instant purchaseRecordedAt
     ) {
     }
 

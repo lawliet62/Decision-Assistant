@@ -1,5 +1,7 @@
 # 문서 색인
 
+- [결정 이유와 재사용 기록](decisions/0022-decision-reasons-and-reusable-history.md): 이유 GUI·구매 상태·구매 전 재검토·AI 없는 과거 기록 활용
+
 - [결정 완료와 기록 정정·재검토](decisions/0021-decision-completion-and-revisions.md): 완료 결과 분리, 과거 근거·회고 보존과 개인화 연결
 
 - [결정 보관·휴지통과 개인화 활용](decisions/0020-decision-retention-and-personalization.md): 30일 복구·만료 삭제·복원 안내

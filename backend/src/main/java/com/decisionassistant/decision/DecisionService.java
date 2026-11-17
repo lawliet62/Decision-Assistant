@@ -357,8 +357,7 @@ public class DecisionService {
         if (decision.version() != request.expectedVersion()) {
             throw new ConflictException("Decision version이 변경되었습니다. 최신 draft를 다시 불러오세요.");
         }
-        if (decision.status() != DecisionTypes.DecisionStatus.DRAFT
-                && decision.status() != DecisionTypes.DecisionStatus.DEFERRED) {
+        if (decision.status() != DecisionTypes.DecisionStatus.DRAFT) {
             throw new ConflictException("선택 또는 포기된 Decision은 draft를 수정할 수 없습니다.");
         }
 
@@ -388,8 +387,7 @@ public class DecisionService {
     public ResolutionData resolve(UUID id, CreateResolutionRequest request) {
         var decision = locked(id);
         ensureEditable(decision);
-        if (decision.editMode() == DecisionTypes.EditMode.CORRECTION && request.kind() == DecisionTypes.ResolutionKind.DEFERRED)
-            throw new ConflictException("기록 수정은 후보 선택 또는 구매하지 않음으로 완료하세요.");
+
         if (decision.editMode() != null && request.expectedVersion() == null)
             throw new ConflictException("기록 수정·재검토는 최신 version으로 완료하세요.");
         if (request.expectedVersion() != null && request.expectedVersion() != decision.version())
@@ -405,6 +403,7 @@ public class DecisionService {
         var now = Instant.now(clock);
         var resolution = resolutions.save(new Resolution(
                 id, request.kind(), request.selectedOptionId(), request.rationale(), now, Comparison.Snapshot.capture(response(decision), now)));
+        resolution.reasons(DecisionReasons.validate(request.kind(), request.reasonIds(), request.primaryReasonId()), request.primaryReasonId());
         resolution.revision(decision.editMode(), decision.revisionBaseId());
         if (decision.editMode() == DecisionTypes.EditMode.CORRECTION) {
             resolutions.findById(decision.revisionBaseId()).orElseThrow().supersede(now);
@@ -415,8 +414,8 @@ public class DecisionService {
             case DEFERRED -> DecisionTypes.DecisionStatus.DEFERRED;
             case ABANDONED -> DecisionTypes.DecisionStatus.ABANDONED;
         }, now);
-        decision.recordResolution(resolution.id(), request.kind() != DecisionTypes.ResolutionKind.DEFERRED);
-        if (request.kind() == DecisionTypes.ResolutionKind.CHOSEN) scheduleReminders(id, resolution.id(), now);
+        decision.recordResolution(resolution.id(), true);
+
         log.info("product_event=decision_resolved decision_id={} kind={}", id, request.kind());
         return resolutionData(resolution);
     }
@@ -432,6 +431,9 @@ public class DecisionService {
         reminders.findByDecisionIdOrderByDueAtAsc(id).stream()
                 .filter(r -> r.status() == OutcomeReminder.Status.PENDING || r.status() == OutcomeReminder.Status.SENT)
                 .forEach(OutcomeReminder::skip);
+        if (base.purchaseStatus() == Resolution.PurchaseStatus.PURCHASED) throw new ConflictException("구매한 선택은 재검토할 수 없습니다.");
+        if (!Boolean.TRUE.equals(request.notPurchased())) throw new ConflictException("아직 구매하지 않았는지 확인하세요.");
+        decision.revisionDraft(response(decision));
         decision.beginRevision(request.mode(), base.id(), Instant.now(clock));
         decisions.flush();
         return response(decision);
@@ -440,6 +442,35 @@ public class DecisionService {
     private Decision locked(UUID id) {
         return decisions.lockByIdAndOwner(id, currentUser.current().id())
                 .orElseThrow(() -> new NotFoundException("결정을 찾을 수 없습니다."));
+    }
+
+    @Transactional
+    public DecisionResponse purchase(UUID id, PurchaseRequest request) {
+        var decision = locked(id);
+        var resolution = currentResolution(decision);
+        if (decision.version() != request.expectedVersion() || decision.status() != DecisionTypes.DecisionStatus.CHOSEN
+                || resolution == null || !resolution.id().equals(request.resolutionId()))
+            throw new ConflictException("현재 제품 선택과 최신 내용을 확인하세요.");
+        if (resolution.purchaseStatus() == Resolution.PurchaseStatus.PURCHASED)
+            throw new ConflictException("구매 완료 기록은 변경할 수 없습니다.");
+        resolution.purchase(request.status(), Instant.now(clock));
+        decision.updateDraft(decision.title(), decision.context(), Instant.now(clock));
+        decisions.flush();
+        return response(decision);
+    }
+
+    @Transactional
+    public DecisionResponse cancelRevision(UUID id, VersionRequest request) {
+        var decision = locked(id);
+        if (decision.version() != request.expectedVersion() || decision.editMode() == null || decision.revisionDraft() == null)
+            throw new ConflictException("취소할 재검토를 찾을 수 없습니다. 최신 내용을 확인하세요.");
+        var saved = decision.revisionDraft();
+        decision.updateDraft(saved.title(), new DecisionContext(saved.context().intendedUse(), saved.context().budget(), saved.context().currency(), saved.context().notes()), Instant.now(clock));
+        syncOptions(decision, saved.options()); syncCriteria(decision, saved.criteria()); syncConstraints(decision, saved.constraints());
+        syncValues(decision, saved.values()); syncConstraintResults(decision, saved.constraintResults());
+        if (saved.comparison() != null) decision.comparisonState(new Comparison.State(saved.comparison().settings(), saved.comparison().confirmations()), Instant.now(clock));
+        decision.cancelRevision(Instant.now(clock)); decisions.flush();
+        return response(decision);
     }
 
     private Resolution currentResolution(Decision decision) {
@@ -651,8 +682,7 @@ public class DecisionService {
     }
 
     private void ensureEditable(Decision decision) {
-        if (decision.status() != DecisionTypes.DecisionStatus.DRAFT
-                && decision.status() != DecisionTypes.DecisionStatus.DEFERRED) {
+        if (decision.status() != DecisionTypes.DecisionStatus.DRAFT) {
             throw new ConflictException("선택 또는 포기된 Decision은 수정할 수 없습니다.");
         }
     }
@@ -702,17 +732,6 @@ public class DecisionService {
                         .ifPresent(item -> item.update(item.name(), item.kind(), item.direction(),
                                 BigDecimal.valueOf(Math.max(1, Math.min(3, memory.strength()))), item.worstAnchor(),
                                 item.bestAnchor(), item.unit(), item.active())));
-    }
-
-    private void scheduleReminders(UUID decisionId, UUID resolutionId, Instant now) {
-        for (var days : List.of(14L, 60L)) {
-            var due = now.plus(days, ChronoUnit.DAYS);
-            for (var channel : OutcomeReminder.Channel.values()) {
-                var reminder = new OutcomeReminder(decisionId, due, channel, now);
-                reminder.resolution(resolutionId);
-                reminders.save(reminder);
-            }
-        }
     }
 
     private void proposeMemories(Decision decision, OutcomeCheckIn outcome, CreateOutcomeRequest request) {
@@ -795,7 +814,7 @@ public class DecisionService {
     private ResolutionData resolutionData(Resolution resolution) {
         return new ResolutionData(resolution.id(), resolution.kind(), resolution.selectedOptionId(),
                 resolution.rationale(), resolution.createdAt(), resolution.comparisonSnapshot(),
-                resolution.editMode(), resolution.previousResolutionId(), resolution.supersededAt());
+                resolution.editMode(), resolution.previousResolutionId(), resolution.supersededAt(), resolution.reasonIds(), resolution.primaryReasonId(), resolution.purchaseStatus(), resolution.purchaseRecordedAt());
     }
 
     private OutcomeData outcomeData(OutcomeCheckIn outcome) {
