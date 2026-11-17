@@ -18,6 +18,8 @@
 
 Evaluation·StructureRun·ProductDiscovery·CandidateSuggestion·EvidenceImport·Resolution·OutcomeCheckIn·OutcomeReminder는 Decision을 통해 접근 소유권을 따른다. CatalogProduct와 공유 template에는 개인 소유권을 적용하지 않는다.
 
+과거 원문 기록의 Memory 조회도 현재 Decision의 소유권을 먼저 확인하고 같은 소유자·제품군의 기록만 제공한다. 삭제·활용 제외·정정된 기록과 정정 중 원본은 제외한다. 이 조회 projection은 기존 PreferenceMemory와 별개이며 자세한 수명·복사 경계는 [과거 판단 기록 활용](history-reuse.md)을 따른다.
+
 ## 로그인과 접근의 생명주기
 
 ```mermaid

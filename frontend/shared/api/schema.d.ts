@@ -4,6 +4,22 @@
  */
 
 export interface paths {
+    "/api/v1/decisions/{decisionId}/purchase": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["purchase"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/{decisionId}/draft": {
         parameters: {
             query?: never;
@@ -128,6 +144,22 @@ export interface paths {
         put?: never;
         /** 완료된 결정의 기록 수정 또는 재검토 시작 */
         post: operations["beginRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/decisions/{decisionId}/revisions/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelRevision"];
         delete?: never;
         options?: never;
         head?: never;
@@ -438,6 +470,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/memories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/{decisionId}/evaluations/{evaluationId}": {
         parameters: {
             query?: never;
@@ -486,6 +534,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/reason-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reasons"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/management": {
         parameters: {
             query?: never;
@@ -493,7 +557,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         post?: never;
         delete?: never;
@@ -538,6 +602,44 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        PurchaseRequest: {
+            /** Format: int64 */
+            expectedVersion: number;
+            /** Format: uuid */
+            resolutionId: string;
+            /** @enum {string} */
+            status: "UNRECORDED" | "PLANNED" | "PURCHASED" | "NOT_PURCHASED";
+        };
+        CandidateSuggestionData: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            url?: string;
+            reason?: string;
+            status?: string;
+            facts?: components["schemas"]["ProductFact"][];
+            /** Format: date-time */
+            fetchedAt?: string;
+            sourceExcerpt?: string;
+            requirementChecks?: components["schemas"]["RequirementCheck"][];
+            officialOffer?: components["schemas"]["OfficialOffer"];
+            /** @enum {string} */
+            sourceKind?: "VIDEO" | "BLOG" | "OFFICIAL_STORE" | "WEB";
+            /** @enum {string} */
+            recommendationGroup?: "RECOMMENDED" | "UNKNOWN" | "BELOW" | "LEGACY";
+            compatibilityCheck?: components["schemas"]["RequirementCheck"];
+            priceStatus?: string;
+        };
+        Confirmation: {
+            /** Format: uuid */
+            optionId?: string;
+            feature?: string;
+            supported?: boolean;
+            note?: string;
+            sourceUrl?: string;
+            /** Format: date-time */
+            confirmedAt?: string;
+        };
         ConstraintData: {
             /** Format: uuid */
             id?: string;
@@ -582,74 +684,6 @@ export interface components {
             unit?: string;
             active?: boolean;
         };
-        OptionData: {
-            /** Format: uuid */
-            id?: string;
-            name: string;
-            description?: string;
-            sourceUrl?: string;
-            sourceText?: string;
-        };
-        OptionValueData: {
-            /** Format: uuid */
-            id?: string;
-            /** Format: uuid */
-            optionId: string;
-            /** Format: uuid */
-            criterionId: string;
-            numericValue?: number;
-            /** Format: int32 */
-            rating?: number;
-            /** @enum {string} */
-            certainty: "CONFIRMED" | "ESTIMATED";
-            sourceUrl?: string;
-            sourceNote?: string;
-            /** @enum {string} */
-            origin?: "USER" | "WEB_EXTRACTED" | "AI_INFERRED";
-            /** @enum {string} */
-            verificationStatus?: "UNREVIEWED" | "CONFIRMED" | "DISPUTED";
-        };
-        UpdateDraftRequest: {
-            /** Format: int64 */
-            expectedVersion?: number;
-            title: string;
-            context: components["schemas"]["ContextData"];
-            options: components["schemas"]["OptionData"][];
-            criteria: components["schemas"]["CriterionData"][];
-            values: components["schemas"]["OptionValueData"][];
-            constraints: components["schemas"]["ConstraintData"][];
-            constraintResults: components["schemas"]["ConstraintResultData"][];
-        };
-        CandidateSuggestionData: {
-            /** Format: uuid */
-            id?: string;
-            name?: string;
-            url?: string;
-            reason?: string;
-            status?: string;
-            facts?: components["schemas"]["ProductFact"][];
-            /** Format: date-time */
-            fetchedAt?: string;
-            sourceExcerpt?: string;
-            requirementChecks?: components["schemas"]["RequirementCheck"][];
-            officialOffer?: components["schemas"]["OfficialOffer"];
-            /** @enum {string} */
-            sourceKind?: "VIDEO" | "BLOG" | "OFFICIAL_STORE" | "WEB";
-            /** @enum {string} */
-            recommendationGroup?: "RECOMMENDED" | "UNKNOWN" | "BELOW" | "LEGACY";
-            compatibilityCheck?: components["schemas"]["RequirementCheck"];
-            priceStatus?: string;
-        };
-        Confirmation: {
-            /** Format: uuid */
-            optionId?: string;
-            feature?: string;
-            supported?: boolean;
-            note?: string;
-            sourceUrl?: string;
-            /** Format: date-time */
-            confirmedAt?: string;
-        };
         Data: {
             settings?: components["schemas"]["Settings"];
             confirmations?: components["schemas"]["Confirmation"][];
@@ -690,6 +724,8 @@ export interface components {
             editMode?: "CORRECTION" | "RECONSIDERATION";
             /** Format: uuid */
             currentResolutionId?: string;
+            /** Format: uuid */
+            revisionBaseId?: string;
         };
         DiscoveryData: {
             /** Format: int64 */
@@ -784,6 +820,33 @@ export interface components {
             price?: number;
             priceOrigin?: string;
             checks?: components["schemas"]["RequirementCheck"][];
+        };
+        OptionData: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
+            description?: string;
+            sourceUrl?: string;
+            sourceText?: string;
+        };
+        OptionValueData: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            optionId: string;
+            /** Format: uuid */
+            criterionId: string;
+            numericValue?: number;
+            /** Format: int32 */
+            rating?: number;
+            /** @enum {string} */
+            certainty: "CONFIRMED" | "ESTIMATED";
+            sourceUrl?: string;
+            sourceNote?: string;
+            /** @enum {string} */
+            origin?: "USER" | "WEB_EXTRACTED" | "AI_INFERRED";
+            /** @enum {string} */
+            verificationStatus?: "UNREVIEWED" | "CONFIRMED" | "DISPUTED";
         };
         OutcomeData: {
             /** Format: uuid */
@@ -884,6 +947,12 @@ export interface components {
             previousResolutionId?: string;
             /** Format: date-time */
             supersededAt?: string;
+            reasonIds?: string[];
+            primaryReasonId?: string;
+            /** @enum {string} */
+            purchaseStatus?: "UNRECORDED" | "PLANNED" | "PURCHASED" | "NOT_PURCHASED";
+            /** Format: date-time */
+            purchaseRecordedAt?: string;
         };
         Settings: {
             maxBudget?: number;
@@ -905,6 +974,17 @@ export interface components {
             productFacts?: components["schemas"]["ProductFactsData"][];
             comparison?: components["schemas"]["Data"];
             title?: string;
+        };
+        UpdateDraftRequest: {
+            /** Format: int64 */
+            expectedVersion?: number;
+            title: string;
+            context: components["schemas"]["ContextData"];
+            options: components["schemas"]["OptionData"][];
+            criteria: components["schemas"]["CriterionData"][];
+            values: components["schemas"]["OptionValueData"][];
+            constraints: components["schemas"]["ConstraintData"][];
+            constraintResults: components["schemas"]["ConstraintResultData"][];
         };
         UpdateRequest: {
             /** Format: int64 */
@@ -1017,6 +1097,11 @@ export interface components {
             expectedVersion: number;
             /** @enum {string} */
             mode: "CORRECTION" | "RECONSIDERATION";
+            notPurchased?: boolean;
+        };
+        VersionRequest: {
+            /** Format: int64 */
+            expectedVersion: number;
         };
         CreateResolutionRequest: {
             /** @enum {string} */
@@ -1026,6 +1111,8 @@ export interface components {
             rationale?: string;
             /** Format: int64 */
             expectedVersion?: number;
+            reasonIds?: string[];
+            primaryReasonId?: string;
         };
         AnswerQuestionRequest: {
             answer: string;
@@ -1255,13 +1342,35 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
             /** @enum {string} */
-            result?: "OPTION_SELECTED" | "NOT_PURCHASED";
-            /** @enum {string} */
             phase?: "COMPARING" | "DEFERRED" | "COMPLETED" | "ARCHIVED";
+            /** @enum {string} */
+            result?: "OPTION_SELECTED" | "NOT_PURCHASED";
+        };
+        Memory: {
+            /** Format: uuid */
+            decisionId?: string;
+            title?: string;
+            /** Format: uuid */
+            resolutionId?: string;
+            /** @enum {string} */
+            kind?: "CHOSEN" | "DEFERRED" | "ABANDONED";
+            selectedName?: string;
+            rationale?: string;
+            reasonIds?: string[];
+            primaryReasonId?: string;
+            /** Format: date-time */
+            decidedAt?: string;
+            outcomes?: components["schemas"]["OutcomeData"][];
         };
         RecoveryNotice: {
             /** Format: date-time */
             restoredTo?: string;
+        };
+        Reason: {
+            id?: string;
+            label?: string;
+            /** @enum {string} */
+            kind?: "CHOSEN" | "DEFERRED" | "ABANDONED";
         };
         RetentionPage: {
             items?: components["schemas"]["RetentionItem"][];
@@ -1291,6 +1400,32 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    purchase: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
     update: {
         parameters: {
             query?: never;
@@ -1507,6 +1642,32 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["BeginRevisionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecisionResponse"];
+                };
+            };
+        };
+    };
+    cancelRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionRequest"];
             };
         };
         responses: {
@@ -2047,6 +2208,28 @@ export interface operations {
             };
         };
     };
+    list_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Memory"][];
+                };
+            };
+        };
+    };
     get_1: {
         parameters: {
             query?: never;
@@ -2112,7 +2295,27 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    reasons: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Reason"][];
+                };
+            };
+        };
+    };
+    list_4: {
         parameters: {
             query: {
                 view: "ACTIVE" | "ARCHIVE" | "TRASH";

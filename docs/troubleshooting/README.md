@@ -1,5 +1,9 @@
 # Troubleshooting
 
+- [OpenAPI 객체 속성 순서에 따른 계약 검사 실패](openapi-property-order.md): 값·구조 차이와 직렬화 순서 차이의 구분
+
+- [카탈로그 갱신의 유효 가격·사양 시각·부분 실패](catalog-refresh-invariants.md): 과거 성공과 현재 유효성, JSON 표현·Instant 비교, 원본 DB와 API 검증 분리
+
 - [Jabra 직접 HTML과 Firecrawl 근거 차이](jabra-provider-evidence-gap.md): 첫 거절 단계와 후속 재고 근거 확인, 등록 보류
 
 장애를 해결한 방법뿐 아니라, 기대한 개선이 나타나지 않은 이유와 아직 확인하지 못한 원인도 기록한다. 평가 보고서는 실행 결과의 원본이고, troubleshooting은 그 근거로 다음 진단에서 반복할 판단과 피할 오해를 설명한다.
@@ -7,6 +11,7 @@
 ## 사례와 진단 방법
 
 - [UI 촬영 성공과 화면 준비 완료의 구분](ui-gallery-capture.md): 목록 로딩·viewport 변경 중 전체 페이지 높이와 hydration 지연 확인
+- [겹친 Gradle 테스트의 결과 파일 충돌](parallel-gradle-test-output.md): 동일 build 디렉터리의 EOF·결과 파일 유실과 순차 검증
 
 - [GitHub 출처 점검 실패 분리](../evaluations/source-check-2026-11-14/README.md): 로컬 성공과 클라우드 접근의 구분, 제목 변경을 제한적으로 처리한 사례
 - [Windows 임시 worktree에서 로컬 명령이 실패하는 경우](windows-worktree-permissions.md): Hook 점유, 실행기 오류 740, Git 소유권, 실제 파일 접근 실패의 구분

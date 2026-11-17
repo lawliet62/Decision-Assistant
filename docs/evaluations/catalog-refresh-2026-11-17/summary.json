@@ -1,0 +1,31 @@
+{
+  "activeProducts": 25,
+  "workerAttempts": 25,
+  "verified": 21,
+  "failed": [
+    {
+      "id": "marshall-minor-iv-black",
+      "outcome": "UNAVAILABLE"
+    },
+    {
+      "id": "marshall-motif-ii-anc",
+      "outcome": "PRICE_CONTEXT_MISSING"
+    },
+    {
+      "id": "qcy-ht10-hires",
+      "outcome": "PRODUCT_MISSING"
+    },
+    {
+      "id": "sony-wf-c710n-glass-blue",
+      "outcome": "PRICE_CONTEXT_MISSING"
+    }
+  ],
+  "monthlyBefore": 79,
+  "monthlyAfter": 104,
+  "firecrawlCreditBefore": 994,
+  "firecrawlCreditAfter": 970,
+  "firecrawlCreditsConsumed": 24,
+  "nextPrice": "2026-11-19T09:43:08.514713+00:00",
+  "apiCandidates": 25,
+  "apiRecommended": 21
+}

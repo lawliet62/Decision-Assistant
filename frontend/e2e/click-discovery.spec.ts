@@ -43,8 +43,9 @@ for (const [key, name, use] of [["LAPTOP", "노트북", "학업"], ["PHONE", "�
     if (key === "EARBUDS") await page.screenshot({ path: test.info().outputPath("mobile-comparison.png"), fullPage: true });
     await page.getByRole("button", { name: "실제 선택 기록으로 이동" }).click();
     await page.getByLabel("실제로 선택한 후보").selectOption({ label: name + " Alpha" });
-    await page.getByRole("button", { name: "선택 기록", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "사용 후 회고", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "결정 완료", exact: true }).click();
+    await page.getByRole("button", { name: "선택 사항 · 회고", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "사용 후 회고", exact: true })).toBeVisible();
   });
 }
 
@@ -107,9 +108,17 @@ test("추천 부분 실패 표시와 명시적 재시도", async ({ page }) => {
     await route.fulfill({ json: data });
   });
   // Client refresh retrieves the same persisted partial state that a restored page would see.
+  await page.route("**/api/v1/decisions/11111111-1111-1111-1111-111111111111/revisions", async route => {
+    const response = await route.fetch(); const data = await response.json();
+    data.discovery.status = "PARTIAL"; data.discovery.error = "일부 정보만 확인했습니다.";
+    await route.fulfill({ json: data });
+  });
   await page.getByRole("button", { name: "비교에 추가", exact: true }).first().click();
   await page.getByRole("button", { name: "3. 선택 기록", exact: true }).click();
   await page.getByRole("button", { name: "보류", exact: true }).click();
+  await page.getByRole("button", { name: "결정 완료", exact: true }).click();
+  await page.getByLabel("아직 구매하지 않아 다시 검토합니다").check();
+  await page.getByRole("button", { name: "다시 검토", exact: true }).click();
   await page.getByRole("button", { name: "1. 비교 준비", exact: true }).click();
   await expect(page.getByText("일부 정보만 확인했습니다.", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "추천 다시 시도", exact: true }).click();

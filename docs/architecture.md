@@ -23,7 +23,7 @@ Browser
 
 | backend package | 현재 책임과 주요 연결 |
 |---|---|
-| `decision` | aggregate·비교·완료·회고·보관/삭제 API를 조정한다. template·guidance·evaluation·preference·notification 모델과 협력하며 `DecisionTaskWriter`로 외부 작업 결과 쓰기를 보호한다. |
+| `decision` | aggregate·비교·이유·완료·구매·재검토/취소·회고·보관/삭제 API를 조정한다. DecisionMemoryController는 같은 제품군의 과거 기록을 읽어 제공한다. template·guidance·evaluation·preference·notification 모델과 협력하며 `DecisionTaskWriter`로 외부 작업 결과 쓰기를 보호한다. |
 | `template` | 제품군별 versioned 초기 기준·조건과 intake 선택지를 제공한다. |
 | `evaluation` | 입력 준비·snapshot·순수 Java 점수 계산·평가 이력을 담당한다. 선택적 AI 평가는 ai port를 사용한다. |
 | `ai` | 구조화 proposal·AI 정책·provider port/adapter·실행 metadata를 관리한다. 외부 호출 결과는 보호된 결과 쓰기로 저장한다. |
@@ -58,7 +58,9 @@ flowchart LR
 | 카탈로그 추천 | UI → Decision 생성 → DB CatalogProduct 조회 → 개인 CandidateSuggestion 복사. 추천 요청 중 외부 호출은 없다. |
 | 후보 승인·조건 비교 | 사용자가 후보를 Option에 연결 → 현재 comparison_state 저장 → 판정 표시. 수집 사양·사용자 확인·평가 입력을 구분한다. |
 | 평가·완료 | 최신 version 검증 → Evaluation 입력·결과 고정 → 선택적으로 독립 LLM 평가. 완료는 별도로 Resolution의 comparison_snapshot을 고정한다. |
-| 회고·개인화 | Resolution에 회고 추가 → PROPOSED 성향 → 사용자 확인 → 같은 제품군의 새 Decision 기본값에 반영한다. |
+| 완료·구매·재검토 | 이유 ID·대표 이유·자유 메모를 Resolution에 기록하고 선택·보류·포기를 모두 완료한다. 구매 상태는 별도 갱신하며 미구매 확인 후 재개·임시 draft/후보 선택 복원본으로 취소한다. |
+| 원문 기록 활용 | DecisionMemoryController가 소유자·같은 제품군·유효 기록 최대 3개와 각 회고 2개를 DB에서 조회한다. 사용자 선택 시 출처 ID를 포함한 현재 Context 메모에 저장하며 외부 호출·weight 변경은 없다. |
+| 회고·개인화 | 선택적 회고 → PROPOSED 성향 → 사용자 확인 → 같은 제품군의 새 Decision 기본값. 원문 기록 활용과 별도다. 새 완료의 자동 알림은 없다. |
 | 기존 실시간 탐색·근거 | 상태 행 생성 → scheduled worker claim → 외부 검색·수집·AI → 실행 식별자·version·부모 존재/삭제 재확인 후 결과 저장. |
 | 운영 갱신·알림·삭제 | 카탈로그 고정 URL 예약 갱신, 회고 email 발송, 휴지통 만료 purge를 같은 backend의 scheduler가 수행한다. |
 
@@ -74,7 +76,9 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 - Evaluation: 특정 `decisionVersion`의 immutable input snapshot, hash, algorithm result, optional LLM result를 저장한다.
 - StructureRun: LLM에 실제 전달한 input과 proposal, 실행 metadata를 저장한다. proposal은 Decision을 자동 변경하지 않는다.
 - 구조화 AI에는 현재 활성 비교 기준의 이름·타입·단위를 전달한다. 기존 `StructureRun` input snapshot에 기준 목록이 없어도 읽을 수 있으며 과거 snapshot을 재작성하지 않는다.
-- Resolution/OutcomeCheckIn: 선택과 사후 회고를 append한다.
+- Resolution/OutcomeCheckIn: 제품 선택·보류·포기와 선택적 회고를 append한다. Resolution은 reasonIds·primaryReasonId·rationale와 별도 purchaseStatus를 갖는다. PURCHASED 이후 구매 상태 변경·재검토를 차단한다.
+- 재검토 임시 복원본: Decision.revisionDraft와 revisionCandidates JSONB에 시작 전 draft 및 후보 수락·제외·Option 연결을 보존한다. 취소는 이전 결론을 복원하고, 완료·취소는 임시 복원본을 해제한다. 과거 고정본·추천 실행·수집 자료 전체를 되돌리지 않는다.
+- 과거 원문 기록 Memory: 별도 aggregate나 학습 저장소가 아닌 조회 projection이다. 삭제·활용 제외·정정된 기록 및 정정 중 원본을 제외한다. 출처가 있는 현재 메모와 기존 PreferenceMemory를 구분한다.
 
 ## 클릭 추천 작업
 
@@ -100,7 +104,9 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 
 단일 GCP VM의 HTTPS proxy·Next.js·Spring Boot·PostgreSQL 구성과 VM attached Identity를 준비한다. 컨테이너는 별도 IAM identity 경계가 아니며 actual provisioning은 수행하지 않았다. [ADR 0019](decisions/0019-portfolio-deployment-preparation.md)를 따른다.
 
-기본 목록은 DTO projection과 DB pagination으로 소유자별 상태 결과 중 보관·삭제되지 않은 결정을 조회한다. 진행 상태와 기록 수명을 분리해 보관과 30일 휴지통 복구를 제공한다. 삭제·복구는 부모 행 잠금·version 확인으로 직렬화하며 만료 후 영구 삭제에 DB cascade를 사용한다. 성향 기억의 source FK도 cascade이며 활용 조회는 원본의 삭제·개인화 설정을 검사한다. 외부 작업 완료는 부모의 존재와 삭제 여부를 다시 확인한다. 알림·evidence worker는 삭제와 동일한 부모 잠금 순서를 사용한다. commit 후 최소 상태 변경 audit를 남겨 백업 복원 시 재적용한다. [ADR 0020](decisions/0020-decision-retention-and-personalization.md)을 따른다.
+완료 의미와 이유·구매·재검토 경계는 [ADR 0022](decisions/0022-decision-reasons-and-reusable-history.md)를 따른다. 별도 module·배포 단위·AI provider를 추가하지 않는다.
+
+기본 목록은 DTO projection과 DB pagination으로 소유자별 상태 결과 중 보관·삭제되지 않은 결정을 조회한다. 진행 상태와 기록 수명을 분리해 보관과 30일 휴지통 복구를 제공한다. 삭제·복구는 부모 행 잠금·version 확인으로 직렬화하며 만료 후 영구 삭제에 DB cascade를 사용한다. 성향 기억의 source FK도 cascade이며 활용 조회는 원본의 삭제·개인화 설정을 검사한다. 외부 작업 완료는 부모의 존재와 삭제 여부를 다시 확인한다. 알림·evidence worker는 삭제와 동일한 부모 잠금 순서를 사용한다. 새 완료는 자동 알림을 만들지 않으며 기존 예약만 기존 발송 경계로 관리한다. commit 후 최소 상태 변경 audit를 남겨 백업 복원 시 재적용한다. [ADR 0020](decisions/0020-decision-retention-and-personalization.md)을 따른다.
 
 ## Security/operations baseline
 

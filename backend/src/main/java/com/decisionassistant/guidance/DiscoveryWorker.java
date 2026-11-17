@@ -307,6 +307,6 @@ public class DiscoveryWorker {
         return quote != null && !quote.isBlank() && quote.length() <= 600 && page.excerpt().contains(quote);
     }
     private static boolean editable(Decision decision) {
-        return decision.deletedAt() == null && (decision.status() == DecisionTypes.DecisionStatus.DRAFT || decision.status() == DecisionTypes.DecisionStatus.DEFERRED);
+        return decision.deletedAt() == null && (decision.status() == DecisionTypes.DecisionStatus.DRAFT);
     }
 }

@@ -49,6 +49,46 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Import(DecisionApiIntegrationTest.TestSecurityConfiguration.class)
 class DecisionApiIntegrationTest {
+    @Autowired com.decisionassistant.guidance.CandidateSuggestionRepository candidateRepository;
+
+    @Test
+    void cancellingRevisionRestoresCandidateSelectionsAndAllowsAcceptingAgain() throws Exception {
+        var created = revisionFixture(); var id = created.path("id").asText(); var decisionId = UUID.fromString(id);
+        var alphaId = UUID.fromString(created.path("options").get(0).path("id").asText());
+        var original = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Alpha", "https://example.com/alpha", "기존 수락", "fixture", Instant.now());
+        original.discovered(List.of()); original.accept(alphaId);
+        var gamma = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Gamma", "https://example.com/gamma", "추가 후보", "fixture", Instant.now());
+        gamma.discovered(List.of());
+        var toDismiss = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Delta", "https://example.com/delta", "검토 전 제안", "fixture", Instant.now());
+        var dismissed = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Epsilon", "https://example.com/epsilon", "이미 제외", "fixture", Instant.now());
+        dismissed.dismiss();
+        candidateRepository.saveAllAndFlush(List.of(original, gamma, toDismiss, dismissed));
+        resolveRevision(id, "CHOSEN", alphaId.toString());
+        startRevision(id, "RECONSIDERATION", readDecision(id).path("version").asLong());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/decisions/{id}/candidate-suggestions/{candidate}", id, gamma.id())
+                .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"ACCEPT\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.options.length()").value(3));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/decisions/{id}/candidate-suggestions/{candidate}", id, toDismiss.id())
+                .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"DISMISS\"}"))
+                .andExpect(status().isOk());
+        var fresh = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Zeta", "https://example.com/zeta", "검토 중 새 후보", "fixture", Instant.now());
+        fresh.dismiss(); candidateRepository.saveAndFlush(fresh);
+        mvc.perform(post("/api/v1/decisions/{id}/revisions/cancel", id).with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedVersion\":" + readDecision(id).path("version") + "}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.options.length()").value(2));
+        var restoredGamma = candidateRepository.findById(gamma.id()).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(restoredGamma.status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.PROPOSED);
+        org.assertj.core.api.Assertions.assertThat(restoredGamma.optionId()).isNull();
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(original.id()).orElseThrow().optionId()).isEqualTo(alphaId);
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(original.id()).orElseThrow().status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.ACCEPTED);
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(dismissed.id()).orElseThrow().status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.DISMISSED);
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(toDismiss.id()).orElseThrow().status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.PROPOSED);
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(fresh.id()).orElseThrow().status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.PROPOSED);
+        startRevision(id, "RECONSIDERATION", readDecision(id).path("version").asLong());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/decisions/{id}/candidate-suggestions/{candidate}", id, gamma.id())
+                .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"ACCEPT\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.options.length()").value(3));
+    }
 
     static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000010");
     static final AppUserPrincipal TEST_USER = new AppUserPrincipal(
@@ -136,6 +176,8 @@ class DecisionApiIntegrationTest {
     void aReminderSelectedBeforeReconsiderationCannotSendForTheOldResolution() throws Exception {
         var created = revisionFixture(); var id = UUID.fromString(created.path("id").asText());
         var resolved = resolveRevision(id.toString(), "CHOSEN", created.path("options").get(0).path("id").asText());
+        reminderRepository.saveAndFlush(new com.decisionassistant.notification.OutcomeReminder(id, Instant.now(), com.decisionassistant.notification.OutcomeReminder.Channel.EMAIL, Instant.now()));
+        var seededReminder = reminderRepository.findByDecisionIdOrderByDueAtAsc(id).getFirst(); seededReminder.resolution(UUID.fromString(resolved.path("id").asText())); reminderRepository.saveAndFlush(seededReminder);
         var reminder = reminderRepository.findByDecisionIdOrderByDueAtAsc(id).stream()
                 .filter(r -> r.channel() == com.decisionassistant.notification.OutcomeReminder.Channel.EMAIL).findFirst().orElseThrow();
         reminder.reschedule(Instant.now().minusSeconds(60)); reminderRepository.saveAndFlush(reminder);
@@ -415,15 +457,16 @@ class DecisionApiIntegrationTest {
         var editing = startRevision(id, "RECONSIDERATION", completed.path("version").asLong());
         org.assertj.core.api.Assertions.assertThat(editing.path("status").asText()).isEqualTo("DRAFT");
         org.assertj.core.api.Assertions.assertThat(editing.path("resolutions").get(0).path("comparisonSnapshot")).isEqualTo(first.path("comparisonSnapshot"));
-        resolveRevision(id, "DEFERRED", null);
+        var deferred = resolveRevision(id, "DEFERRED", null);
+        startRevision(id, "RECONSIDERATION", readDecision(id).path("version").asLong());
         var second = resolveRevision(id, "CHOSEN", created.path("options").get(1).path("id").asText());
         org.assertj.core.api.Assertions.assertThat(second.path("editMode").asText()).isEqualTo("RECONSIDERATION");
-        org.assertj.core.api.Assertions.assertThat(second.path("previousResolutionId").asText()).isEqualTo(first.path("id").asText());
+        org.assertj.core.api.Assertions.assertThat(second.path("previousResolutionId").asText()).isEqualTo(deferred.path("id").asText());
         var result = readDecision(id);
         org.assertj.core.api.Assertions.assertThat(result.path("result").asText()).isEqualTo("OPTION_SELECTED");
         org.assertj.core.api.Assertions.assertThat(result.path("resolutions").get(2).path("supersededAt").isNull()).isTrue();
         org.assertj.core.api.Assertions.assertThat(reminderRepository.findByDecisionIdOrderByDueAtAsc(UUID.fromString(id)))
-                .hasSize(4).allMatch(r -> r.resolutionId().toString().equals(second.path("id").asText()));
+                .isEmpty();
     }
 
     @Test
@@ -436,6 +479,7 @@ class DecisionApiIntegrationTest {
         var uuid = UUID.fromString(id);
         jdbc.update("update decisions set current_resolution_id = null where id = ?", uuid);
         jdbc.update("update outcome_check_ins set resolution_id = null where decision_id = ?", uuid);
+        reminderRepository.saveAndFlush(new com.decisionassistant.notification.OutcomeReminder(uuid, Instant.now(), com.decisionassistant.notification.OutcomeReminder.Channel.EMAIL, Instant.now()));
         jdbc.update("update outcome_reminders set resolution_id = null where decision_id = ?", uuid);
         jdbc.update("update resolutions set comparison_snapshot = jsonb_set(comparison_snapshot - 'title', '{schemaVersion}', '\"comparison-v1\"') where decision_id = ?", uuid);
         var before = readDecision(id);
@@ -480,13 +524,13 @@ class DecisionApiIntegrationTest {
 
     private tools.jackson.databind.JsonNode startRevision(String id, String mode, long version) throws Exception {
         return mapper.readTree(mvc.perform(post("/api/v1/decisions/{id}/revisions", id).with(signedIn()).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"mode\":\"%s\",\"expectedVersion\":%d}".formatted(mode, version)))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"mode\":\"%s\",\"expectedVersion\":%d,\"notPurchased\":true}".formatted(mode, version)))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
     }
 
     private void startRevisionStatus(String id, String mode, long version, int expected) throws Exception {
         mvc.perform(post("/api/v1/decisions/{id}/revisions", id).with(signedIn()).with(csrf())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"mode\":\"%s\",\"expectedVersion\":%d}".formatted(mode, version)))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"mode\":\"%s\",\"expectedVersion\":%d,\"notPurchased\":true}".formatted(mode, version)))
                 .andExpect(status().is(expected));
     }
 
@@ -561,6 +605,7 @@ class DecisionApiIntegrationTest {
                 {"kind":"DEFERRED","rationale":"iOS 확인 대기","expectedVersion":%s}
                 """.formatted(confirmed.path("version"))))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.comparisonSnapshot.comparison.options[0].checks[1].status").value("UNKNOWN"));
+        startRevision(id, "RECONSIDERATION", readDecision(id).path("version").asLong());
         var reopened = mapper.readTree(mvc.perform(get("/api/v1/decisions/{id}", id).with(signedIn()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.comparison.confirmations[0].note").value("설명서에서 직접 확인"))
                 .andReturn().getResponse().getContentAsString());
@@ -589,6 +634,59 @@ class DecisionApiIntegrationTest {
         mvc.perform(get("/api/v1/product-lookups/capabilities").with(signedIn()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.searchEnabled").value(false))
                 .andExpect(jsonPath("$.searchProvider").value("Serper"));
+    }
+
+    @Test
+    void reasonsPurchaseReconsiderationAndMemoryRespectHistoryAndOwnership() throws Exception {
+        var created = revisionFixture(); var id = created.path("id").asText();
+        var option = created.path("options").get(0).path("id").asText();
+        mvc.perform(post("/api/v1/decisions/{id}/resolutions", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"kind":"CHOSEN","selectedOptionId":"%s","reasonIds":["budget","features"],"primaryReasonId":"budget","rationale":"직접 확인"}
+                """.formatted(option))).andExpect(status().isCreated()).andExpect(jsonPath("$.reasonIds.length()").value(2));
+        var saved = readDecision(id);
+        mvc.perform(post("/api/v1/decisions/{id}/revisions", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"expectedVersion":%s,"mode":"RECONSIDERATION"}
+                """.formatted(saved.path("version")))).andExpect(status().isConflict());
+        startRevision(id, "RECONSIDERATION", saved.path("version").asLong());
+        var active = readDecision(id);
+        var edited = mapper.createObjectNode();
+        for (var field : List.of("context", "options", "criteria", "values", "constraints", "constraintResults")) edited.set(field, active.path(field));
+        edited.put("title", "취소할 편집 제목"); edited.put("expectedVersion", active.path("version").asLong());
+        mvc.perform(put("/api/v1/decisions/{id}/draft", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(edited))).andExpect(status().isOk());
+        active = readDecision(id);
+        mvc.perform(post("/api/v1/decisions/{id}/revisions/cancel", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"expectedVersion\":" + active.path("version") + "}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CHOSEN"))
+                .andExpect(jsonPath("$.title").value(created.path("title").asText()));
+        var next = revisionFixture(); var nextId = next.path("id").asText();
+        mvc.perform(get("/api/v1/decisions/{id}/memories", nextId).with(signedIn()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].reasonIds[0]").value("budget"));
+        mvc.perform(get("/api/v1/decisions/{id}/memories", nextId).with(signedIn(createOtherUser())))
+                .andExpect(status().isNotFound());
+        jdbc.update("update decisions set personalization_enabled = false where id = ?", UUID.fromString(id));
+        var excluded = mvc.perform(get("/api/v1/decisions/{id}/memories", nextId).with(signedIn()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(excluded).doesNotContain(id);
+        jdbc.update("update decisions set personalization_enabled = true, deleted_at = now() where id = ?", UUID.fromString(id));
+        var deleted = mvc.perform(get("/api/v1/decisions/{id}/memories", nextId).with(signedIn()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(deleted).doesNotContain(id);
+        jdbc.update("update decisions set deleted_at = null where id = ?", UUID.fromString(id));
+        var beforePurchase = readDecision(id);
+        mvc.perform(put("/api/v1/decisions/{id}/purchase", id).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                {"expectedVersion":%s,"resolutionId":"%s","status":"PURCHASED"}
+                """.formatted(beforePurchase.path("version"), beforePurchase.path("currentResolutionId").asText())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.resolutions[0].purchaseStatus").value("PURCHASED"));
+        startRevisionStatus(id, "RECONSIDERATION", readDecision(id).path("version").asLong(), 409);
+        mvc.perform(post("/api/v1/decisions/{id}/resolutions", nextId).with(signedIn()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"kind\":\"DEFERRED\",\"reasonIds\":[\"budget\"]}"))
+                .andExpect(status().isUnprocessableEntity());
+        resolveRevision(nextId, "DEFERRED", null);
+        org.assertj.core.api.Assertions.assertThat(readDecision(nextId).path("phase").asText()).isEqualTo("COMPLETED");
     }
 
     @Test

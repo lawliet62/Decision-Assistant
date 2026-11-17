@@ -15,6 +15,23 @@ import static com.decisionassistant.decision.DecisionTypes.ResolutionKind;
 @Entity
 @Table(name = "resolutions")
 public class Resolution {
+    public enum PurchaseStatus { UNRECORDED, PLANNED, PURCHASED, NOT_PURCHASED }
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "reason_ids", nullable = false, columnDefinition = "jsonb")
+    private java.util.List<String> reasonIds = java.util.List.of();
+    @Column(name = "primary_reason_id")
+    private String primaryReasonId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "purchase_status", nullable = false)
+    private PurchaseStatus purchaseStatus = PurchaseStatus.UNRECORDED;
+    @Column(name = "purchase_recorded_at")
+    private Instant purchaseRecordedAt;
+    public java.util.List<String> reasonIds() { return reasonIds; }
+    public String primaryReasonId() { return primaryReasonId; }
+    public PurchaseStatus purchaseStatus() { return purchaseStatus; }
+    public Instant purchaseRecordedAt() { return purchaseRecordedAt; }
+    public void reasons(java.util.List<String> ids, String primary) { reasonIds = ids; primaryReasonId = primary; }
+    public void purchase(PurchaseStatus status, Instant now) { purchaseStatus = status; purchaseRecordedAt = now; }
 
     @Enumerated(EnumType.STRING)
     @Column(name = "edit_mode", length = 30)
