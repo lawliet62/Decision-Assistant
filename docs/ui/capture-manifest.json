@@ -1,7 +1,7 @@
 {
-  "capturedAt": "2026-11-17T10:14:08.087Z",
-  "applicationCommit": "62a58b19ae5228d0fc5e14e61c775c532f879c73",
-  "data": "기존 E2E mock backend의 가상 데이터. 성향 API는 capture script의 고정 응답.",
+  "capturedAt": "2026-11-17T11:57:46.956Z",
+  "applicationCommit": "7afc1ffe51481417e012ac26acb01d38671cf3e4",
+  "data": "기존 E2E mock backend의 가상 데이터. 이유 템플릿은 현재 backend 소스에서 읽으며 성향·알림 설정·원문 기록 조회는 고정 응답.",
   "command": "npm.cmd --prefix frontend run test:e2e -- --config playwright.docs.config.ts",
   "browser": "chromium",
   "locale": "ko-KR",
@@ -84,7 +84,7 @@
     {
       "file": "completion/05-resolution-desktop.png",
       "route": "/decisions/11111111-1111-1111-1111-111111111111",
-      "state": "후보 선택·보류·구매하지 않음 기록 전",
+      "state": "제품 선택·보류·포기와 복수 이유·대표 이유·자유 메모",
       "viewport": {
         "width": 1440,
         "height": 1000
@@ -93,7 +93,25 @@
     {
       "file": "completion/05-resolution-mobile.png",
       "route": "/decisions/11111111-1111-1111-1111-111111111111",
-      "state": "후보 선택·보류·구매하지 않음 기록 전",
+      "state": "제품 선택·보류·포기와 복수 이유·대표 이유·자유 메모",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "completion/15-completed-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "필수 흐름 종료 · 구매 미기록과 선택적 구매·회고",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "completion/15-completed-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "필수 흐름 종료 · 구매 미기록과 선택적 구매·회고",
       "viewport": {
         "width": 390,
         "height": 844
@@ -120,7 +138,7 @@
     {
       "file": "completion/07-correction-desktop.png",
       "route": "/decisions/11111111-1111-1111-1111-111111111111",
-      "state": "원본 완료 기록을 보존하는 정정 · 보류 비활성",
+      "state": "미구매 확인 후 원본 결과·이유를 초기값으로 정정 · 보류도 허용",
       "viewport": {
         "width": 1440,
         "height": 1000
@@ -129,7 +147,7 @@
     {
       "file": "completion/07-correction-mobile.png",
       "route": "/decisions/11111111-1111-1111-1111-111111111111",
-      "state": "원본 완료 기록을 보존하는 정정 · 보류 비활성",
+      "state": "미구매 확인 후 원본 결과·이유를 초기값으로 정정 · 보류도 허용",
       "viewport": {
         "width": 390,
         "height": 844
@@ -138,7 +156,7 @@
     {
       "file": "completion/08-not-purchased-desktop.png",
       "route": "/decisions/11111111-1111-1111-1111-111111111111",
-      "state": "구매하지 않음도 결정 완료 · 결정에 대한 회고",
+      "state": "포기로 완료 · 기존 NOT_PURCHASED 결과와 선택적인 결정 후 회고",
       "viewport": {
         "width": 1440,
         "height": 1000
@@ -147,7 +165,97 @@
     {
       "file": "completion/08-not-purchased-mobile.png",
       "route": "/decisions/11111111-1111-1111-1111-111111111111",
-      "state": "구매하지 않음도 결정 완료 · 결정에 대한 회고",
+      "state": "포기로 완료 · 기존 NOT_PURCHASED 결과와 선택적인 결정 후 회고",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "completion/16-deferred-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "보류도 완료 · 직접 편집 대신 미구매 확인 후 재검토",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "completion/16-deferred-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "보류도 완료 · 직접 편집 대신 미구매 확인 후 재검토",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "completion/17-reconsideration-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "이전 결론·근거를 보존하며 새 판단 준비 · 취소 가능",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "completion/17-reconsideration-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "이전 결론·근거를 보존하며 새 판단 준비 · 취소 가능",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "completion/18-restored-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "취소 후 이전 제목·보류 결론 복원 · 제품 코드 복원 범위는 backend 검증 참조",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "completion/18-restored-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "취소 후 이전 제목·보류 결론 복원 · 제품 코드 복원 범위는 backend 검증 참조",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "completion/19-purchased-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "선택과 별도인 구매함 기록 · 구매 후 재검토 차단 UI",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "completion/19-purchased-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "선택과 별도인 구매함 기록 · 구매 후 재검토 차단 UI",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "reflection/20-history-desktop.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "과거 이유·회고 원문과 출처 링크 · 명시적으로 현재 메모에 참고",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      }
+    },
+    {
+      "file": "reflection/20-history-mobile.png",
+      "route": "/decisions/11111111-1111-1111-1111-111111111111",
+      "state": "과거 이유·회고 원문과 출처 링크 · 명시적으로 현재 메모에 참고",
       "viewport": {
         "width": 390,
         "height": 844
