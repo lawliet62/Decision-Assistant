@@ -434,6 +434,8 @@ public class DecisionService {
         if (base.purchaseStatus() == Resolution.PurchaseStatus.PURCHASED) throw new ConflictException("구매한 선택은 재검토할 수 없습니다.");
         if (!Boolean.TRUE.equals(request.notPurchased())) throw new ConflictException("아직 구매하지 않았는지 확인하세요.");
         decision.revisionDraft(response(decision));
+        decision.revisionCandidates(candidateSuggestions.findByDecisionIdOrderByCreatedAtAsc(id).stream()
+                .map(item -> new Decision.RevisionCandidateState(item.id(), item.status(), item.optionId())).toList());
         decision.beginRevision(request.mode(), base.id(), Instant.now(clock));
         decisions.flush();
         return response(decision);
@@ -469,6 +471,19 @@ public class DecisionService {
         syncOptions(decision, saved.options()); syncCriteria(decision, saved.criteria()); syncConstraints(decision, saved.constraints());
         syncValues(decision, saved.values()); syncConstraintResults(decision, saved.constraintResults());
         if (saved.comparison() != null) decision.comparisonState(new Comparison.State(saved.comparison().settings(), saved.comparison().confirmations()), Instant.now(clock));
+        var previousCandidates = decision.revisionCandidates();
+        var savedById = previousCandidates == null ? java.util.Map.<UUID, Decision.RevisionCandidateState>of()
+                : previousCandidates.stream().collect(Collectors.toMap(Decision.RevisionCandidateState::id, Function.identity()));
+        var optionIds = saved.options().stream().map(OptionData::id).collect(Collectors.toSet());
+        for (var candidate : candidateSuggestions.findByDecisionIdOrderByCreatedAtAsc(id)) {
+            var previous = savedById.get(candidate.id());
+            if (previous != null) candidate.restoreSelection(previous.status(), previous.optionId());
+            else if (previousCandidates != null || candidate.status() == CandidateSuggestion.Status.ACCEPTED
+                    && !optionIds.contains(candidate.optionId())) {
+                // 재검토 중 새로 생긴 후보는 선택 전 상태로 남긴다. 이전 버전 복원본은 끊긴 연결만 복구한다.
+                candidate.restoreSelection(CandidateSuggestion.Status.PROPOSED, null);
+            }
+        }
         decision.cancelRevision(Instant.now(clock)); decisions.flush();
         return response(decision);
     }
@@ -803,7 +818,7 @@ public class DecisionService {
                 DecisionTypes.phase(decision.status()), DecisionTypes.result(decision.status()), decision.editMode(),
                 decision.currentResolutionId() != null ? decision.currentResolutionId() :
                         (DecisionTypes.phase(decision.status()) == DecisionTypes.DecisionPhase.COMPLETED && currentResolution(decision) != null
-                                ? currentResolution(decision).id() : null));
+                                ? currentResolution(decision).id() : null), decision.revisionBaseId());
     }
 
     private List<DiscoveryContracts.RequirementCheck> requirementChecks(Decision decision, java.util.Map<String, String> selected,

@@ -49,6 +49,46 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @org.springframework.test.annotation.DirtiesContext(classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_CLASS)
 @Import(DecisionApiIntegrationTest.TestSecurityConfiguration.class)
 class DecisionApiIntegrationTest {
+    @Autowired com.decisionassistant.guidance.CandidateSuggestionRepository candidateRepository;
+
+    @Test
+    void cancellingRevisionRestoresCandidateSelectionsAndAllowsAcceptingAgain() throws Exception {
+        var created = revisionFixture(); var id = created.path("id").asText(); var decisionId = UUID.fromString(id);
+        var alphaId = UUID.fromString(created.path("options").get(0).path("id").asText());
+        var original = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Alpha", "https://example.com/alpha", "기존 수락", "fixture", Instant.now());
+        original.discovered(List.of()); original.accept(alphaId);
+        var gamma = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Gamma", "https://example.com/gamma", "추가 후보", "fixture", Instant.now());
+        gamma.discovered(List.of());
+        var toDismiss = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Delta", "https://example.com/delta", "검토 전 제안", "fixture", Instant.now());
+        var dismissed = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Epsilon", "https://example.com/epsilon", "이미 제외", "fixture", Instant.now());
+        dismissed.dismiss();
+        candidateRepository.saveAllAndFlush(List.of(original, gamma, toDismiss, dismissed));
+        resolveRevision(id, "CHOSEN", alphaId.toString());
+        startRevision(id, "RECONSIDERATION", readDecision(id).path("version").asLong());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/decisions/{id}/candidate-suggestions/{candidate}", id, gamma.id())
+                .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"ACCEPT\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.options.length()").value(3));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/decisions/{id}/candidate-suggestions/{candidate}", id, toDismiss.id())
+                .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"DISMISS\"}"))
+                .andExpect(status().isOk());
+        var fresh = new com.decisionassistant.guidance.CandidateSuggestion(decisionId, "Zeta", "https://example.com/zeta", "검토 중 새 후보", "fixture", Instant.now());
+        fresh.dismiss(); candidateRepository.saveAndFlush(fresh);
+        mvc.perform(post("/api/v1/decisions/{id}/revisions/cancel", id).with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"expectedVersion\":" + readDecision(id).path("version") + "}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.options.length()").value(2));
+        var restoredGamma = candidateRepository.findById(gamma.id()).orElseThrow();
+        org.assertj.core.api.Assertions.assertThat(restoredGamma.status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.PROPOSED);
+        org.assertj.core.api.Assertions.assertThat(restoredGamma.optionId()).isNull();
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(original.id()).orElseThrow().optionId()).isEqualTo(alphaId);
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(original.id()).orElseThrow().status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.ACCEPTED);
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(dismissed.id()).orElseThrow().status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.DISMISSED);
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(toDismiss.id()).orElseThrow().status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.PROPOSED);
+        org.assertj.core.api.Assertions.assertThat(candidateRepository.findById(fresh.id()).orElseThrow().status()).isEqualTo(com.decisionassistant.guidance.CandidateSuggestion.Status.PROPOSED);
+        startRevision(id, "RECONSIDERATION", readDecision(id).path("version").asLong());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/v1/decisions/{id}/candidate-suggestions/{candidate}", id, gamma.id())
+                .with(signedIn()).with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{\"action\":\"ACCEPT\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.options.length()").value(3));
+    }
 
     static final UUID TEST_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000010");
     static final AppUserPrincipal TEST_USER = new AppUserPrincipal(

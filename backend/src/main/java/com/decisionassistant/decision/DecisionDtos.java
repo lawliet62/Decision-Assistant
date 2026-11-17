@@ -87,7 +87,8 @@ public final class DecisionDtos {
             DecisionTypes.DecisionPhase phase,
             DecisionTypes.DecisionResult result,
             DecisionTypes.EditMode editMode,
-            UUID currentResolutionId
+            UUID currentResolutionId,
+            UUID revisionBaseId
     ) {
     }
 

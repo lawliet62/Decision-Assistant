@@ -1707,6 +1707,10 @@
           "currentResolutionId" : {
             "type" : "string",
             "format" : "uuid"
+          },
+          "revisionBaseId" : {
+            "type" : "string",
+            "format" : "uuid"
           }
         }
       },

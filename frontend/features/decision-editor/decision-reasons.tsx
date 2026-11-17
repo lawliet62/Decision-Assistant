@@ -7,12 +7,12 @@ type Kind = "CHOSEN" | "DEFERRED" | "ABANDONED";
 type Reason = components["schemas"]["Reason"];
 type Memory = components["schemas"]["Memory"];
 const button = "rounded-xl border px-4 py-2 text-sm aria-pressed:bg-emerald-100 disabled:opacity-40";
-export function ReasonPicker({ options, onComplete }: { options: components["schemas"]["OptionData"][]; onComplete: (kind: Kind, option: string, note: string, ids: string[], primary?: string) => void }) {
-  const [kind, setKind] = useState<Kind>("CHOSEN");
-  const [selected, setSelected] = useState("");
-  const [ids, setIds] = useState<string[]>([]);
-  const [primary, setPrimary] = useState("");
-  const [note, setNote] = useState("");
+export function ReasonPicker({ options, onComplete, initialResolution }: { options: components["schemas"]["OptionData"][]; initialResolution?: components["schemas"]["ResolutionData"]; onComplete: (kind: Kind, option: string, note: string, ids: string[], primary?: string) => void }) {
+  const [kind, setKind] = useState<Kind>(initialResolution?.kind ?? "CHOSEN");
+  const [selected, setSelected] = useState(initialResolution?.selectedOptionId ?? "");
+  const [ids, setIds] = useState<string[]>(initialResolution?.reasonIds ?? []);
+  const [primary, setPrimary] = useState(initialResolution?.primaryReasonId ?? "");
+  const [note, setNote] = useState(initialResolution?.rationale ?? "");
   const [templates, setTemplates] = useState<Reason[]>([]);
   useEffect(() => { api.GET("/api/v1/decisions/reason-templates").then(r => setTemplates(r.data ?? [])).catch(() => {}); }, []);
   return <section className="space-y-4 rounded-3xl border bg-white p-6"><h2 className="text-xl font-semibold">결정 결과</h2>

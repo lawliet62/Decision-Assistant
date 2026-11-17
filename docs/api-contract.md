@@ -2,6 +2,8 @@
 
 ## 결정 이유·구매·재검토
 
+- `DecisionResponse.revisionBaseId`는 현재 정정·재검토의 원본 Resolution ID다. 정정 화면은 이 ID로 원본을 골라 결과·선택 제품·이유·대표 이유·메모의 초기값을 채운다. 검토 종료·취소 후에는 null이다.
+
 - `GET /api/v1/decisions/reason-templates`: 결과별 이유 ID·라벨. 완료 요청의 `reasonIds`, `primaryReasonId`는 optional이며 결과별 유효 조합만 허용한다. 자유 설명은 기존 `rationale`이다.
 - `DEFERRED`도 `COMPLETED` phase다. 직접 draft 수정을 거절하고 기존 revisions API로 재개한다. revisions 요청에 `notPurchased: true`가 필요하며 구매한 기록은 거절한다.
 - `POST /api/v1/decisions/{id}/revisions/cancel`: `{expectedVersion}`으로 새 검토 시작 전의 draft·결론을 복원한다. 이전 버전에서 시작한 검토는 복원본이 없을 수 있다.

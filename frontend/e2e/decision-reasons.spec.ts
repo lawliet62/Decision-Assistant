@@ -1,4 +1,39 @@
 import { test, expect } from "@playwright/test";
+
+for (const scenario of [
+  { kind: "CHOSEN", label: "제품 선택", reason: "budget", reasonLabel: "예산에 적합함" },
+  { kind: "DEFERRED", label: "보류", reason: "information", reasonLabel: "추가 정보가 필요함" },
+  { kind: "ABANDONED", label: "포기", reason: "no_match", reasonLabel: "조건에 맞는 제품이 없음" },
+]) {
+  test(`${scenario.label}: 제목만 정정해도 기존 판단과 모든 이유를 유지한다`, async ({page,request}) => {
+    const response = await request.post("http://127.0.0.1:18080/api/v1/decisions", { data: {
+      intentText: "이유를 보존할 결정", templateKey: "EARBUDS", selectedSources: [{ name: "Alpha", url: "https://example.com/alpha" }],
+    } });
+    const decision = await response.json();
+    const selectedOptionId = scenario.kind === "CHOSEN" ? decision.options[0].id : undefined;
+    await request.post(`http://127.0.0.1:18080/api/v1/decisions/${decision.id}/resolutions`, { data: {
+      kind: scenario.kind, selectedOptionId, reasonIds: [scenario.reason], primaryReasonId: scenario.reason, rationale: "정정 전의 구체적인 판단 근거",
+    } });
+    await page.goto(`/decisions/${decision.id}`);
+    await page.getByLabel("아직 구매하지 않아 다시 검토합니다").check();
+    await page.getByRole("button", { name: "기록 수정", exact: true }).click();
+    await page.getByLabel("제목", { exact: true }).fill("제목만 정정했습니다");
+    await page.getByRole("button", { name: "변경 저장", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "제목만 정정했습니다", exact: true })).toBeVisible();
+    await page.reload();
+    await page.getByRole("button", { name: "3. 선택 기록", exact: true }).click();
+    await expect(page.getByRole("button", { name: scenario.label, exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: scenario.reasonLabel, exact: true })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByLabel("가장 중요한 이유")).toHaveValue(scenario.reason);
+    await expect(page.getByLabel("결정 이유", { exact: true })).toHaveValue("정정 전의 구체적인 판단 근거");
+    if (selectedOptionId) await expect(page.getByLabel("실제로 선택한 후보")).toHaveValue(selectedOptionId);
+    const sent = page.waitForRequest(r => r.method() === "POST" && r.url().endsWith("/resolutions"));
+    await page.getByRole("button", { name: "결정 완료", exact: true }).click();
+    expect((await sent).postDataJSON()).toMatchObject({kind: scenario.kind, reasonIds: [scenario.reason], primaryReasonId: scenario.reason, rationale: "정정 전의 구체적인 판단 근거"});
+    await expect(page.getByRole("heading", { name: "결정을 완료했습니다" })).toBeVisible();
+  });
+}
+
 test("이유 GUI·메모·구매 전 재검토 취소·구매 기록", async ({page,request}) => {
   const response = await request.post("http://127.0.0.1:18080/api/v1/decisions", {data:{intentText:"새 결정 기록 검증",templateKey:"EARBUDS",selectedSources:[{name:"Alpha",url:"https://example.com/alpha"}]}});
   const decision = await response.json(); await page.goto(`/decisions/${decision.id}`);

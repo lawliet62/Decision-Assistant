@@ -724,6 +724,8 @@ export interface components {
             editMode?: "CORRECTION" | "RECONSIDERATION";
             /** Format: uuid */
             currentResolutionId?: string;
+            /** Format: uuid */
+            revisionBaseId?: string;
         };
         DiscoveryData: {
             /** Format: int64 */
