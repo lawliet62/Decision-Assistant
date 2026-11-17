@@ -1,12 +1,14 @@
 # Troubleshooting
 
+- [OpenAPI 객체 속성 순서에 따른 계약 검사 실패](openapi-property-order.md): 값·구조 차이와 직렬화 순서 차이의 구분
+
+- [카탈로그 갱신의 유효 가격·사양 시각·부분 실패](catalog-refresh-invariants.md): 과거 성공과 현재 유효성, JSON 표현·Instant 비교, 원본 DB와 API 검증 분리
+
 - [Jabra 직접 HTML과 Firecrawl 근거 차이](jabra-provider-evidence-gap.md): 첫 거절 단계와 후속 재고 근거 확인, 등록 보류
 
 장애를 해결한 방법뿐 아니라, 기대한 개선이 나타나지 않은 이유와 아직 확인하지 못한 원인도 기록한다. 평가 보고서는 실행 결과의 원본이고, troubleshooting은 그 근거로 다음 진단에서 반복할 판단과 피할 오해를 설명한다.
 
 ## 사례와 진단 방법
-
-- [OpenAPI property 순서 drift](openapi-property-order.md): record와 getter의 출력 순서가 바뀌는 경우의 범위 확인과 명시적 순서
 
 - [겹친 Gradle 테스트의 결과 파일 충돌](parallel-gradle-test-output.md): 동일 build 디렉터리의 EOF·결과 파일 유실과 순차 검증
 
