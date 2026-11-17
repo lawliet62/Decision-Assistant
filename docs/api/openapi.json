@@ -550,6 +550,84 @@
         }
       }
     },
+    "/api/v1/decisions/{decisionId}/memories/{resolutionId}/insight" : {
+      "get" : {
+        "tags" : [ "memory-insight-controller" ],
+        "operationId" : "get",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "resolutionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InsightView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "memory-insight-controller" ],
+        "operationId" : "generate",
+        "parameters" : [ {
+          "name" : "decisionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "resolutionId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InsightResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/decisions/{decisionId}/evidence/{evidenceId}/retry" : {
       "post" : {
         "tags" : [ "decision-controller" ],
@@ -1086,7 +1164,7 @@
     "/api/v1/decisions/{decisionId}" : {
       "get" : {
         "tags" : [ "decision-controller" ],
-        "operationId" : "get",
+        "operationId" : "get_1",
         "parameters" : [ {
           "name" : "decisionId",
           "in" : "path",
@@ -1170,7 +1248,7 @@
     "/api/v1/decisions/{decisionId}/evaluations/{evaluationId}" : {
       "get" : {
         "tags" : [ "evaluation-controller" ],
-        "operationId" : "get_1",
+        "operationId" : "get_2",
         "parameters" : [ {
           "name" : "decisionId",
           "in" : "path",
@@ -2909,6 +2987,71 @@
         },
         "required" : [ "expectationStatus" ]
       },
+      "GenerateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "aiConsent" : {
+            "type" : "boolean"
+          },
+          "sensitiveDataAcknowledged" : {
+            "type" : "boolean"
+          },
+          "expectedInputHash" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "expectedInputHash" ]
+      },
+      "Insight" : {
+        "type" : "object",
+        "properties" : {
+          "summary" : {
+            "type" : "string"
+          },
+          "relevance" : {
+            "type" : "string"
+          },
+          "conditions" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "uncertainty" : {
+            "type" : "string"
+          }
+        }
+      },
+      "InsightResponse" : {
+        "type" : "object",
+        "properties" : {
+          "sourceDecisionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "resolutionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "insight" : {
+            "$ref" : "#/components/schemas/Insight"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "promptVersion" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "CreateEvaluationRequest" : {
         "type" : "object",
         "properties" : {
@@ -3533,15 +3676,65 @@
             "items" : {
               "$ref" : "#/components/schemas/OutcomeData"
             }
+          },
+          "purchaseStatus" : {
+            "type" : "string",
+            "enum" : [ "UNRECORDED", "PLANNED", "PURCHASED", "NOT_PURCHASED" ]
+          },
+          "context" : {
+            "$ref" : "#/components/schemas/ContextData"
+          },
+          "conditions" : {
+            "$ref" : "#/components/schemas/Settings"
           }
         }
       },
-      "RecoveryNotice" : {
+      "Input" : {
         "type" : "object",
         "properties" : {
-          "restoredTo" : {
-            "type" : "string",
-            "format" : "date-time"
+          "currentTitle" : {
+            "type" : "string"
+          },
+          "currentContext" : {
+            "$ref" : "#/components/schemas/ContextData"
+          },
+          "currentConditions" : {
+            "$ref" : "#/components/schemas/Settings"
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/Memory"
+          },
+          "reasonLabels" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/Reason"
+            }
+          }
+        }
+      },
+      "InsightView" : {
+        "type" : "object",
+        "properties" : {
+          "available" : {
+            "type" : "boolean"
+          },
+          "provider" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "dataNotice" : {
+            "type" : "string"
+          },
+          "input" : {
+            "$ref" : "#/components/schemas/Input"
+          },
+          "inputHash" : {
+            "type" : "string"
+          },
+          "saved" : {
+            "$ref" : "#/components/schemas/InsightResponse"
           }
         }
       },
@@ -3557,6 +3750,15 @@
           "kind" : {
             "type" : "string",
             "enum" : [ "CHOSEN", "DEFERRED", "ABANDONED" ]
+          }
+        }
+      },
+      "RecoveryNotice" : {
+        "type" : "object",
+        "properties" : {
+          "restoredTo" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },

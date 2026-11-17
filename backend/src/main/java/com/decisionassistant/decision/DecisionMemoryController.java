@@ -12,7 +12,8 @@ import static com.decisionassistant.decision.DecisionDtos.*;
 public class DecisionMemoryController {
     public record Memory(UUID decisionId, String title, UUID resolutionId, DecisionTypes.ResolutionKind kind,
                          String selectedName, String rationale, List<String> reasonIds, String primaryReasonId,
-                         java.time.Instant decidedAt, List<OutcomeData> outcomes) {}
+                         java.time.Instant decidedAt, List<OutcomeData> outcomes, Resolution.PurchaseStatus purchaseStatus,
+                         ContextData context, Comparison.Settings conditions) {}
     private final EntityManager em;
     private final DecisionService service;
     private final CurrentUserProvider user;
@@ -37,7 +38,11 @@ public class DecisionMemoryController {
             var outcomes = em.createQuery("select o from OutcomeCheckIn o where o.decisionId = :id and o.resolutionId = :resolution order by o.createdAt desc", OutcomeCheckIn.class)
                     .setParameter("id", d.id()).setParameter("resolution", r.id()).setMaxResults(2).getResultList().stream()
                     .map(o -> new OutcomeData(o.id(), o.satisfaction(), o.expectationStatus(), o.notes(), o.wouldChooseAgain(), o.workedWell(), o.disappointedBy(), o.createdAt(), o.resolutionId())).toList();
-            return new Memory(d.id(), d.title(), r.id(), r.kind(), selected, r.rationale(), r.reasonIds(), r.primaryReasonId(), r.createdAt(), outcomes);
+            var snapshot = r.comparisonSnapshot();
+            var context = snapshot == null ? null : snapshot.context();
+            return new Memory(d.id(), snapshot == null ? d.title() : snapshot.title(), r.id(), r.kind(), selected, r.rationale(), r.reasonIds(), r.primaryReasonId(), r.createdAt(), outcomes, r.purchaseStatus(),
+                    context == null ? null : new ContextData(context.intendedUse(), context.budget(), context.currency(), null),
+                    snapshot == null || snapshot.comparison() == null ? null : snapshot.comparison().settings());
         }).toList();
     }
 }

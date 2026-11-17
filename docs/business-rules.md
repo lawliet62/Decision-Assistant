@@ -268,6 +268,11 @@
 - **동작:** outcome은 category·criterion·근거 Decision을 가진 `PROPOSED` PreferenceMemory를 만들 수 있다. 원본이 휴지통에 없고 개인화 활용이 켜져 있으며 사용자가 확인한 기억만 같은 category의 다음 Decision 기본 weight에 적용하고 적용 내역을 표시한다. category를 넘는 자동 전이, vector retrieval, 숨은 weight 변경은 하지 않는다.
 - **이유:** 개인화의 근거와 통제권을 사용자에게 남기면서 실제 outcome을 다음 선택에 재사용한다.
 
+### BR-MEM-01: 과거 이유의 AI 해석은 현재 조건에 따른 참고 자료다
+
+- **동작:** 활용 가능한 동일 제품군 원본 한 건과 현재 조건만으로 요약·관련 이유·적용 조건·불확실성을 제안한다. 전송할 실제 내용을 확인한 사용자의 동의가 있어야 호출한다. 원문과 AI 해석을 구분하고 확인·수정한 내용은 현재 메모에 출처와 함께 저장할 수 있다. 장기 성향·제품 사실·가중치로 자동 적용하지 않는다. 원본 변경·삭제·활용 해제와 현재 조건 변경 시 기존 결과를 재사용하지 않으며 원본 영구 삭제는 파생 해석도 제거한다.
+- **검증:** `MemoryInsightIntegrationTest`, `memory-insight.spec.ts`. 세부 경계는 [ADR 0023](decisions/0023-contextual-decision-memory.md)을 따른다.
+
 ### BR-SCP-01: 범용 agent와 자동 학습 모델은 범위 밖이다
 
 - **동작:** pairwise comparison, 확률 모델, 자동 학습 모델, 범용 대화형 agent, 인증 페이지 수집, 지속적 가격 감시를 제공하지 않는다. Algorithm/LLM 결합은 outcome 데이터로 검증한 뒤 별도 ADR로 결정한다.

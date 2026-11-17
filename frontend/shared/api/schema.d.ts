@@ -214,6 +214,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/decisions/{decisionId}/memories/{resolutionId}/insight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get"];
+        put?: never;
+        post: operations["generate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/decisions/{decisionId}/evidence/{evidenceId}/retry": {
         parameters: {
             query?: never;
@@ -461,7 +477,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get"];
+        get: operations["get_1"];
         put?: never;
         post?: never;
         delete: operations["delete_1"];
@@ -493,7 +509,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["get_1"];
+        get: operations["get_2"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1131,6 +1147,29 @@ export interface components {
             /** Format: int64 */
             expectedVersion?: number;
         };
+        GenerateRequest: {
+            aiConsent?: boolean;
+            sensitiveDataAcknowledged?: boolean;
+            expectedInputHash: string;
+        };
+        Insight: {
+            summary?: string;
+            relevance?: string;
+            conditions?: string[];
+            uncertainty?: string;
+        };
+        InsightResponse: {
+            /** Format: uuid */
+            sourceDecisionId?: string;
+            /** Format: uuid */
+            resolutionId?: string;
+            insight?: components["schemas"]["Insight"];
+            provider?: string;
+            model?: string;
+            promptVersion?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
         CreateEvaluationRequest: {
             /** Format: int64 */
             expectedVersion?: number;
@@ -1361,16 +1400,36 @@ export interface components {
             /** Format: date-time */
             decidedAt?: string;
             outcomes?: components["schemas"]["OutcomeData"][];
+            /** @enum {string} */
+            purchaseStatus?: "UNRECORDED" | "PLANNED" | "PURCHASED" | "NOT_PURCHASED";
+            context?: components["schemas"]["ContextData"];
+            conditions?: components["schemas"]["Settings"];
         };
-        RecoveryNotice: {
-            /** Format: date-time */
-            restoredTo?: string;
+        Input: {
+            currentTitle?: string;
+            currentContext?: components["schemas"]["ContextData"];
+            currentConditions?: components["schemas"]["Settings"];
+            source?: components["schemas"]["Memory"];
+            reasonLabels?: components["schemas"]["Reason"][];
+        };
+        InsightView: {
+            available?: boolean;
+            provider?: string;
+            model?: string;
+            dataNotice?: string;
+            input?: components["schemas"]["Input"];
+            inputHash?: string;
+            saved?: components["schemas"]["InsightResponse"];
         };
         Reason: {
             id?: string;
             label?: string;
             /** @enum {string} */
             kind?: "CHOSEN" | "DEFERRED" | "ABANDONED";
+        };
+        RecoveryNotice: {
+            /** Format: date-time */
+            restoredTo?: string;
         };
         RetentionPage: {
             items?: components["schemas"]["RetentionItem"][];
@@ -1757,6 +1816,56 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["OutcomeData"];
+                };
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+                resolutionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InsightView"];
+                };
+            };
+        };
+    };
+    generate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decisionId: string;
+                resolutionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InsightResponse"];
                 };
             };
         };
@@ -2164,7 +2273,7 @@ export interface operations {
             };
         };
     };
-    get: {
+    get_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -2230,7 +2339,7 @@ export interface operations {
             };
         };
     };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
