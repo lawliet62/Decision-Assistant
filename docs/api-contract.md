@@ -1,5 +1,7 @@
 # API contract
 
+과거 기록 요약은 `GET /api/v1/decisions/{decisionId}/memories/{resolutionId}/insight`에서 실제 전송 입력·hash·provider 고지·동일 입력의 저장 결과를 조회한다. `POST`는 `aiConsent`, `sensitiveDataAcknowledged`, `expectedInputHash`를 받아 명시적으로 생성한다. 입력이 바뀌면 409, 소유권 또는 원본 활용 자격이 없으면 404, AI 비활성·출력/호출 실패는 422다. 기존 `/memories` 응답에는 당시 조건과 구매 상태가 추가된다. [ADR 0023](decisions/0023-contextual-decision-memory.md)을 따른다.
+
 ## 결정 이유·구매·재검토
 
 - `DecisionResponse.revisionBaseId`는 현재 정정·재검토의 원본 Resolution ID다. 정정 화면은 이 ID로 원본을 골라 결과·선택 제품·이유·대표 이유·메모의 초기값을 채운다. 검토 종료·취소 후에는 null이다.

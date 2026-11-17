@@ -12,7 +12,7 @@ import static com.decisionassistant.ai.AiContracts.*;
 @Component
 @ConditionalOnProperty(prefix = "decision-assistant.ai", name = "enabled", havingValue = "true")
 @ConditionalOnProperty(prefix = "decision-assistant.ai", name = "provider", havingValue = "gemini")
-public class GeminiDecisionAdapter implements DecisionStructurer, DecisionAssessor, com.decisionassistant.guidance.DiscoveryContracts.ProductDiscoverer {
+public class GeminiDecisionAdapter implements DecisionStructurer, DecisionAssessor, com.decisionassistant.guidance.DiscoveryContracts.ProductDiscoverer, com.decisionassistant.decision.MemoryInsightContracts.Interpreter {
 
     private final ChatClient chatClient;
     private final ObjectMapper objectMapper;
@@ -84,6 +84,15 @@ public class GeminiDecisionAdapter implements DecisionStructurer, DecisionAssess
                 .responseEntity(LlmAssessment.class, specification -> specification
                         .useProviderStructuredOutput()
                         .validateSchema());
+        return withUsage(response.entity(), response.response());
+    }
+
+    @Override
+    public AiResult<com.decisionassistant.decision.MemoryInsightContracts.Insight> interpret(
+            com.decisionassistant.decision.MemoryInsightContracts.Input input) {
+        var response = discoveryClient.prompt().system(com.decisionassistant.decision.MemoryInsightContracts.PROMPT)
+                .user(json(input)).call().responseEntity(com.decisionassistant.decision.MemoryInsightContracts.Insight.class,
+                        specification -> specification.useProviderStructuredOutput().validateSchema());
         return withUsage(response.entity(), response.response());
     }
 
