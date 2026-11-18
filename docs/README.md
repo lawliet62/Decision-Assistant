@@ -1,8 +1,20 @@
 # 문서 색인
 
+## 개발자 시작점
+
+1. [도메인 개요](domain.md): 전체 사용자 흐름, 도메인 지도와 공통 경계
+2. 도메인 상세: [카탈로그](domains/catalog.md), [탐색·근거](domains/discovery-evidence.md), [결정·비교·템플릿](domains/decision-comparison.md), [평가](domains/evaluation.md), [회고·알림·개인화](domains/outcome-personalization.md), [과거 판단 기록 활용](domains/history-reuse.md), [사용자·소유권](domains/identity.md)
+3. [UI 화면 모음](ui/README.md): 과정별 대표 화면과 재촬영 방법
+4. [Architecture](architecture.md): 현재 package 책임, 실행 흐름과 보안·데이터 경계
+5. [Business rules](business-rules.md): 동작 규칙과 검증 시작점 · [Development workflow](development.md): 개발·전달 절차
+
+도메인 설명은 위 개요·상세 문서, 강제할 동작은 Business rules, 장기 선택의 이유는 ADR에 둔다. 화면 변경 시 관련 이미지와 촬영 metadata를 갱신하고, 과거 검증 이미지는 아래 evaluations 기록으로 보존한다.
+
+## 설계·운영·검증 자료
+
 - [결정별 요약과 과거 이유 설명](decisions/0023-contextual-decision-memory.md): 명시적 동의·조건부 AI 해석·원본 근거·현재 메모에 선택 적용
 
-- [결정 이유와 재사용 기록](decisions/0022-decision-reasons-and-reusable-history.md): 이유 GUI·구매 상태·구매 전 재검토·AI 없는 과거 기록 활용
+- [결정 이유와 재사용 기록](decisions/0022-decision-reasons-and-reusable-history.md): 이유 GUI·구매 상태·구매 전 재검토·원문 과거 기록 활용
 - [11월 17일 카탈로그 반복 갱신](evaluations/catalog-refresh-2026-11-17/README.md): 25회 시도·21개 유효 가격·격리 API 대조·주간 출처 점검 결과
 
 - [결정 완료와 기록 정정·재검토](decisions/0021-decision-completion-and-revisions.md): 완료 결과 분리, 과거 근거·회고 보존과 개인화 연결
