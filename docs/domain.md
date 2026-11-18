@@ -1,70 +1,98 @@
-# Domain model
+# 도메인 개요
 
-현재 완료 의미는 [결정 이유·구매 상태 ADR](decisions/0022-decision-reasons-and-reusable-history.md)이 우선한다. DEFERRED도 완료이며 재검토 없이 직접 수정하지 않는다. Resolution은 이유 ID·대표 이유·자유 설명과 별도 구매 상태를 가진다. 구매함 이전까지 새 검토를 시작하고 취소할 수 있으며 과거 근거를 보존한다. 과거 판단은 고정 취향이나 검증된 제품 사양으로 자동 변환하지 않는다.
+Decision Assistant는 구매 후보의 근거를 확인하고 비교한 뒤, 선택 이유와 사후 회고를 다음 결정에 연결한다. 객관적 사양, 사용자의 예상 만족도, 실제 결정과 사후 결과를 구분해 보존한다. 완료·구매·재검토는 [ADR 0022](decisions/0022-decision-reasons-and-reusable-history.md), 선택적 기록 AI 해석은 [ADR 0023](decisions/0023-contextual-decision-memory.md)를 따른다.
 
-## 사전 검토 제품 목록
+이 문서는 전체 흐름과 공통 경계를 설명한다. 모델·관계·생명주기는 아래 상세 문서, 준수할 동작은 [Business rules](business-rules.md), 설계 선택의 이유는 [ADR](decisions/), 실행 구조는 [Architecture](architecture.md)에서 관리한다. [UI 화면 모음](ui/README.md)에서 각 과정의 화면을 볼 수 있다.
 
-`CatalogProduct`는 운영자가 등록한 공개 제품·공식 사양·최근 판매 관측이다. 사용자와 무관한 공유 데이터이며 `Decision`의 소유권 경계를 확장하지 않는다. 사양의 출처·인용·확인 시각·점검 주기, 모델 identity와 등록 revision을 보존한다. `catalog_observations`와 `catalog_monthly_usage`는 고정 URL 수집 결과와 호출 한도를 기록하며 사용자 조건을 저장하지 않는다.
+## 전체 흐름
 
-브랜드는 관리용 대표 이름과 KNOWN(이름 확인), UNBRANDED(브랜드 없음 확인), UNVERIFIED(존재 여부 또는 이름 조사 중)로 구분한다. KNOWN은 실제 이름이 필수이고 나머지는 NULL이다. 확인된 이름 누락은 저장 오류이며 별도의 정상 상태로 보존하지 않는다. 미확인을 브랜드 없음으로 추론하지 않는다.
-
-후보 생성 시 근거를 개인 `CandidateSuggestion`으로 복사한다. 공용 정보 갱신은 이미 선택한 Option·확인값·Evaluation을 변경하지 않는다. 등록 사양도 `UNREVIEWED`이며 사용자 확인 사실과 다르다. [정보 수명과 운영](catalog-operations.md)을 따른다.
-
-## Aggregate와 lifecycle
-
-진행 단계(`phase`)와 완료 결과(`result`)를 구분한다. 후보 선택과 구매하지 않음은 모두 결정 완료이며 구매 실행 여부를 의미하지 않는다. 완료 후 기록 수정과 재검토는 [ADR 0021](decisions/0021-decision-completion-and-revisions.md)을 따른다. 새 resolution은 원본 기록과 편집 목적을 보존하고 회고·알림은 해당 resolution에 귀속한다. 정정은 이전 기록을 대체하지만 재검토는 과거 판단의 유효성을 유지한다.
-
-`Decision`이 수정 가능한 aggregate root다. Context, Option, Criterion, OptionValue, Constraint, ConstraintResult를 소유하며 optimistic `version`을 가진다.
-
-`ApplicationUser`는 외부 인증 identity와 domain ownership을 분리하는 로컬 사용자다. Auth0 `(issuer, subject)`는 `ExternalIdentity`로 연결하며 이메일은 identity key로 사용하지 않는다. Decision만 `ownerUserId`를 직접 가지고 Evaluation, StructureRun, Resolution, OutcomeCheckIn은 자신의 `decisionId`를 통해 같은 ownership을 상속한다. Template은 모든 사용자에게 공통이다.
-
-사용자에게 관찰 가능한 상태 전이·평가·AI 경계 규칙은 [Business rules](business-rules.md)에서 관리한다.
-
-```text
-Decision draft ──evaluate──> Evaluation(snapshot + results)
-       │
-       └──resolve──> Resolution ──check in──> OutcomeCheckIn(s)
+```mermaid
+flowchart TD
+    Catalog[공유 제품 카탈로그] --> Discovery[조건 선택과 후보 추천]
+    Discovery --> Approval[사용자가 후보 승인]
+    Manual[제품 직접 추가·제품명 검색] --> Compare[개인 Decision의 후보 비교]
+    Approval --> Compare
+    Compare --> Evaluate[입력 보강 후 선택적으로 평가]
+    Evaluate --> Resolve[완료 결과와 당시 근거 기록]
+    Compare --> Resolve
+    Resolve --> Selected[후보 선택]
+    Resolve --> Deferred[보류로 완료]
+    Resolve --> NoPurchase[포기로 완료]
+    Selected --> Purchase[선택 사항: 구매 상태 기록]
+    Selected --> Outcome[선택 사항: 사용 후 회고]
+    Deferred --> Reflection[선택 사항: 결정에 대한 회고]
+    NoPurchase --> Reflection
+    Resolve --> History[유효한 과거 이유·회고 원문]
+    History --> Reference[사용자가 원문을 선택해 다음 draft 메모에 참고]
+    History --> Insight[선택 사항: 입력 확인·동의 후 AI 해석]
+    Insight --> Review[요약·조건부 관련성·불확실성 검토]
+    Review -->|사용자 확인·수정| Reference
+    Reference --> Compare
+    Outcome --> Memory[성향 제안과 사용자 확인]
+    Memory --> Next[다음 결정의 명시적 기본값]
+    Next --> Compare
+    Resolve --> Revision[미구매 확인 후 정정·재검토]
+    Revision --> Compare
+    Revision --> Cancel[취소: 이전 draft·결론·후보 선택 복원]
+    Cancel --> Resolve
 ```
 
-## 핵심 용어
+기본 추천은 등록된 이어폰 카탈로그를 읽으며 요청 시 검색·수집·AI를 호출하지 않는다. 기존 실시간 탐색과 제품명 검색은 별도 동의가 필요한 경로다. 추천 후보 0개에서 시작할 수 있고 비교·결정 완료에 점수 평가는 필수가 아니다. 제품 선택·보류·포기는 모두 완료이며 필수 흐름은 여기서 끝난다. 구매 상태 기록·회고는 선택 사항이고 신규 자동 알림은 만들지 않는다. 선택만으로 구매나 만족을 추정하지 않는다.
 
-- Context: 목적·예산·자유 메모. 독립 entity가 아니라 Decision의 value다.
-- Option: 사용자가 실제로 선택 가능한 후보.
-- Criterion: 모든 Option을 비교하는 soft preference. numeric utility 또는 1~5 rating을 사용한다.
-- Constraint: 후보를 feasible/infeasible로 가르는 hard requirement. 점수 가중치와 다르다.
-- EvidenceImport: 사용자가 승인한 공개 URL의 비동기 수집 상태와 조회 시점·hash·짧은 excerpt를 보존한다. 원문 전체는 장기 저장하지 않는다.
-- DecisionQuestion: 미확인 정보 중 결론에 영향이 큰 질문과 답변 상태다.
-- ProductDiscovery: 선택 조건·전송 동의·비동기 추천 상태·실행 metadata를 Decision에 귀속해 보존한다. 후보 0개에서 시작할 수 있다.
-- CandidateSuggestion: 검색으로 찾은 후보이며 승인 전에는 Option이 아니다. 새 추천은 주요 사양·원문 인용·조회 시점을 포함하고 승인 시 Option에 연결한다.
-- ProductFact: 출처가 있는 표시용 사양이다. 평가용 OptionValue와 분리하고 자동 값은 UNREVIEWED로 표시한다.
-- MinimumRequirement: intake-v2에서 선택한 객관적 사양 하한·지원 요구다. 기존 hard Constraint와 별개로 추천·사양 비교에만 적용한다.
-- RequirementCheck: 선택 조건과 표시 사양으로 계산한 MEETS/BELOW/UNKNOWN 및 근거다. 검증 완료나 평가 탈락을 뜻하지 않으며, 사용자가 확인 수치를 변경하면 화면과 함께 다시 계산한다.
-- Product lookup result: 제품명에 대한 일시적인 웹 검색 결과. 저장된 CandidateSuggestion이나 제품 catalog가 아니며 선택한 이름·URL만 기존 Option으로 연결한다. 검색 발췌는 확인된 OptionValue가 아니다.
-- Evaluation: 특정 Decision version의 재현 가능한 run. 현재 draft를 참조해 재계산하지 않는다.
-- Comparison.State: 최초 추천과 독립적인 현재 비교 조건, 비교 보류 후보, 직접 확인한 ANC·플랫폼별 호환성이다. 추천 조건·점수·공용 카탈로그를 변경하지 않는다.
-- Resolution: 사용자가 선택·보류·포기한 사실과 이유. 신규 기록은 당시 조건·후보·입력·근거·판정의 immutable comparison snapshot을 함께 가진다. 이전 기록의 snapshot은 없을 수 있다.
-- OutcomeCheckIn: 시간이 지난 뒤 만족도와 기대 충족 여부를 여러 번 기록한다.
-- PreferenceMemory: resolution/outcome에서 제안된 category별 성향 projection이다. `PROPOSED`는 평가에 쓰지 않고 사용자가 확인한 `CONFIRMED`만 다음 Decision의 명시적 기본값이 된다.
-- OutcomeReminder: 이전 버전에서 예약한 회고를 앱 또는 이메일로 요청하는 일정이다. 신규 완료에서는 자동 예약하지 않는다.
-- ApplicationUser: Decision ownership의 안정적인 로컬 UUID. 외부 IdP 교체나 identity 추가가 domain FK를 바꾸지 않게 한다.
-- ExternalIdentity: Auth0 issuer와 subject의 유일한 조합. 같은 이메일만으로 다른 identity를 자동 연결하지 않는다.
+## 도메인 지도
 
-## Invariants
+| 영역과 상세 문서 | 책임 | 주요 모델 |
+|---|---|---|
+| [제품 카탈로그](domains/catalog.md) | 공유 제품 identity·사양·판매 관측과 정보 수명 | CatalogProduct, Fact, OfficialOffer |
+| [제품 탐색·근거](domains/discovery-evidence.md) | 추천 실행, 후보 승인, 공개 근거 수집·확인 | ProductDiscovery, CandidateSuggestion, EvidenceImport, DecisionQuestion |
+| [결정·비교](domains/decision-comparison.md) | 개인 비교 입력, 구조화된 이유·별도 구매 상태, 완료·재검토·기록 수명 | Decision, Option, Criterion, Constraint, Comparison, Resolution |
+| [평가](domains/evaluation.md) | 재현 가능한 점수 평가와 독립 AI 평가 | DecisionSnapshot, Evaluation, AlgorithmResult, StructureRun |
+| [회고·알림·개인화](domains/outcome-personalization.md) | 완료 결과의 회고, 알림, 확인 가능한 성향 기억 | OutcomeCheckIn, OutcomeReminder, PreferenceMemory |
+| [과거 판단 기록 활용](domains/history-reuse.md) | 같은 제품군 원문 또는 동의한 AI 해석을 명시적으로 참고 | Memory 조회 projection, MemoryInsightInput, MemoryInsight |
+| [사용자·소유권](domains/identity.md) | 외부 identity와 내부 사용자 연결, 데이터 접근 경계 | ApplicationUser, ExternalIdentity |
 
-`EARBUDS/earbuds-v1`은 가격(KRW, 최선 50,000 / 최악 500,000)과 음질·착용감·노이즈 캔슬링·배터리 적합도(각 1~5점)를 기본 중요도 1로 시작한다. 네 rating은 사용자 만족 예상이며 사양에서 자동 확정하지 않는다. 최대 예산과 필수 호환성 constraint는 기본 비활성이다. 클릭 추천에서 사용자가 최대 예산을 선택하면 해당 constraint를 활성화한다. 기존 template/평가 snapshot은 변경하지 않는다.
+템플릿은 결정의 초기 기준·조건을 만들고 평가의 해석 기준을 제공하므로 [결정·비교 문서](domains/decision-comparison.md#템플릿과-초기값)에서 설명한다. 도메인별 문서 구분은 별도 서비스나 배포 단위를 뜻하지 않는다.
 
-- 평가에는 2~5개 Option, 하나 이상의 활성 Criterion, 모든 활성 cell 값이 필요하다.
-- numeric Criterion에는 서로 다른 worst/best anchor가 필요하다.
-- `HIGHER_BETTER`는 best가 worst보다 크고 `LOWER_BETTER`는 best가 worst보다 작아야 한다.
-- 모든 weight는 양수이며 evaluator가 합계를 normalize한다.
-- 활성 Constraint는 모든 Option에 대해 PASS/FAIL이 결정되어야 한다.
-- estimated value는 허용하지만 result에 표시한다. missing은 허용하지 않는다.
-- 불완전한 draft는 score range와 `PROVISIONAL` 조언을 제공할 수 있지만 immutable Evaluation으로 저장하지 않는다.
-- `USER/CONFIRMED` 값은 background import나 AI proposal이 덮어쓰지 않는다.
-- Resolution의 selected Option은 해당 Decision에 존재해야 한다.
-- 직접 확인한 기능은 해당 후보·기능의 비교 판정에만 우선 적용하며 background import가 덮어쓰지 않는다. 조건 변경은 이미 저장된 Resolution snapshot을 재계산하지 않는다.
-- 사용자 resource는 소유한 ApplicationUser만 읽고 변경할 수 있다.
+## 핵심 관계와 소유권
 
-## 결정 보관과 삭제 수명
+```mermaid
+flowchart LR
+    Identity[ExternalIdentity] --> User[ApplicationUser]
+    User --> Decision[Decision aggregate]
+    Template[공유 versioned template] --> Decision
+    Catalog[공유 CatalogProduct] -->|근거 복사| Candidate[개인 CandidateSuggestion]
+    Decision --> Candidate
+    Candidate -->|사용자 승인| Option[Option]
+    Decision --> Option
+    Decision --> Evaluation[Evaluation snapshot]
+    Decision --> Resolution[Resolution snapshot]
+    Resolution --> Outcome[OutcomeCheckIn]
+    Resolution --> Purchase[별도 purchaseStatus]
+    Resolution --> History[과거 기록 Memory 조회]
+    History -->|사용자가 선택| Notes[다음 Decision의 참고 메모]
+    Decision --> Insight[MemoryInsightInput·MemoryInsight]
+    Resolution -->|원본과 현재의 수명을 함께 따름| Insight
+    Insight -->|확인·수정한 해석만| Notes
+    Resolution -. 이전 예약만 유지 .-> Reminder[OutcomeReminder]
+    Outcome --> Memory[PreferenceMemory]
+    User --> Memory
+```
 
-진행 상태와 별도로 `archivedAt`, `deletedAt`, `personalizationEnabled`를 관리한다. 보관은 목록 정리이며 삭제는 30일 복구 유예 후 연쇄 영구 삭제다. [ADR 0020](decisions/0020-decision-retention-and-personalization.md)을 따른다.
+Decision은 수정 가능한 aggregate root로 Context, Option, Criterion, OptionValue, Constraint, ConstraintResult를 소유한다. Context는 목적·예산·메모를 담은 value다. 평가·추천·구조화·완료·회고·알림은 decisionId를 통해 Decision 소유권을 따른다. PreferenceMemory는 사용자 소유이며 원본 Decision과 Outcome을 참조한다. 공유 카탈로그와 템플릿에는 개인 Decision의 소유권을 적용하지 않는다.
+
+## 공통 불변 조건과 시간 경계
+
+- **사양과 평가값:** 출처가 있는 ProductFact와 평가용 OptionValue는 다르다. 자동 수집 사양의 UNREVIEWED는 사용자 확인 사실이 아니다. RequirementCheck의 MEETS/BELOW/UNKNOWN도 평가의 필수 조건 통과·탈락과 다르다.
+- **현재 입력과 과거 기록:** Decision은 version으로 동시 수정을 검사한다. Evaluation은 당시 입력·알고리즘 결과를, Resolution은 당시 비교 조건·근거·판정을 고정한다. 카탈로그 갱신·가격 만료·재검토로 과거 기록을 다시 계산하지 않는다.
+- **사용자 확인과 자동 제안:** USER 또는 CONFIRMED 값은 background import나 AI proposal이 덮어쓰지 않는다. AI와 결정론적 평가를 임의의 한 점수로 합치지 않는다.
+- **완료와 구매:** DRAFT만 직접 편집한다. CHOSEN·DEFERRED·ABANDONED는 모두 phase=COMPLETED다. result는 기존 호환 값이며 DEFERRED에서는 null이다. 선택 기록의 purchaseStatus는 별도이고 UNRECORDED는 미구매 증명이 아니다. PURCHASED 이후 구매 상태 변경·정정·재검토는 막는다.
+- **재개와 취소:** 미구매 명시 확인과 최신 version으로 정정·재검토한다. 정정은 이전 완료 기록을 대체하고 재검토는 이전 판단을 유효하게 남긴다. 취소는 임시 복원본으로 이전 draft·결론·후보 수락/제외 연결을 복원한다. 회고는 대상 Resolution에 연결하며 과거 고정본을 바꾸지 않는다.
+- **기록 활용과 성향:** 원문 참고와 선택적 MemoryInsight는 출처가 있는 현재 메모에만 추가한다. AI 해석은 실제 전송 입력 확인·동의와 snapshot 보존을 거치며 원본 또는 입력 변경 시 재검증한다. 현재 메모는 AI 해석 입력에서 제외한다. 기존 PreferenceMemory의 별도 확인·기본 weight 적용과 구분하고 해석을 고정 성향·사양·가중치로 자동 변환하지 않는다.
+- **진행 상태와 기록 수명:** archivedAt, deletedAt, personalizationEnabled는 진행 상태와 별개다. 보관은 목록 정리, 삭제는 30일 복구 유예 후 연쇄 영구 삭제다. 기존 ARCHIVED enum과 새 보관 기능을 혼동하지 않는다.
+- **소유권과 외부 전송:** 개인 resource는 소유자만 접근한다. URL 문자열은 자동 fetch 지시가 아니며 사용자 경로의 검색·수집·AI는 해당 동의와 공개 URL 검증을 거친다. 운영자 등록 고정 URL 갱신은 별도 경계다.
+
+## 문서를 읽고 변경하는 순서
+
+신규 개발자는 전체 흐름 → 담당 도메인 상세 → 관련 BR-* 규칙 → 코드·테스트 순서로 읽는다. 상세 문서는 의미 있는 속성과 관계·상태 전이를 설명하며 DB의 모든 열이나 API 필드를 복제하지 않는다. API 필드는 [OpenAPI](api/openapi.json), schema는 [Flyway migration](../backend/src/main/resources/db/migration/)을 확인한다.
+
+동작 변경 시 상세 문서와 관련 규칙·검증을 함께 갱신하고 장기 설계 변경 이유는 ADR에 남긴다. 아직 결정되지 않은 정책은 [미정 동작](business-rules.md#아직-정하지-않은-동작)으로 구분하며 문서화 과정에서 새 정책으로 확정하지 않는다.
