@@ -64,6 +64,7 @@ final class VisiblePrice {
             var purchase = doc.select("p").stream().filter(p -> p.parent() != null
                     && p.parent().children().stream().filter(e -> e.tagName().equals("button")).count() == 1
                     && p.parent().children().stream().anyMatch(e -> e.tagName().equals("button") && e.text().contains("장바구니"))).toList();
+            var stage = regular.size() != 1 ? "REGULAR_PRICE_AREA" : "PURCHASE_AREA";
             if (regular.size() == 1 && purchase.size() == 1) {
                 var p = purchase.getFirst(); var button = p.parent().children().stream().filter(e -> e.tagName().equals("button")).findFirst().orElseThrow();
                 if (p.text().equals(expected) && regular.getFirst().text().equals(expected)
@@ -71,7 +72,13 @@ final class VisiblePrice {
                         && button.text().equals(expected + " - 장바구니") && !button.hasAttr("disabled")
                         && !"true".equalsIgnoreCase(button.attr("aria-disabled")))
                     return new Result("구매 영역 판매가 " + expected, null);
+                stage = !p.text().equals(expected) ? "PURCHASE_PRICE_MISMATCH"
+                        : !button.text().equals(expected + " - 장바구니") ? "BUTTON_PRICE_OR_LABEL_MISMATCH" : "BUTTON_DISABLED";
             }
+            // 고정 단계와 개수만 기록한다. 페이지 문구·가격·원문은 로그에 넣지 않는다.
+            org.slf4j.LoggerFactory.getLogger(VisiblePrice.class).warn(
+                    "marshall_visible_price_check sku={} stage={} regularMatches={} purchaseAreas={}",
+                    sku, stage, regular.size(), purchase.size());
         }
         String confirmed = null;
         for (var text : rows) {

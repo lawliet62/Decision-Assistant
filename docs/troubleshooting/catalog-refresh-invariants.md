@@ -14,11 +14,15 @@ JBL facts는 `1794572702.769`와 `1794572702.769000000`의 표현 차이 때문�
 
 원래 JSON 숫자 문자열을 보존하고 Instant를 정확하게 비교한다. 이번에는 Node.js 24의 JSON reviver `context.source`와 BigInt 나노초를 사용했으며, JBL 숫자 표현 정규화 후 이전 해시와도 대조했다. 먼저 부동소수점으로 읽고 다시 저장하면 원래 정밀도를 복구할 수 없다. clock이 같다는 검증과 확인 시각을 실제로 재조회해 갱신했다는 주장은 별개다.
 
+Sony 개발 helper의 사양 반영 전 비교도 같은 정밀도를 요구한다. `Date.parse`와 숫자형 초의 `Number` 비교는 같은 밀리초 내의 차이를 잃는다. fixture에서 이전 확인 `2026-11-13T12:00:00.000000001Z`보다 1나노초 이른 `.000Z`가 기존 `factReviewsFor`를 통과하는 것을 재현했다. 실제 DB에서 역행이 발생했다는 증거는 아니다. `parseSonyCatalogRow`는 JSON 숫자 원문을 유지하고 revision·version만 정수로 변환하며, 반영 전에는 ISO Instant와 숫자형 초를 BigInt 나노초로 대조한다. 원래 근거·이전 확인보다 이른 관측과 해석할 수 없는 시각은 반영하지 않는다. `sony-facts.test.mjs`는 두 DB 표현의 마지막 나노초, 같은 시각, 이후 관측과 잘못된 시각을 외부 호출 없이 검증한다.
+
 ## 부분 실패의 세부 원인을 소급 추정하지 않기
 
 Sony는 OPTION_LIST_CHANGED였지만 당시 옵션 개수와 라벨별 일치 정보가 없었다. 빈 목록·새 라벨·중복 중 어느 경우인지 구분할 수 없다. 직접 브라우저 진단도 선택 버튼 대기에서 종료됐으므로 실제 Firecrawl 응답의 변형 원인이나 가격 정확성을 설명하는 근거로 사용하지 않는다.
 
 다음 정상 예약에서 목록 개수·고유 개수·기존 라벨 일치 개수를 기록하도록 로그를 보강했다. 원문과 임의 라벨은 남기지 않고 수용 조건도 유지한다. Marshall의 UNAVAILABLE·PRICE_CONTEXT_MISSING 역시 추가 근거 없이 단종·품절·파서 오류로 단정하지 않는다.
+
+Marshall의 `marshall_visible_price_check`는 기존 전용 구매 영역 대조가 통과하지 못했을 때 고정 SKU, 단계, 일치하는 정상 가격 영역 수와 구매 영역 수만 기록한다. `REGULAR_PRICE_AREA`는 구조화 가격과 일치하는 정상 가격 영역의 누락·중복, `PURCHASE_AREA`는 구매 영역의 누락·중복, `PURCHASE_PRICE_MISMATCH`는 구매 영역 금액 불일치, `BUTTON_PRICE_OR_LABEL_MISMATCH`는 버튼 금액·라벨 불일치, `BUTTON_DISABLED`는 버튼 비활성을 구분한다. 첫 불일치 단계이므로 후속 조건까지 정상이라는 의미는 아니다. 이 로그는 전용 분기의 진단이며, 이후 공통 검증과 worker의 최종 outcome도 함께 확인한다. `UNAVAILABLE`처럼 구매 영역 대조 전에 거절된 응답에는 이 진단이 없을 수 있다. 실제 품절·단종 여부나 Firecrawl 응답의 실패 원인을 로그 부재로 추정하지 않는다.
 
 ## 원본 DB와 API 검증 분리
 

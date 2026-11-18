@@ -68,8 +68,9 @@ export async function inspectSonyFacts() {
 export async function refreshSonyFacts() {
   const rowText = sql(`select row_to_json(p) from (select id,revision,purchase_url,expected_identity,version,active,facts,fact_reviews from catalog_products where id=${quote(productId)}) p;`);
   if (!rowText) return { outcome: "SKIPPED_NOT_REGISTERED" };
-  const row = JSON.parse(rowText);
-  if (!row.active || row.purchase_url !== purchaseUrl || !Number.isSafeInteger(row.version)) return { outcome: "SKIPPED_REGISTRATION_CHANGED" };
+  const row = parseSonyCatalogRow(rowText);
+  if (!row.active || row.purchase_url !== purchaseUrl || !Number.isSafeInteger(row.version)
+    || !Number.isSafeInteger(row.revision)) return { outcome: "SKIPPED_REGISTRATION_CHANGED" };
   const reserved = sql(`insert into catalog_spec_attempts(product_id,next_attempt_at)
     select id, now()+interval '7 days' from catalog_products where id=${quote(productId)} and version=${Number(row.version)} and active
     on conflict(product_id) do update set next_attempt_at=excluded.next_attempt_at where catalog_spec_attempts.next_attempt_at<=now()
@@ -89,16 +90,36 @@ export async function refreshSonyFacts() {
   return { outcome: updated === productId ? "VERIFIED" : "REGISTRATION_OR_VERSION_CHANGED", productId, checkedAt: report.checkedAt };
 }
 
+// 숫자형 Instant는 Number로 반올림하기 전에 원래 JSON 숫자 문자열을 보존한다.
+export function parseSonyCatalogRow(text) {
+  const row = JSON.parse(text, (key, value, context) => typeof value === "number" ? context.source : value);
+  row.revision = Number(row.revision);
+  row.version = Number(row.version);
+  return row;
+}
+
+function instantNanos(value) {
+  if (typeof value === "number") return Number.isSafeInteger(value) ? BigInt(value) * 1_000_000_000n : null;
+  if (typeof value !== "string") return null;
+  const decimal = /^(-?)(\d+)(?:\.(\d{1,9}))?$/.exec(value);
+  if (decimal) return (decimal[1] ? -1n : 1n)
+    * (BigInt(decimal[2]) * 1_000_000_000n + BigInt((decimal[3] ?? "").padEnd(9, "0")));
+  const iso = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?Z$/.exec(value);
+  if (!iso) return null;
+  const millis = Date.parse(iso[1] + "Z");
+  if (!Number.isFinite(millis) || new Date(millis).toISOString().slice(0, 19) !== iso[1]) return null;
+  return BigInt(millis) * 1_000_000n + BigInt((iso[2] ?? "").padEnd(9, "0"));
+}
+
 export function factReviewsFor(report, row) {
-  const checked = Date.parse(report.checkedAt);
-  const timestamp = value => typeof value === "number" ? value * 1000 : Date.parse(value);
-  if (!Number.isFinite(checked) || !Array.isArray(report.facts) || report.facts.length !== 2
+  const checked = instantNanos(report.checkedAt);
+  if (checked === null || !Array.isArray(report.facts) || report.facts.length !== 2
     || new Set(report.facts.map(f => f.name)).size !== 2) return null;
   for (const proof of report.facts) {
     const originals = row.facts.filter(f => f.evidence.name === proof.name);
-    if (originals.length !== 1 || !Number.isFinite(timestamp(originals[0].evidence.fetchedAt))
-      || checked < timestamp(originals[0].evidence.fetchedAt)
-      || (row.fact_reviews[proof.name] != null && (!Number.isFinite(timestamp(row.fact_reviews[proof.name])) || checked < timestamp(row.fact_reviews[proof.name])))) return null;
+    const original = originals.length === 1 ? instantNanos(originals[0].evidence.fetchedAt) : null;
+    const previous = row.fact_reviews[proof.name] == null ? original : instantNanos(row.fact_reviews[proof.name]);
+    if (original === null || previous === null || checked < original || checked < previous) return null;
   }
   return Object.fromEntries(report.facts.map(f => [f.name, report.checkedAt]));
 }
