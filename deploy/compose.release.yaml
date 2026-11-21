@@ -1,0 +1,17 @@
+# 운영에서는 compose.yaml과 함께 사용한다.
+services:
+  frontend:
+    build: !reset null
+    image: ${RELEASE_FRONTEND_IMAGE:?릴리스 frontend 이미지 필요}
+    pull_policy: never
+  backend:
+    build: !reset null
+    image: ${RELEASE_BACKEND_IMAGE:?릴리스 backend 이미지 필요}
+    pull_policy: never
+  postgres:
+    build: !reset null
+    image: ${RELEASE_POSTGRES_IMAGE:?릴리스 PostgreSQL 이미지 필요}
+    pull_policy: never
+  proxy:
+    image: ${RELEASE_PROXY_IMAGE:?릴리스 Caddy 이미지 필요}
+    pull_policy: never

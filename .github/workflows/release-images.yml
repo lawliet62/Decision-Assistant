@@ -1,0 +1,51 @@
+name: Release image smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'deploy/**'
+      - 'scripts/deployment-smoke.mjs'
+      - '.github/workflows/release-images.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  image-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: |
+            backend/*.gradle
+            backend/gradle/wrapper/gradle-wrapper.properties
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build and reload the release bundle
+        run: |
+          bundle="$RUNNER_TEMP/release"
+          python3 deploy/release.py build "$bundle" "$GITHUB_SHA"
+          docker image rm $(cut -d= -f2 "$bundle/images.env")
+          python3 deploy/release.py load "$bundle"
+          python3 deploy/release.py verify "$bundle" deploy/.env.example
+      - name: Smoke test the reloaded images on loopback
+        run: |
+          npm ci --prefix frontend
+          (cd frontend && npx playwright install --with-deps chromium)
+          bundle="$RUNNER_TEMP/release"
+          python3 deploy/release.py verify "$bundle" deploy/.env.example --local-smoke
+          compose=(docker compose --env-file deploy/.env.example --env-file "$bundle/images.env" -f deploy/compose.yaml -f deploy/compose.release.yaml -f deploy/compose.local.yaml -p decision-mvp-smoke)
+          trap '"${compose[@]}" stop' EXIT
+          "${compose[@]}" up -d --no-build --pull never
+          node scripts/deployment-smoke.mjs
+          python3 deploy/release.py verify "$bundle" deploy/.env.example --local-smoke --running
+          cat "$bundle/release.json"
