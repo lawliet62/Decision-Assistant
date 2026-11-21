@@ -23,9 +23,50 @@ docker stats --no-stream
 docker compose --env-file deploy/.env.example -f deploy/compose.yaml -f deploy/compose.local.yaml -p decision-mvp-smoke stop
 ```
 
-빌드는 운영 VM이 아닌 개발/CI 머신에서 수행한다. 운영 이미지는 검증한 digest로 고정하고, roll-forward에 사용할 이전 image digest도 기록한다. 로컬 smoke는 Auth0·GCP Identity·공개 HTTPS·실제 백업 저장소의 검증을 대체하지 않는다.
+로컬 smoke는 Auth0·GCP Identity·공개 HTTPS·실제 백업 저장소의 검증을 대체하지 않는다.
 
 별도 로컬 frontend를 `127.0.0.1:3101`에서 실행하고 같은 synthetic Compose backend에 연결한 경우, 검증 명령에 `DECISION_SMOKE_ORIGIN=http://127.0.0.1:3101`을 지정할 수 있다. 그 외 주소는 허용하지 않는다. smoke는 선택 API와 화면의 선택·해제도 실제 backend에서 확인한다.
+
+## 운영 이미지 릴리스
+
+개발/CI의 Linux 빌드 환경에서 Java 21, Python 3.12 이상과 Docker를 사용한다. 배포 대상은 성공한 CI와 대조한 병합 커밋이다. 전체 SHA로 checkout한 뒤 새 출력 디렉터리를 지정한다. 빌드는 해당 커밋의 `git archive`에서 시작하며 현재 checkout의 미커밋 파일이나 기존 JAR를 읽지 않는다.
+
+```bash
+bundle=/path/to/new-release
+python3 deploy/release.py build "$bundle" "$(git rev-parse HEAD)"
+```
+
+- `release.json`에는 Git SHA, 소스 아카이브·backend JAR·전달 아카이브의 SHA-256, 배포 파일 해시, 플랫폼(`linux/amd64`), Dockerfile·베이스 이미지 참조 또는 공식 Caddy 다이제스트, 최종 Docker 이미지 ID가 기록된다. 이미지 ID는 로드된 이미지의 검증에 사용한다. 자체 빌드 이미지에 게시된 Registry 참조를 가정하지 않는다.
+- 같은 `images.tar`를 로드한 이미지로 격리된 로컬 smoke를 수행한다. 기존 synthetic smoke project가 유휴 상태인지 확인하고 아래 명령을 실행한다. CI의 Release image smoke도 빌드한 아카이브를 다시 로드해 이 경로를 검증한다. CI에서 생성한 이미지는 해당 실행의 검증 산출물이다. 별도로 빌드한 운영 후보에도 아래 검증을 적용한다.
+
+```bash
+python3 deploy/release.py load "$bundle"
+python3 deploy/release.py verify "$bundle" deploy/.env.example --local-smoke
+smoke=(docker compose --env-file deploy/.env.example --env-file "$bundle/images.env" \
+  -f deploy/compose.yaml -f deploy/compose.release.yaml -f deploy/compose.local.yaml -p decision-mvp-smoke)
+"${smoke[@]}" up -d --no-build --pull never
+node scripts/deployment-smoke.mjs
+python3 deploy/release.py verify "$bundle" deploy/.env.example --local-smoke --running
+"${smoke[@]}" stop
+```
+
+검증에 사용한 `release.json`, `images.env`, `images.tar`와 CI 실행 링크·스모크 결과를 함께 보관한다. 운영 승인 이후에만 검증한 세 파일을 신뢰할 수 있는 경로로 VM에 전달한다. 운영 VM에는 해당 릴리스의 배포 파일과 Python 3.11 이상을 사용한다. VM에서 빌드하거나 Registry에서 pull하지 않는다.
+
+공개 접근을 차단한 상태에서 아카이브 해시와 배포 파일·Compose 설정·이미지 ID를 확인한다. 기존 proxy가 실행 중이면 먼저 정지한다. PostgreSQL·backend·frontend를 같은 릴리스 설정으로 올리고 Flyway 적용 및 backend 기동을 확인한 뒤 proxy를 시작한다. 실제 컨테이너의 이미지 ID와 운영 인수 항목까지 확인한 후 접근을 개방한다.
+
+```bash
+bundle=/path/to/verified-release
+runtime=/etc/decision-assistant/runtime.conf
+python3 deploy/release.py load "$bundle"
+python3 deploy/release.py verify "$bundle" "$runtime"
+release=(docker compose --env-file "$runtime" --env-file "$bundle/images.env" \
+  -f deploy/compose.yaml -f deploy/compose.release.yaml)
+"${release[@]}" stop proxy
+"${release[@]}" up -d --no-build --pull never postgres backend frontend
+# Flyway 적용과 backend 기동을 확인한 뒤 실행한다.
+"${release[@]}" up -d --no-build --pull never
+python3 deploy/release.py verify "$bundle" "$runtime" --running
+```
 
 ## 실제 배포의 사전 조건
 
@@ -45,7 +86,8 @@ docker compose --env-file deploy/.env.example -f deploy/compose.yaml -f deploy/c
 - 삭제 audit은 DB commit 뒤 기록하는 로그이며 transactional outbox가 아니다. commit 직후 프로세스/호스트 장애나 외부 로그 수집 손실이 있었다면 누락 가능성이 있다. 해당 기간의 완전성을 입증할 수 없으면 복원 DB 공개를 중지한다. 로컬 복원 smoke는 이 장애 구간의 내구성을 검증하지 않는다.
 - `DECISION_ASSISTANT_RECOVERY_RESTORED_TO`에 실제 복원 기준 시각(예: `2026-11-14T03:00:00Z`)을 넣고 backend를 재기동한다. 홈의 KST 안내와 생성·수정·삭제 영향 문구를 확인한다.
 - 세션을 무효화하고 외부 기능·예약 알림을 계속 끈 채 소유권·목록·정렬·삭제 결과와 복원 전후 카탈로그/결정 건수를 확인한다. 영구 삭제된 결정·성향 기억이 없고 휴지통·활용 중단 기록이 개인화에 쓰이지 않는지 SQL로 검증한 뒤 접근을 재개한다.
-- 현재 migration 이후에는 이전 삭제 정책의 코드로 되돌리지 않는다. 장애 시 proxy를 닫고 기능 flag를 끄며 검증한 새 이미지로 복구한다. `down -v`, 자동 DB 초기화, migration rollback은 운영 절차에 없다.
+- 첫 릴리스에는 직전 운영 이미지나 DB 롤백을 배포 전제 조건으로 두지 않는다. 장애 시 공개 접근을 차단하고 수정한 이미지 쌍을 검증한 뒤 전진 복구한다.
+- 이후 릴리스부터 직전 frontend·backend 이미지 쌍과 DB 스키마 버전을 기록한다. 격리된 복제 DB에서 현재 적용된 Flyway 스키마로 직전 backend 기동, 주요 읽기·쓰기, frontend 계약을 확인한 경우에만 해당 쌍을 복구 후보로 사용할 수 있다. 이전 삭제 정책의 코드로 되돌리는 복구, `down -v`, 자동 DB 초기화 및 migration rollback은 운영 절차에 포함하지 않는다.
 
 ## 비용·장애 통제
 

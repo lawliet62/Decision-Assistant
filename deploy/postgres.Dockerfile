@@ -1,4 +1,5 @@
-FROM postgres:17-bookworm
+ARG BASE_IMAGE=postgres:17-bookworm
+FROM ${BASE_IMAGE}
 RUN apt-get update && apt-get install -y --no-install-recommends python3 ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY deploy/pg_hba.conf /etc/postgresql/pg_hba.conf
 COPY deploy/init-database.py /opt/init-database.py
