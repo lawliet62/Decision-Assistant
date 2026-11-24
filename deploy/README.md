@@ -72,7 +72,7 @@ python3 deploy/release.py verify "$bundle" "$runtime" --running
 
 1. [MVP 준비 보고서](../docs/mvp-readiness.md)의 비용·메모리 결과를 확인하고 유효한 크레딧/비용 승인을 받는다. 현재 추가 지출 허용액은 0원이다. 프로젝트 생성·결제 연결·유료 리소스 생성 명령은 제공된 스크립트에 포함하지 않는다.
 2. 기존 보유 hostname과 DNS를 결정한다. 예시 `.env.example`은 실제 배포 설정이 아니다. `/etc/decision-assistant/runtime.conf`에 비밀 아닌 프로젝트 ID·Secret 숫자 버전·Auth0 issuer/client ID·정확한 allowlist·hostname을 작성한다. 실제 이메일 목록은 commit하지 않는다.
-3. Auth0 callback/logout URL을 기존 runbook과 일치시키고 Dev/Prod Identity 격리와 실제 Secret 접근을 확인한다. VM 외부 firewall은 80/443 및 운영자 전용 관리 접근만 허용한다. 신뢰하지 않는 Host·forwarded header는 public ingress에서 차단한다. Caddy는 지정 hostname만 처리하고 proxy header를 재작성한다.
+3. Auth0 callback/logout URL을 기존 runbook과 일치시키고 Dev/Prod Identity 격리와 실제 Secret 접근을 확인한다. VM 외부 firewall은 80/443 및 운영자 전용 관리 접근만 허용한다. 신뢰하지 않는 Host·forwarded header는 public ingress에서 차단한다. Caddy는 지정 hostname에 ZeroSSL ACME를 사용한다. 운영 연락처 `ACME_EMAIL`은 `runtime.conf`에만 설정한다. 인증서 발급 스크립트의 `-ReleaseCommit`과 `-ReleaseRecordHash`는 검증한 로컬 릴리스 기록에서 가져오며, VM 번들 경로는 `~/first-gcp-<커밋 앞 7자리>`를 사용한다.
 4. 백업 bucket은 비공개·uniform access·public access prevention, `backup-lifecycle.json`을 적용한다. 7일 보존 정책과 충돌하는 object versioning·기본 soft delete 추가 보존은 끈다. lifecycle 삭제는 비동기이므로 정확히 168시간 이내 물리 파기를 보장한다고 고지하지 않는다. 운영자는 만료 객체 잔존을 점검한다.
 5. `backup.conf`에 `BACKUP_BUCKET`, `DEPLOY_ENV_FILE`을 설정하고 service/timer를 설치한다. 백업은 매일 UTC 03시, 실패/24시간 이상 미생성은 경보 대상이다. 일일 백업의 RPO는 최대 24시간이며 RTO는 실제 복원 시험 전에는 약속하지 않는다.
 6. 앱 로그를 VM 밖의 제한된 Cloud Logging bucket에 보존하고 retention 14일을 설정한다. 요청 본문·쿠키·토큰·사용자 메모는 수집하지 않는다. 삭제 audit에는 UUID·시각만 남긴다. Docker 로컬 로그는 디스크 보호를 위한 30MB rotation이고 **14일 보존의 대체물이 아니다**. 외부 수집과 TTL이 검증되기 전에는 운영 준비 완료로 표시하지 않는다.

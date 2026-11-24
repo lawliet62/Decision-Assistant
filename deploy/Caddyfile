@@ -1,4 +1,9 @@
 {$PUBLIC_HOST} {
+    tls {
+        issuer acme https://acme.zerossl.com/v2/DV90 {
+            email {$ACME_EMAIL}
+        }
+    }
     encode zstd gzip
     request_body {
         max_size 1MB

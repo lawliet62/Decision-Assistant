@@ -71,6 +71,7 @@ services:
     image: caddy:2-alpine
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST:?공개 hostname 필요}
+      ACME_EMAIL: ${ACME_EMAIL:?ZeroSSL ACME 운영 연락처 필요}
     ports: ["80:80", "443:443"]
     volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "tls:/data", "caddy_config:/config"]
     mem_limit: 128m
