@@ -10,6 +10,8 @@
 
 ## 사례와 진단 방법
 
+- [로그아웃이 403으로 거부되는 경우](logout-csrf-token-rotation.md) — 양식과 쿠키의 CSRF 토큰 교체 시점, 기존 세션과 새 인증 구분
+
 - [UI 촬영 성공과 화면 준비 완료의 구분](ui-gallery-capture.md): 목록 로딩·viewport 변경 중 전체 페이지 높이와 hydration 지연 확인
 - [겹친 Gradle 테스트의 결과 파일 충돌](parallel-gradle-test-output.md): 동일 build 디렉터리의 EOF·결과 파일 유실과 순차 검증
 

@@ -3,22 +3,22 @@ import type { paths } from "./schema";
 
 export const api = createClient<paths>();
 
-function cookie(name: string): string | undefined {
+export function readCsrfToken(): string | undefined {
   if (typeof document === "undefined") return undefined;
-  const prefix = `${name}=`;
+  const prefix = "XSRF-TOKEN=";
   const value = document.cookie.split("; ").find((item) => item.startsWith(prefix));
   return value ? decodeURIComponent(value.slice(prefix.length)) : undefined;
 }
 
 export async function ensureCsrfToken(): Promise<string> {
-  let token = cookie("XSRF-TOKEN");
+  let token = readCsrfToken();
   if (!token) {
     const response = await fetch("/api/v1/me", {
       credentials: "same-origin",
       cache: "no-store",
     });
     if (!response.ok) throw new Error(`CSRF initialization failed: ${response.status}`);
-    token = cookie("XSRF-TOKEN");
+    token = readCsrfToken();
   }
   if (!token) throw new Error("CSRF token cookie was not issued");
   return token;
