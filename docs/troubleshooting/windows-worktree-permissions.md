@@ -53,7 +53,7 @@ MXC는 기본 실행의 경로 격리를 제공하지만 sandbox 밖 명령은 �
 
 ### 빌드 검증의 별도 문제
 
-일반 권한의 현재 worktree에서 의존성 설치와 frontend lint·typecheck가 성공했다. 기본 MXC build는 Google Fonts 다운로드에서 실패했다. 같은 build를 일반 사용자 호스트에서 실행하면 Turbopack이 `globals.css` 처리용 Node 자식 프로세스가 연결 전에 exit code 0으로 종료됐다는 오류를 냈다. 오류 제목의 `Failed to write app endpoint`만으로 ACL 문제라고 판단하지 않는다. 같은 사용자·같은 worktree에서 [공식 webpack 선택 옵션](https://nextjs.org/docs/app/api-reference/cli/next)을 사용한 `npm.cmd --prefix frontend run build -- --webpack`은 성공했다. 기본 build script, dependency, 품질 gate는 바꾸지 않았다. 기본 Turbopack 경로의 원인은 아직 미해결이다.
+일반 권한의 현재 worktree에서 의존성 설치와 frontend lint·typecheck가 성공했다. 기본 MXC build는 Google Fonts 다운로드에서 실패했다. 같은 build를 일반 사용자 호스트에서 실행하면 Turbopack이 `globals.css` 처리용 Node 자식 프로세스가 연결 전에 exit code 0으로 종료됐다는 오류를 냈다. 오류 제목의 `Failed to write app endpoint`만으로 ACL 문제라고 판단하지 않는다. 같은 사용자·같은 worktree에서 [공식 webpack 선택 옵션](https://nextjs.org/docs/app/api-reference/cli/next)을 사용한 `npm.cmd --prefix frontend run build -- --webpack`은 성공했다. 기본 build script, dependency, 품질 gate는 바꾸지 않았다. 기본 Turbopack 경로의 원인은 아직 미해결이다. 실패 단계의 동작 방식과 2026-11-26의 재현 시도는 [Turbopack build가 CSS 처리용 Node 자식 프로세스에 연결하지 못하는 경우](turbopack-postcss-pool-child.md)에 있다.
 
 전체 검사와 별도 backend 검사를 동시에 시작한 진단 실행에서는 공유 test-results 파일 충돌로 전체 검사가 실패했다. 이 결과는 환경의 권한 결함을 입증하지 않는다. 같은 worktree의 Gradle 검증은 반드시 순차 실행하며, 이후 검증 결과는 해당 재실행을 기준으로 판단한다.
 

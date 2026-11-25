@@ -19,6 +19,7 @@
 - [GitHub 출처 점검 실패 분리](../evaluations/source-check-2026-11-14/README.md): 로컬 성공과 클라우드 접근의 구분, 제목 변경을 제한적으로 처리한 사례
 - [Claude Code에서 지침 파일이 로드되지 않는 경우](claude-code-instruction-loading.md): 루트 `CLAUDE.md`와 하위 폴더 `AGENTS.md`의 로드 조건, `/context` 확인
 - [Windows 임시 worktree에서 로컬 명령이 실패하는 경우](windows-worktree-permissions.md): Codex CLI의 Hook 점유, 실행기 오류 740, Git 소유권, 실제 파일 접근 실패의 구분
+- [Turbopack build가 CSS 처리용 Node 자식 프로세스에 연결하지 못하는 경우](turbopack-postcss-pool-child.md): `PATH`의 Node로 실행되는 PostCSS 자식과 loopback TCP 연결, exit code 0의 해석(추정), 미해결 상태
 
 - [개발 실행 종료 후 backend가 남는 경우](dev-server-process-shutdown.md): Node wrapper의 신호 전달·하위 서버 정리와 OS별 검증
 
