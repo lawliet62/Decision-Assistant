@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/shared/api/client";
 import type { components } from "@/shared/api/schema";
@@ -23,6 +23,8 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
   const [compatibility, setCompatibility] = useState<string>();
   const [minimumRequirements, setMinimumRequirements] = useState<NonNullable<components["schemas"]["DiscoveryRequest"]["minimumRequirements"]>>({});
   const [note, setNote] = useState("");
+  const [title, setTitle] = useState("");
+  const titleHint = useId();
   const [manual, setManual] = useState(false);
   const [web, setWeb] = useState<Capabilities>();
   const [ai, setAi] = useState<AiCapabilities>();
@@ -50,7 +52,7 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
     inFlight.current = true; setPending(true); setError(undefined);
     try {
       const { data, error } = await api.POST("/api/v1/decisions", { body: {
-        templateKey: template.key, intentText: note || undefined,
+        templateKey: template.key, intentText: note || undefined, title: title.trim() || undefined,
         discovery: { templateVersion: template.version!, uses: (template.uses ?? []).filter(value => uses.includes(value)), maxBudget: budget, compatibility, minimumRequirements,
           searchConsent: consents.search, collectionConsent: consents.collection,
           aiConsent: consents.ai, sensitiveDataAcknowledged: consents.sensitive },
@@ -88,6 +90,8 @@ export function ClickIntake({ initialCategory }: { initialCategory?: string }) {
             {template.key === "TABLET" && <p className="text-xs text-zinc-500">전용 펜 지원은 능동형 펜과의 호환을 뜻하며, 펜 기본 포함 여부와는 다릅니다.</p>}
           </fieldset>}
           <details className="text-sm"><summary className="cursor-pointer text-zinc-600">상세 조건 (선택)</summary><div className="mt-3 space-y-3">
+            <div><label className="block">비교 제목 (선택)<input value={title} onChange={event => setTitle(event.target.value)} maxLength={200} aria-describedby={titleHint} className="mt-1 w-full rounded-xl border p-3" /></label>
+              <p id={titleHint} className="mt-1 text-xs text-zinc-500">비워 두면 &quot;{template.label} 비교&quot;로 저장합니다. 최대 200자입니다.</p></div>
             <label className="block">구매 메모<textarea maxLength={4000} value={note} onChange={event => setNote(event.target.value)} className="mt-1 w-full rounded-xl border p-3" /></label>
             <p className="text-xs text-zinc-500">메모는 비교에 저장하며 최초 추천 검색·AI에는 보내지 않습니다.</p>
           </div></details>

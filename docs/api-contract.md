@@ -12,6 +12,12 @@
 - `PUT /api/v1/decisions/{id}/purchase`: `{expectedVersion,resolutionId,status}`로 현재 CHOSEN의 구매 상태를 기록한다. `UNRECORDED|PLANNED|PURCHASED|NOT_PURCHASED`. PURCHASED 이후 변경은 거절한다.
 - `GET /api/v1/decisions/{id}/memories`: 현재 결정과 같은 제품군의 소유자 기록을 최대 3개, 연결 회고를 각 2개 반환한다. 삭제·활용 제외·정정된 기록은 제외하고 외부 요청 없이 원문을 반환한다.
 
+## 결정 생성 제목
+
+- `POST /api/v1/decisions`의 `title`은 모든 생성 경로에서 같은 규칙을 따른다. 최대 200자이며 길이는 앞뒤 공백을 제거하기 전 원문으로 검증하고, 초과하면 400이다.
+- 값은 앞뒤의 공백·제어 문자(U+0020 이하)를 제거해 저장한다. 생략·null이거나 제거한 결과가 비면(빈 문자열, 공백·제어 문자뿐인 값) 자동 제목을 쓴다. 추천 시작(`discovery`)은 `<제품군 표시명> 비교`, 직접 추가(`intentText`와 후보 URL)는 공백을 정리한 `intentText`의 앞 80자다. `title`과 `templateKey`만 받는 경로는 자동 제목이 없어 이런 값을 422로 거절한다. 어느 경로도 빈 제목을 저장하지 않는다.
+- 생성 화면은 사용자가 공백이 아닌 제목을 입력한 경우에만 `title`을 보낸다. 생성 후에는 진행 중 draft의 `PUT /draft`로 바꿀 수 있고, 완료한 결정은 정정·재검토로만 바꾼다(BR-DEC-02).
+
 ## 결정 목록·삭제
 
 `GET /api/v1/decisions`는 배열 대신 `items/page/size/totalElements/totalPages`를 반환한다. frontend와 backend를 같은 release로 갱신한다. `statuses`는 복수 enum(생략 시 전체), `page`는 0부터 1,000,000까지, `size`는 1~50(기본 10), `sort`는 `UPDATED_AT/CREATED_AT/TITLE/TEMPLATE_KEY`, `direction`은 `ASC/DESC`다. 정렬은 소유자·상태로 제한한 전체 결과에 적용하며 ID 오름차순을 보조키로 쓴다. 제품군은 enum 코드 순서, 제목은 DB collation 순서다. 범위를 벗어난 페이지는 마지막 유효 페이지로 보정한다.
