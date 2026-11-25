@@ -36,6 +36,48 @@ test.beforeEach(async ({ request }) => {
   await request.post("http://127.0.0.1:18080/__test/decision-list", { data: {} });
 });
 
+test("열려 있는 보관함은 목록에서 보관한 결정을 수동 새로고침 없이 표시한다", async ({ page }) => {
+  await page.goto("/?open=CHOSEN");
+  const chosen = page.getByRole("region", { name: "결정 완료", exact: true });
+  await expect(chosen.getByRole("listitem")).toHaveCount(4);
+  await page.getByRole("button", { name: "보관함", exact: true }).click();
+  const management = page.getByRole("region", { name: "결정 보관과 삭제 관리" });
+  await expect(management.getByText("결정이 없습니다.")).toBeVisible();
+  const title = await chosen.getByRole("link").first().locator("span").first().innerText();
+  page.on("dialog", dialog => dialog.accept());
+  await chosen.getByRole("button", { name: "보관하기", exact: true }).first().click();
+  await expect(management.getByRole("link", { name: title, exact: true })).toBeVisible();
+  await expect(management.getByText("결정이 없습니다.")).toHaveCount(0);
+  await expect(chosen.getByRole("button", { name: "결정 완료 3건" })).toBeVisible();
+});
+
+test("기존 호환 보관됨 상태의 결정이 없으면 그룹과 필터 선택지를 표시하지 않는다", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "비교 중 11건" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "결정 완료 4건" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "보관됨", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: "보관됨", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: "비교 중", exact: true })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "결정 완료", exact: true })).toBeChecked();
+});
+
+test("기존 호환 보관됨 상태의 결정이 있으면 그룹·건수·필터 선택지를 표시한다", async ({ page, request }) => {
+  await request.post("http://127.0.0.1:18080/__test/decision-list", { data: { legacyArchived: 2 } });
+  await page.goto("/?open=ARCHIVED");
+  const legacy = page.getByRole("region", { name: "보관됨", exact: true });
+  await expect(legacy.getByRole("button", { name: "보관됨 2건" })).toHaveAttribute("aria-expanded", "true");
+  await expect(legacy.getByRole("listitem")).toHaveCount(2);
+  await expect(legacy.getByRole("link", { name: /기존 보관 01/ })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "보관됨", exact: true })).toBeChecked();
+  await expect(page.getByRole("button", { name: "비교 중 11건" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "결정 완료 4건" })).toBeVisible();
+  // 기존 호환 상태만 남은 경우 다른 상태 필터의 결과 없음 안내를 유지한다.
+  await request.post("http://127.0.0.1:18080/__test/decision-list", { data: { empty: true, legacyArchived: 1 } });
+  await page.goto("/?statuses=DRAFT");
+  await expect(page.getByText("선택한 상태의 결정이 없습니다.")).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "보관됨", exact: true })).not.toBeChecked();
+});
+
 test("백업 복원 기준 시각과 변경 유실 가능성을 안내한다", async ({ page }) => {
   await page.route("**/api/v1/decisions/recovery-notice", route => route.fulfill({
     json: { restoredTo: "2026-11-14T03:00:00Z" },
@@ -122,12 +164,19 @@ test("상태별 페이지 선택과 모든 페이지 선택은 다른 상태의 
   await expect(page.getByRole("dialog")).toContainText("12개");
 });
 
-test("상태 전체 선택 실패 시 다른 선택을 보존하고 빈 그룹은 선택을 비활성화한다", async ({ page }) => {
+test("빈 상태 그룹은 선택을 비활성화하고 빈 기존 호환 보관됨 그룹은 열린 링크로도 표시하지 않는다", async ({ page, request }) => {
+  await request.post("http://127.0.0.1:18080/__test/decision-list", { data: { empty: true } });
   await page.goto("/?open=DRAFT,ARCHIVED");
   const draft = page.getByRole("region", { name: "비교 중", exact: true });
-  const archived = page.getByRole("region", { name: "보관됨", exact: true });
-  await expect(archived.getByRole("button", { name: "이 페이지 선택" })).toBeDisabled();
-  await expect(archived.getByRole("button", { name: "이 상태 전체 선택" })).toBeDisabled();
+  await expect(draft.getByRole("button", { name: "비교 중 0건" })).toBeVisible();
+  await expect(draft.getByRole("button", { name: "이 페이지 선택" })).toBeDisabled();
+  await expect(draft.getByRole("button", { name: "이 상태 전체 선택" })).toBeDisabled();
+  await expect(page.getByRole("region", { name: "보관됨", exact: true })).toHaveCount(0);
+});
+
+test("상태 전체 선택 실패 시 다른 선택을 보존한다", async ({ page }) => {
+  await page.goto("/?open=DRAFT");
+  const draft = page.getByRole("region", { name: "비교 중", exact: true });
   await draft.getByRole("checkbox", { name: "결정 11 선택" }).check();
   await page.route("**/api/v1/decisions/selection?*", route => route.fulfill({ status: 503, json: {} }));
   await draft.getByRole("button", { name: "이 상태 전체 선택" }).click();
@@ -269,8 +318,12 @@ test("빈 목록과 필터 결과 없음·조회 실패 복구를 구분한다",
   await page.unroute("**/api/v1/decisions/counts");
   await page.getByRole("button", { name: "다시 시도" }).click();
   await expect(page.getByRole("button", { name: "비교 중 11건" })).toBeVisible();
+  // 기존 호환 상태를 지정한 이전 링크도 오류 없이 결과 없음으로 안내하고 빈 그룹은 표시하지 않는다.
   await page.goto("/?statuses=ARCHIVED&open=ARCHIVED");
   await expect(page.getByText("선택한 상태의 결정이 없습니다.")).toBeVisible();
+  await expect(page.getByRole("region", { name: "보관됨", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("checkbox", { name: "보관됨", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("alert").filter({ hasText: "불러오지 못했습니다" })).toHaveCount(0);
   await request.post("http://127.0.0.1:18080/__test/decision-list", { data: { empty: true } });
   await page.goto("/");
   await expect(page.getByText("아직 저장한 결정이 없습니다.", { exact: false })).toBeVisible();

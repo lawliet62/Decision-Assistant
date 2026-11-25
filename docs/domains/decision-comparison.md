@@ -33,7 +33,7 @@ OptionValue와 ConstraintResult는 Decision 내부 참조를 사용하며 각 �
 | CHOSEN | COMPLETED | OPTION_SELECTED | 제품 선택 완료. 실제 구매와 별개 |
 | DEFERRED | COMPLETED | null | 보류로 완료. 다시 검토를 시작해야 편집 가능 |
 | ABANDONED | COMPLETED | NOT_PURCHASED | 포기로 완료. UI의 ‘포기’와 기존 result 값을 구분 |
-| ARCHIVED | ARCHIVED | null | 기존 호환 값. 새 보관 기능의 전이 상태가 아님 |
+| ARCHIVED | ARCHIVED | null | 기존 호환 값. 새 보관 기능의 전이 상태가 아님. 목록은 해당 결정이 있을 때만 ‘보관됨’ 그룹으로 표시 |
 
 기존 enum의 DecisionPhase.DEFERRED는 호환 값으로 남아 있지만 DEFERRED status의 현재 phase 계산은 COMPLETED다. 기존 보류 기록도 완료 그룹으로 읽으며 이유·구매 여부를 소급 추정하지 않는다. DecisionResult.NOT_PURCHASED와 아래 PurchaseStatus.NOT_PURCHASED는 이름이 같아도 각각 판단 결과와 선택 후 구매 기록이다.
 

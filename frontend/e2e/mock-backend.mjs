@@ -105,6 +105,12 @@ const server = http.createServer(async (request, response) => {
       status: i < 11 ? "DRAFT" : i < 13 ? "CHOSEN" : i === 13 ? "DEFERRED" : "ABANDONED",
       createdAt: new Date(Date.UTC(2026, 0, i + 1)).toISOString(), updatedAt: new Date(Date.UTC(2026, 1, i + 1)).toISOString(),
     }));
+    // 기존 호환 ARCHIVED 상태 행. 새 보관 기능(archivedAt)과 별개이며 요청한 경우에만 추가한다.
+    for (let i = 0; i < (body.legacyArchived ?? 0); i++) listFixture.push({
+      id: `99999999-9999-9999-9999-${String(100 + i).padStart(12, "0")}`, version: 0,
+      title: `기존 보관 ${String(i + 1).padStart(2, "0")}`, templateKey: "EARBUDS", status: "ARCHIVED",
+      createdAt: new Date(Date.UTC(2025, 0, i + 1)).toISOString(), updatedAt: new Date(Date.UTC(2025, 1, i + 1)).toISOString(),
+    });
     return send(200, { ok: true });
   }
   if (request.method === "GET" && url.pathname === "/api/v1/decisions/counts") {
