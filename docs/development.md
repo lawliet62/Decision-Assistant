@@ -119,9 +119,11 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 
 #### Claude Code
 
-`claude --worktree <작업명>`으로 세션을 시작한다. worktree는 `.claude/worktrees/<작업명>/`에, branch는 fetch한 origin 기본 branch를 기준으로 `worktree-<작업명>`이라는 이름으로 만들어진다. 첫 push 전에 `git branch -m <type>/<short-kebab-description>`으로 이름을 바꾼다. 새 worktree에는 `frontend/node_modules`와 `backend/.env`가 없으므로 필요한 의존성은 그 worktree에서 설치한다.
+세션은 `claude --worktree <작업명>`이나 JetBrains Air가 만든 worktree에서 시작하고, 원본 checkout에서 시작됐으면 리드가 EnterWorktree 도구로 `.claude/worktrees/<작업명>/`을 만들어 옮긴다. `--worktree`와 EnterWorktree로 만든 branch는 fetch한 origin 기본 branch를 기준으로 `worktree-<작업명>`이라는 이름으로 만들어진다. 도구가 만든 branch(`worktree-<작업명>`, `air/...`)는 첫 push 전에 `git branch -m <type>/<short-kebab-description>`으로 이름을 바꾼다. 새 worktree에는 `frontend/node_modules`와 `backend/.env`가 없으므로 필요한 의존성은 그 worktree에서 설치한다.
 
-세션 간 점유를 강제하는 Hook은 두지 않는다. worktree 하나에 리드 세션 하나만 둔다는 규칙과 `--worktree` 시작으로 격리하며, subagent는 리드의 worktree를 공유한다. 리드·subagent 운영과 리뷰 사이클은 루트 `CLAUDE.md`가, 결정의 배경은 [ADR 0024](decisions/0024-claude-code-harness.md)가 다룬다. 지침 파일이 기대대로 로드되지 않으면 [Claude Code 지침 로드 진단](troubleshooting/claude-code-instruction-loading.md)을 따른다.
+세션 간 점유를 강제하는 Hook은 두지 않는다. worktree 하나에 리드 세션 하나만 둔다는 규칙과 별도 worktree에서의 작업으로 격리하며, subagent는 리드의 worktree를 공유한다. 리드·subagent 운영과 리뷰 사이클은 루트 `CLAUDE.md`가, 결정의 배경은 [ADR 0024](decisions/0024-claude-code-harness.md)가 다룬다. 지침 파일이 기대대로 로드되지 않으면 [Claude Code 지침 로드 진단](troubleshooting/claude-code-instruction-loading.md)을 따른다.
+
+새 세션을 시작하면 SessionStart Hook이 `.worktrees/`·`.claude/worktrees/` 바로 아래 worktree 중 head SHA가 일치하는 `MERGED` PR이 있고 변경 파일과 재생성할 수 없는 ignored 파일이 없는 것만 branch와 함께 지운다(조건은 [ADR 0024](decisions/0024-claude-code-harness.md)). JetBrains Air worktree(`~/.air/worktrees/temporary/` 바로 아래)는 Air가 자체 기록으로 관리하므로 지우지 않는다. 같은 조건으로 merge가 확인되면 세션 시작 메시지로 알리고, 정리는 Air에서 세션을 완료해 Air가 하게 한다. merge됐지만 로컬 변경이 있는 Air worktree도 따로 알린다. 그 밖의 위치는 대상이 아니다. 판정은 `npm run worktrees:clean`(dry run)으로 확인하고 `npm run worktrees:clean -- --apply`로 직접 실행하며, Hook 결과는 `<git common dir>/worktree-cleanup.log`에 남는다.
 
 #### Codex CLI worktree guard
 
