@@ -1789,6 +1789,9 @@
           "revisionBaseId" : {
             "type" : "string",
             "format" : "uuid"
+          },
+          "personalizationEnabled" : {
+            "type" : "boolean"
           }
         }
       },

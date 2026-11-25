@@ -742,6 +742,7 @@ export interface components {
             currentResolutionId?: string;
             /** Format: uuid */
             revisionBaseId?: string;
+            personalizationEnabled?: boolean;
         };
         DiscoveryData: {
             /** Format: int64 */
