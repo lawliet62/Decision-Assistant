@@ -152,6 +152,9 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 - commit은 review 가능한 논리 단위로 만들되 파일별로 기계적으로 분할하지 않는다. secret, credential, local-only 설정은 commit하지 않는다.
 - 긴 작업은 논리 단위가 완성되고 관련 검증이 통과한 시점에만 checkpoint commit·push한다. 컴파일되지 않거나 중간 상태만 담은 WIP commit을 자동 생성하지 않는다.
 - agent는 자신의 branch와 PR만 push·갱신하며, default branch push, PR merge, auto-merge 설정을 수행하지 않는다.
+- main ruleset의 `validate`는 최신 main 동기화를 요구하므로 다른 PR이 merge되면 열린 PR이 뒤처진다. agent는 human이 요청하거나 merge 준비 완료를 보고하기 직전에, base가 `main`이고 [등록된 stack](stacked-prs.md)에 속하지 않는 자기 PR의 `mergeStateStatus`가 `BEHIND`이면 `& C:\Users\dlwld\Tools\github-agent\agent.ps1 exec gh pr update-branch <번호>`로 갱신한다. 이 명령의 기본 merge 방식은 GitHub 서버에서 main을 PR branch에 merge하므로 force push가 없다. `--rebase`는 쓰지 않는다. 등록됐거나 등록할 예정인 stack PR은 merge commit이 생기면 restack 자동화가 중단되므로 이 방법으로 갱신하지 않고, 뒤처진 사실을 보고한 뒤 stacked PR 절차에 따라 human의 정리를 기다린다.
+- 갱신 후 CI를 다시 확인하고 결과를 보고한다. 서버에서 갱신한 뒤에는 로컬 branch가 원격보다 뒤처지므로, 다음 commit·push 전에 fetch 후 원격 branch를 merge해 맞춘다. push가 거절돼도 force push하지 않는다.
+- 충돌로 갱신이 실패하거나 `mergeStateStatus`가 `DIRTY`이면 충돌을 해결하지 않고 충돌 파일과 원인을 보고한다. 충돌 해결은 새 코드 변경이므로 human이 요청한 경우에만 별도 commit으로 수행하고 리뷰·검증 절차를 다시 거친다.
 - 변경 작업은 remote tracking branch, review 가능한 commit, open PR, CI 결과, clean working tree가 모두 확인되기 전에 완료로 보고하지 않는다.
 
 ### CI response
