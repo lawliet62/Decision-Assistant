@@ -10,6 +10,7 @@ import { EvaluationResultView } from "@/features/evaluation-result/evaluation-re
 import { ProductFacts } from "./product-facts";
 import { ComparisonWorkspace, ComparisonSummary, ResolutionSnapshots } from "./comparison-workspace";
 import { DiscoveryCandidates } from "./discovery-candidates";
+import { PersonalizationSetting } from "./personalization-setting";
 import { OfficialPolicyNotice } from "@/features/product-lookup/official-policy-notice";
 import Link from "next/link";
 
@@ -240,14 +241,25 @@ export function DecisionEditor({ initialDecision }: { initialDecision: DecisionR
     await refreshDecision(); setOutcomeNotes(""); setMessage("사용 후 회고를 저장했습니다.");
   }
 
+  async function changePersonalization(enabled: boolean) {
+    clearFeedback();
+    const { data, error: apiError } = await api.PATCH("/api/v1/decisions/{decisionId}/retention", {
+      params: { path: { decisionId: decision.id! } }, body: { expectedVersion: decision.version!, action: enabled ? "PERSONALIZATION_ON" : "PERSONALIZATION_OFF" },
+    });
+    if (apiError || !data) return setError(problemMessage(apiError));
+    // 응답은 RetentionItem이므로 증가한 version과 설정을 상세 응답으로 다시 읽어 후속 동작이 stale version을 쓰지 않게 한다.
+    await refreshDecision(); setMessage(enabled ? "이 결정의 개인화 활용을 켰습니다." : "이 결정의 개인화 활용을 껐습니다.");
+  }
+
   return <fieldset disabled={busy} className="mt-6 min-w-0 space-y-6">
     <header className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm font-medium text-emerald-700">{templateLabels[decision.templateKey ?? "CUSTOM"]} · {statusLabels[decision.status ?? "DRAFT"]}</p><h1 className="mt-1 text-3xl font-semibold tracking-tight">{decision.title}</h1></div><span className={`rounded-full px-3 py-1 text-xs font-semibold ${guidance?.readiness === "VERIFIED_READY" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>{guidance?.readiness === "VERIFIED_READY" ? "검증 준비됨" : "잠정 비교"}</span></header>
     {(message || error) && <div className={`rounded-xl p-4 text-sm ${error ? "bg-red-50 text-red-800" : "bg-emerald-50 text-emerald-800"}`}>{error ?? message}</div>}
     {completed && <Section title="결정을 완료했습니다" description="필수 절차는 여기서 끝납니다. 구매 기록과 회고는 원할 때 남길 수 있습니다.">
-<Link href="/" className={primarySmall}>내 결정으로 돌아가기</Link>
+<Link href="/" className={`inline-flex ${primarySmall}`}>내 결정으로 돌아가기</Link>
 {decision.status === "CHOSEN" && <div className="space-y-2"><p>구매 상태: {({ UNRECORDED: "미기록", PLANNED: "구매 예정", PURCHASED: "구매함", NOT_PURCHASED: "구매하지 않기로 함" })[currentRecord?.purchaseStatus ?? "UNRECORDED"]}</p>{currentRecord?.purchaseStatus !== "PURCHASED" && <div className="flex flex-wrap gap-2"><button className={secondaryButton} onClick={() => run(() => recordPurchase("PLANNED"))}>구매 예정</button><button className={secondaryButton} onClick={() => run(() => recordPurchase("PURCHASED"))}>구매함</button><button className={secondaryButton} onClick={() => run(() => recordPurchase("NOT_PURCHASED"))}>구매하지 않기로 함</button></div>}</div>}
 {currentRecord?.purchaseStatus !== "PURCHASED" && <><label className="flex gap-2"><input type="checkbox" checked={notPurchased} onChange={e => setNotPurchased(e.target.checked)} />아직 구매하지 않아 다시 검토합니다</label><div className="flex flex-wrap gap-3"><button disabled={!notPurchased} className={secondaryButton} onClick={() => run(() => beginRevision("CORRECTION"))}>기록 수정</button><button disabled={!notPurchased} className={secondaryButton} onClick={() => run(() => beginRevision("RECONSIDERATION"))}>다시 검토</button></div></>}
 </Section>}
+{completed && typeof decision.personalizationEnabled === "boolean" && <PersonalizationSetting enabled={decision.personalizationEnabled} onToggle={enabled => run(() => changePersonalization(enabled))} />}
 {decision.editMode && <button className={secondaryButton} disabled={comparisonDirty} onClick={() => run(cancelRevision, true)}>재검토 취소 · 이전 결론 유지</button>}
 {editable && <PastDecisions hasUnsavedChanges={dirty || comparisonDirty} key={decision.version} id={decision.id!} onApply={note => { markDirty(); setDraftContext({ ...draftContext, notes: [draftContext.notes, note].filter(Boolean).join("\n") }); setMessage("과거 기록을 이번 메모에 추가했습니다. 변경 저장으로 보존하세요."); }} />}
     {decision.editMode && <p role="status" className="rounded-xl bg-amber-50 p-4">{decision.editMode === "CORRECTION" ? "기록 수정 중 · 변경 내용을 저장한 뒤 후보 선택 또는 구매하지 않음으로 완료하세요. 이전 기록에 기반한 개인화는 잠시 중단됩니다." : "다시 검토 중 · 이전 판단과 회고를 보존하면서 새 결정을 준비합니다."}</p>}
