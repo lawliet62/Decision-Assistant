@@ -16,6 +16,7 @@
 - reviewer에는 Edit·Write 도구를 주지 않고 shell은 허용한다. negative test를 실제로 실행하게 하기 위해서다. shell로 파일을 쓸 수 있으므로 수정 금지는 지시문으로만 강제된다.
 - subagent 정의는 `implementer`와 `reviewer` 두 개만 둔다. 탐색은 내장 Explore를 쓴다. 다른 정의는 같은 지시를 반복하게 될 때 추가한다.
 - 리드 기본 모델은 `.claude/settings.json`의 `model: opus`로 고정한다. 세션 중 `/model` 전환은 그대로 동작한다. advisor는 human이 사용자 설정에서 켜며 프로젝트 설정에 넣지 않는다. advisor의 조언은 Human Decision Gate의 승인을 대신하지 않는다.
+- human이 승인한 프로젝트 SessionStart Hook(`.claude/settings.json`)으로 PR이 merge된 worktree를 정리한다. merge는 GitHub에서 human이 수행해 그 순간을 로컬에서 알 수 없으므로 다음 세션 시작 시 확인한다. main checkout의 `.worktrees/`·`.claude/worktrees/` 바로 아래에 있고, 현재 세션의 worktree가 아니며, 같은 branch의 `MERGED` PR head SHA가 로컬 HEAD와 같고, 추적 변경·untracked 파일이 없으며 ignored 항목이 재생성 가능한 산출물뿐인 worktree만 지운다. `git worktree remove`는 `--force` 없이도 ignored 파일(예: `backend/.env`)을 함께 지우므로 마지막 조건을 둔다. PR 조회는 GitHub 인증 helper로만 하고 실패하면 아무것도 지우지 않는다. 판정은 dry run이 기본인 `npm run worktrees:clean`으로 확인한다.
 - Claude Code 전용 규칙은 루트 `CLAUDE.md`에 두고, `CLAUDE.md`는 `@AGENTS.md`로 도구 중립 지침을 불러온다. `frontend/`와 `backend/`에는 `@AGENTS.md` 한 줄만 있는 `CLAUDE.md`를 둔다.
 
 ## 대안과 영향
@@ -26,4 +27,4 @@
 
 Hook을 이식하지 않으므로 같은 worktree에 두 세션이 들어가는 것을 기술적으로 막지 못한다. 세션을 항상 `--worktree`로 시작하는 운영 규칙에 의존한다. `--worktree`가 만드는 branch 이름 `worktree-<작업명>`은 저장소 규칙과 달라 첫 push 전에 바꿔야 한다.
 
-agent teams, Code Mode, agent view, Claude Code용 custom hook은 도입하지 않았다.
+agent teams, Code Mode, agent view는 도입하지 않았다. Claude Code용 custom hook은 merge된 worktree 정리용 SessionStart Hook 하나만 두며, 세션 점유 강제나 도구 호출 차단에는 쓰지 않는다.

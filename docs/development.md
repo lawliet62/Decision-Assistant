@@ -123,6 +123,8 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 
 세션 간 점유를 강제하는 Hook은 두지 않는다. worktree 하나에 리드 세션 하나만 둔다는 규칙과 `--worktree` 시작으로 격리하며, subagent는 리드의 worktree를 공유한다. 리드·subagent 운영과 리뷰 사이클은 루트 `CLAUDE.md`가, 결정의 배경은 [ADR 0024](decisions/0024-claude-code-harness.md)가 다룬다. 지침 파일이 기대대로 로드되지 않으면 [Claude Code 지침 로드 진단](troubleshooting/claude-code-instruction-loading.md)을 따른다.
 
+새 세션을 시작하면 SessionStart Hook이 `.worktrees/`·`.claude/worktrees/` 바로 아래 worktree 중 head SHA가 일치하는 `MERGED` PR이 있고 변경 파일과 재생성할 수 없는 ignored 파일이 없는 것만 branch와 함께 지운다(조건은 [ADR 0024](decisions/0024-claude-code-harness.md)). `.air/worktrees` 등 다른 위치는 대상이 아니다. 판정은 `npm run worktrees:clean`(dry run)으로 확인하고 `npm run worktrees:clean -- --apply`로 직접 실행하며, Hook 결과는 `<git common dir>/worktree-cleanup.log`에 남는다.
+
 #### Codex CLI worktree guard
 
 현재 Hook은 호출의 작업 디렉터리를 기준으로 점유를 확인하므로 읽기 명령이어도 점유된 checkout을 `workdir`로 지정하면 차단된다. shell 명령 문자열을 읽기 전용으로 추측해 통과시키지 않으며, 자기 worktree에서 읽는다. OS 읽기 권한과 Hook 점유는 별개다. [Windows worktree 명령 진단](troubleshooting/windows-worktree-permissions.md)을 참조한다.
