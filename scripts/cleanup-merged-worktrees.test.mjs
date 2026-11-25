@@ -1,11 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  decideWorktree, isRegenerable, normalizePath, parseStatus, parseWorktreeList, preStatusKeepReason,
-  redact, statusKeepReason, validatePrList,
+  buildHookMessage, decideWorktree, defaultAirRoot, hookOutput, isRegenerable, normalizePath, parseStatus,
+  parseWorktreeList, preStatusKeepReason, redact, statusKeepReason, validatePrList, worktreeLocation,
 } from "./cleanup-merged-worktrees.mjs";
 
 const MAIN = "C:/Repo/Decision-Assistant";
+const AIR = "C:/Users/me/.air/worktrees/temporary";
 const HEAD = "a".repeat(40);
 const worktree = (overrides = {}) => ({
   path: `${MAIN}/.worktrees/feature`, head: HEAD, branch: "feat/x",
@@ -15,8 +16,9 @@ const merged = { number: 10, state: "MERGED", headRefName: "feat/x", headRefOid:
 const clean = { changes: [], ignored: [] };
 const input = (overrides = {}) => ({
   worktree: worktree(), mainCheckout: MAIN, currentToplevel: `${MAIN}/.worktrees/current`,
-  prs: [merged], status: clean, caseInsensitive: true, ...overrides,
+  prs: [merged], status: clean, airRoot: AIR, caseInsensitive: true, ...overrides,
 });
+const airInput = (overrides = {}) => input({ worktree: worktree({ path: `${AIR}/decision-assistant-fox` }), ...overrides });
 
 test("removes a clean managed worktree whose merged PR head matches local HEAD", () => {
   const decision = decideWorktree(input());
@@ -97,6 +99,79 @@ test("condition 5: only regenerable ignored entries are allowed", () => {
   assert.match(reason, /backend\/\.env/);
   assert.equal(decideWorktree(input({ status: { changes: [], ignored: ["backend/.env"] } })).remove, false);
   assert.equal(decideWorktree(input({ status: { changes: [], ignored: ["frontend/node_modules/", "backend/build/"] } })).remove, true);
+});
+
+test("Air: only direct children of the Air root are classified as Air worktrees", () => {
+  assert.equal(worktreeLocation(airInput()), "air");
+  assert.equal(worktreeLocation(input({ worktree: worktree({ path: "c:\\users\\ME\\.AIR\\worktrees\\Temporary\\fox\\" }) })), "air");
+  for (const path of [
+    AIR,
+    `${AIR}/fox/.worktrees/nested`,
+    `${AIR}/fox/nested`,
+    "C:/Users/me/.air/worktrees/fox",
+    "C:/Users/me/.air/worktrees/temporary-other/fox",
+    "C:/Users/other/.air/worktrees/temporary/fox",
+  ]) {
+    assert.equal(worktreeLocation(input({ worktree: worktree({ path }) })), null, path);
+    const decision = decideWorktree(input({ worktree: worktree({ path }) }));
+    assert.equal(decision.remove, false, path);
+    assert.equal(decision.air, undefined, path);
+  }
+  assert.equal(worktreeLocation(airInput({ airRoot: undefined })), null);
+  assert.equal(normalizePath(defaultAirRoot("C:\\Users\\me"), true), "c:/users/me/.air/worktrees/temporary");
+});
+
+test("Air: a merged clean worktree is reported as ready, a merged dirty one as dirty", () => {
+  const ready = decideWorktree(airInput());
+  assert.equal(ready.remove, false);
+  assert.equal(ready.air, "ready");
+  assert.equal(ready.pr, 10);
+  const dirty = decideWorktree(airInput({ status: { changes: ["README.md"], ignored: [] } }));
+  assert.equal(dirty.air, "dirty");
+  assert.equal(decideWorktree(airInput({ status: { changes: [], ignored: ["backend/.env"] } })).air, "dirty");
+  assert.equal(decideWorktree(airInput({ status: { changes: [], ignored: ["frontend/node_modules/"] } })).air, "ready");
+});
+
+test("Air: worktrees without an exact merged head, detached or unchecked are not reported", () => {
+  for (const overrides of [
+    { prs: [] },
+    { prs: [{ ...merged, state: "OPEN" }] },
+    { prs: [{ ...merged, headRefOid: "b".repeat(40) }] },
+    { worktree: worktree({ path: `${AIR}/fox`, detached: true, branch: null }) },
+    { status: undefined },
+    { status: { changes: [], ignored: [], error: "fatal" } },
+  ]) {
+    const decision = decideWorktree(airInput(overrides));
+    assert.equal(decision.remove, false);
+    assert.equal(decision.air, undefined);
+  }
+});
+
+test("Air: decideWorktree never removes an Air worktree", () => {
+  const statuses = [clean, { changes: ["a"], ignored: [] }, { changes: [], ignored: ["x/.env"] }, { changes: [], ignored: [], error: "e" }, undefined];
+  const prLists = [[merged], [], [{ ...merged, state: "CLOSED" }], [{ ...merged, headRefOid: "c".repeat(40) }]];
+  for (const status of statuses) {
+    for (const prs of prLists) {
+      for (const flags of [{}, { locked: true }, { prunable: true }, { detached: true }]) {
+        const decision = decideWorktree(airInput({ status, prs, worktree: worktree({ path: `${AIR}/fox`, ...flags }) }));
+        assert.equal(decision.remove, false);
+      }
+    }
+  }
+});
+
+test("hook message summarizes removals and Air notices, or is empty", () => {
+  assert.equal(buildHookMessage({}), null);
+  assert.equal(hookOutput(null), null);
+  assert.equal(buildHookMessage({ removed: 2, failed: 0 }), "worktree 정리: 2개 삭제, 실패 0개.");
+  const airReady = ["a", "b", "c", "d", "e", "f", "g"].map((name, index) => ({ name, pr: index + 1 }));
+  const message = buildHookMessage({ airReady, airDirty: [{ name: "young-parrot", pr: 85 }] });
+  assert.equal(message, "Air 세션 완료로 정리 가능: a(#1), b(#2), c(#3), d(#4), e(#5) 외 2개 / merge됐지만 로컬 변경 있음: young-parrot(#85)");
+  assert.match(buildHookMessage({ removed: 1, failed: 1, logFile: "L" }), /실패 1개\. 상세: L$/);
+  assert.equal(buildHookMessage({ error: "PR 조회 실패", logFile: "L" }), "worktree 정리: PR 조회 실패 상세: L");
+  const line = hookOutput(message);
+  assert.equal(line.includes("\n"), false);
+  assert.deepEqual(JSON.parse(line), { systemMessage: message });
 });
 
 test("parses git worktree porcelain output", () => {

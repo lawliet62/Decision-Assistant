@@ -6,8 +6,9 @@
 
 ## 세션과 worktree
 
-- 작업 하나(PR 하나 규모)는 리드 세션 하나와 `claude --worktree <작업명>`으로 만든 worktree 하나에서 진행한다. 원본 checkout에서 시작된 세션은 변경 작업 전에 별도 worktree로 옮긴다.
-- `--worktree`가 만든 branch `worktree-<작업명>`은 첫 push 전에 `git branch -m <type>/<short-kebab-description>`으로 바꾼다.
+- 작업 하나(PR 하나 규모)는 리드 세션 하나와 worktree 하나에서 진행한다. `claude --worktree <작업명>`이나 JetBrains Air가 만든 worktree에서 시작했으면 그 worktree를 그대로 쓴다.
+- 원본 checkout에서 시작된 세션은 변경 작업 전에 리드가 EnterWorktree 도구로 `.claude/worktrees/<작업명>`을 만들어 옮긴다. 사용자에게 명령 실행을 요청하지 않는다.
+- 도구가 만든 branch(`worktree-<작업명>`, `air/...`)는 첫 push 전에 `git branch -m <type>/<short-kebab-description>`으로 바꾼다.
 - subagent는 리드의 worktree를 공유한다. `isolation: worktree`는 쓰지 않는다. 리드가 subagent별 파일 소유 범위를 나눠 배정하고 통합을 책임진다.
 - 같은 worktree에서 Gradle 검증을 동시에 실행하지 않는다. 결과 파일이 충돌한다([사례](docs/troubleshooting/parallel-gradle-test-output.md)). subagent를 병렬로 돌릴 때는 리드가 검증 순서를 지정하고, 통합 후 전체 검증을 리드가 책임진다.
 

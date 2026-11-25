@@ -1,8 +1,10 @@
 // PR이 merge된 로컬 worktree를 정리한다. 기본은 dry run이며 `--apply`일 때만 삭제한다.
-// `--hook`은 `--apply`와 같지만 짧은 요약만 출력하고 상세 결과를 공통 Git 디렉터리의 로그에 남긴다.
+// `--hook`은 `--apply`와 같지만 보고할 것이 있을 때만 `{"systemMessage": ...}` JSON 한 줄을 출력하고
+// 상세 결과를 공통 Git 디렉터리의 로그에 남긴다. JetBrains Air worktree는 지우지 않고 알리기만 한다.
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { homedir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
@@ -68,18 +70,31 @@ export function isRegenerable(path) {
   return directories.some((segment) => REGENERABLE_DIRECTORIES.has(segment));
 }
 
-// 위치·branch·PR 조건만 판정한다. 통과하면 null, 아니면 유지 이유를 반환한다.
-export function preStatusKeepReason({ worktree, mainCheckout, currentToplevel, prs, caseInsensitive }) {
+// JetBrains Air가 관리하는 worktree의 부모 디렉터리. Air는 자체 기록으로 worktree를 관리하므로 지우지 않고 알리기만 한다.
+export function defaultAirRoot(home = process.env.USERPROFILE || homedir()) {
+  return join(home, ".air", "worktrees", "temporary");
+}
+
+// worktree 위치를 "main", "managed", "air", null(판정 대상 밖) 중 하나로 분류한다.
+export function worktreeLocation({ worktree, mainCheckout, airRoot, caseInsensitive }) {
   const normalize = (path) => normalizePath(path, caseInsensitive);
   const path = normalize(worktree.path);
   const main = normalize(mainCheckout);
-  if (worktree.bare) return "bare 저장소";
-  if (path === main) return "main checkout";
+  if (path === main) return "main";
   const parent = path.slice(0, path.lastIndexOf("/"));
-  if (!MANAGED_PARENTS.some((managed) => parent === `${main}/${normalize(managed)}`)) {
-    return "관리 위치(.worktrees/, .claude/worktrees/) 바로 아래가 아님";
-  }
-  if (path === normalize(currentToplevel)) return "현재 실행 중인 worktree";
+  if (MANAGED_PARENTS.some((managed) => parent === `${main}/${normalize(managed)}`)) return "managed";
+  if (airRoot && parent === normalize(airRoot)) return "air";
+  return null;
+}
+
+// 위치·branch·PR 조건만 판정한다. 통과하면 null, 아니면 유지 이유를 반환한다.
+export function preStatusKeepReason({ worktree, mainCheckout, currentToplevel, prs, airRoot, caseInsensitive }) {
+  const normalize = (path) => normalizePath(path, caseInsensitive);
+  if (worktree.bare) return "bare 저장소";
+  const location = worktreeLocation({ worktree, mainCheckout, airRoot, caseInsensitive });
+  if (location === "main") return "main checkout";
+  if (!location) return "관리 위치(.worktrees/, .claude/worktrees/)나 Air worktree 위치 바로 아래가 아님";
+  if (normalize(worktree.path) === normalize(currentToplevel)) return "현재 실행 중인 worktree";
   if (worktree.detached || !worktree.branch) return "detached HEAD";
   if (worktree.locked) return "locked worktree";
   if (worktree.prunable) return "디렉터리가 없는 prunable worktree";
@@ -107,14 +122,41 @@ export function statusKeepReason(status) {
 }
 
 // 수집한 데이터만으로 삭제 여부를 결정한다. status는 사전 조건을 통과했을 때만 필요하다.
+// Air worktree는 remove가 항상 false이고, 알림 대상이면 air에 "ready"(정리 가능) 또는 "dirty"(로컬 변경 있음)를 담는다.
 export function decideWorktree(input) {
   const pre = preStatusKeepReason(input);
   if (pre) return { remove: false, reason: pre };
   if (!input.status) return { remove: false, reason: "작업 트리 상태를 확인하지 않음" };
-  const reason = statusKeepReason(input.status);
-  if (reason) return { remove: false, reason };
   const pr = matchingMergedPr(input.worktree, input.prs);
-  return { remove: true, reason: `PR #${pr.number} MERGED, head SHA 일치, 작업 트리 깨끗함` };
+  const reason = statusKeepReason(input.status);
+  if (worktreeLocation(input) === "air") {
+    if (input.status.error) return { remove: false, reason };
+    if (reason) return { remove: false, air: "dirty", pr: pr.number, reason: `Air worktree, PR #${pr.number} MERGED이지만 ${reason}` };
+    return { remove: false, air: "ready", pr: pr.number, reason: `Air worktree, PR #${pr.number} MERGED, head SHA 일치, 작업 트리 깨끗함. Air에서 세션을 완료해 정리` };
+  }
+  if (reason) return { remove: false, reason };
+  return { remove: true, pr: pr.number, reason: `PR #${pr.number} MERGED, head SHA 일치, 작업 트리 깨끗함` };
+}
+
+// `--hook` 모드에서 세션에 전달할 한국어 요약. 보고할 것이 없으면 null.
+export function buildHookMessage({ removed = 0, failed = 0, airReady = [], airDirty = [], error = null, logFile = null }) {
+  const detail = logFile ? ` 상세: ${logFile}` : "";
+  if (error) return `worktree 정리: ${error}${detail}`;
+  const parts = [];
+  if (removed > 0 || failed > 0) parts.push(`worktree 정리: ${removed}개 삭제, 실패 ${failed}개.${failed > 0 ? detail : ""}`);
+  const list = (items) => {
+    const shown = items.slice(0, 5).map(({ name, pr }) => `${name}(#${pr})`).join(", ");
+    return items.length > 5 ? `${shown} 외 ${items.length - 5}개` : shown;
+  };
+  const air = [];
+  if (airReady.length > 0) air.push(`Air 세션 완료로 정리 가능: ${list(airReady)}`);
+  if (airDirty.length > 0) air.push(`merge됐지만 로컬 변경 있음: ${list(airDirty)}`);
+  if (air.length > 0) parts.push(air.join(" / "));
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
+export function hookOutput(message) {
+  return message ? JSON.stringify({ systemMessage: message }) : null;
 }
 
 export function validatePrList(value) {
@@ -174,9 +216,11 @@ export function main(argv = process.argv.slice(2)) {
   const log = (line) => { lines.push(line); if (!hook) console.log(line); };
   let logFile = null;
 
-  const finish = (summary, exitCode) => {
+  // summary는 사람이 읽는 마지막 줄, message는 hook이 세션에 전달할 요약(null이면 출력 없음)이다.
+  const finish = (summary, exitCode, message = summary) => {
     if (hook) {
-      console.log(`[worktree cleanup] ${summary}`);
+      const output = hookOutput(message);
+      if (output) console.log(output);
       if (logFile) {
         try { appendFileSync(logFile, `== ${new Date().toISOString()} ==\n${lines.join("\n")}\n${summary}\n\n`); } catch { /* 로그 실패는 무시한다 */ }
       }
@@ -185,6 +229,7 @@ export function main(argv = process.argv.slice(2)) {
     if (summary) console.log(summary);
     return exitCode;
   };
+  const fail = (text) => finish(text, 1, buildHookMessage({ error: text, logFile }));
 
   if (unknown.length > 0) {
     console.error("Usage: node scripts/cleanup-merged-worktrees.mjs [--apply | --hook]");
@@ -193,33 +238,43 @@ export function main(argv = process.argv.slice(2)) {
 
   const common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"]);
   const toplevel = git(["rev-parse", "--show-toplevel"]);
-  if (!common.ok || !toplevel.ok) return finish("Git 저장소를 확인할 수 없어 아무것도 삭제하지 않았습니다.", 1);
+  if (!common.ok || !toplevel.ok) return fail("Git 저장소를 확인할 수 없어 아무것도 삭제하지 않았습니다.");
   const commonDir = common.stdout.trim();
   const mainCheckout = dirname(commonDir);
   const currentToplevel = toplevel.stdout.trim();
+  const airRoot = defaultAirRoot();
   logFile = join(commonDir, "worktree-cleanup.log");
 
   const listed = git(["worktree", "list", "--porcelain"]);
-  if (!listed.ok) return finish("worktree 목록을 읽지 못해 아무것도 삭제하지 않았습니다.", 1);
+  if (!listed.ok) return fail("worktree 목록을 읽지 못해 아무것도 삭제하지 않았습니다.");
   const worktrees = parseWorktreeList(listed.stdout);
 
   const fetched = fetchPrs();
   if (fetched.error) {
     log(fetched.error);
-    return finish("PR 조회에 실패해 아무것도 삭제하지 않았습니다.", 1);
+    return fail("PR 조회에 실패해 아무것도 삭제하지 않았습니다.");
   }
   const prs = fetched.prs;
-  log(`${apply ? "적용" : "dry run"}: main checkout ${mainCheckout}, worktree ${worktrees.length}개, PR ${prs.length}건 조회`);
+  log(`${apply ? "적용" : "dry run"}: main checkout ${mainCheckout}, Air ${airRoot}, worktree ${worktrees.length}개, PR ${prs.length}건 조회`);
 
   const targets = [];
+  const airReady = [];
+  const airDirty = [];
   for (const worktree of worktrees) {
-    const input = { worktree, mainCheckout, currentToplevel, prs };
+    const input = { worktree, mainCheckout, currentToplevel, prs, airRoot };
     const label = `${worktree.path}${worktree.branch ? ` (${worktree.branch})` : ""}`;
-    if (preStatusKeepReason(input)) {
-      log(`[유지] ${label} - ${preStatusKeepReason(input)}`);
+    const pre = preStatusKeepReason(input);
+    if (pre) {
+      log(`[유지] ${label} - ${pre}`);
       continue;
     }
     const decision = decideWorktree({ ...input, status: collectStatus(worktree.path) });
+    if (decision.air) {
+      const entry = { name: basename(worktree.path), pr: decision.pr };
+      (decision.air === "ready" ? airReady : airDirty).push(entry);
+      log(`[${decision.air === "ready" ? "Air 정리 가능" : "Air 로컬 변경"}] ${label} - ${decision.reason}`);
+      continue;
+    }
     if (!decision.remove) {
       log(`[유지] ${label} - ${decision.reason}`);
       continue;
@@ -228,7 +283,8 @@ export function main(argv = process.argv.slice(2)) {
     targets.push(worktree);
   }
 
-  if (!apply) return finish(`삭제 대상 ${targets.length}개. 실제로 삭제하려면 --apply를 붙여 실행하세요.`, 0);
+  const airSummary = `Air 정리 가능 ${airReady.length}개, Air 로컬 변경 ${airDirty.length}개`;
+  if (!apply) return finish(`삭제 대상 ${targets.length}개, ${airSummary}. 실제로 삭제하려면 --apply를 붙여 실행하세요.`, 0);
 
   let removed = 0;
   let failed = 0;
@@ -248,16 +304,21 @@ export function main(argv = process.argv.slice(2)) {
     removed += 1;
     log(`[삭제] ${worktree.path} (${worktree.branch})`);
   }
-  const summary = `merge된 worktree ${removed}개 삭제, 실패 ${failed}개${hook ? `. 상세: ${logFile}` : ""}`;
-  return finish(summary, failed > 0 ? 1 : 0);
+  const summary = `merge된 worktree ${removed}개 삭제, 실패 ${failed}개, ${airSummary}`;
+  return finish(summary, failed > 0 ? 1 : 0, buildHookMessage({ removed, failed, airReady, airDirty, logFile }));
 }
 
 if (process.argv[1] && normalizePath(fileURLToPath(import.meta.url)) === normalizePath(resolve(process.argv[1]))) {
   try {
     process.exitCode = main();
   } catch (error) {
-    const hook = process.argv.includes("--hook");
-    console.log(`[worktree cleanup] 예기치 않은 오류로 중단했습니다: ${redact(error?.message ?? error)}`);
-    process.exitCode = hook ? 0 : 1;
+    if (process.argv.includes("--hook")) {
+      // 오류 내용은 길거나 민감할 수 있으므로 세션에는 짧은 알림만 보낸다.
+      console.log(hookOutput("worktree 정리: 예기치 않은 오류로 중단했습니다. `npm run worktrees:clean`으로 확인하세요."));
+      process.exitCode = 0;
+    } else {
+      console.log(`예기치 않은 오류로 중단했습니다: ${redact(error?.message ?? error)}`);
+      process.exitCode = 1;
+    }
   }
 }
