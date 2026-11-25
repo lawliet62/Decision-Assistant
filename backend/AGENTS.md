@@ -1,14 +1,6 @@
 # Backend 작업 지침
 
-root `AGENTS.md`가 우선 적용된다.
-
-## 구조
-
-- `decision`: Decision aggregate, draft API, resolution/outcome
-- `template`: versioned domain template seed
-- `evaluation`: immutable snapshot과 deterministic evaluation
-- `ai`: provider port/adapter, 구조화 proposal
-- `common`: HTTP error 등 작은 cross-cutting concern
+root `AGENTS.md`가 우선 적용된다. package별 책임은 [Architecture](../docs/architecture.md)를 따른다.
 
 feature package 내부에서 controller/service/entity/repository를 가까이 둔다. 별도 layer 최상위 package나 독립 Gradle module은 실제 경계 필요가 생길 때까지 만들지 않는다.
 
@@ -23,8 +15,5 @@ feature package 내부에서 controller/service/entity/repository를 가까이 �
 
 ## 검증
 
-- unit: `./gradlew test` (`gradlew.bat test` on Windows)
-- PostgreSQL/API integration: `./gradlew integrationTest`
-- 전체 root 검증: `npm run check`
-
-API 변경 후 integration test가 `backend/build/generated/openapi.json`을 생성한다. 이를 `docs/api/openapi.json`에 반영한 뒤 frontend에서 `npm run api:generate`를 실행한다.
+- unit은 `./gradlew test`, PostgreSQL/API integration은 `./gradlew integrationTest`다(Windows는 `gradlew.bat`). 전체 검증은 root의 `npm run check`다.
+- API 변경 후 integration test가 `backend/build/generated/openapi.json`을 생성한다. 이를 `docs/api/openapi.json`에 반영한 뒤 frontend에서 `npm run api:generate`를 실행한다.

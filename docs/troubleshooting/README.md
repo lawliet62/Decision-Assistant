@@ -16,7 +16,8 @@
 - [겹친 Gradle 테스트의 결과 파일 충돌](parallel-gradle-test-output.md): 동일 build 디렉터리의 EOF·결과 파일 유실과 순차 검증
 
 - [GitHub 출처 점검 실패 분리](../evaluations/source-check-2026-11-14/README.md): 로컬 성공과 클라우드 접근의 구분, 제목 변경을 제한적으로 처리한 사례
-- [Windows 임시 worktree에서 로컬 명령이 실패하는 경우](windows-worktree-permissions.md): Hook 점유, 실행기 오류 740, Git 소유권, 실제 파일 접근 실패의 구분
+- [Claude Code에서 지침 파일이 로드되지 않는 경우](claude-code-instruction-loading.md): 루트 `CLAUDE.md`와 하위 폴더 `AGENTS.md`의 로드 조건, `/context` 확인
+- [Windows 임시 worktree에서 로컬 명령이 실패하는 경우](windows-worktree-permissions.md): Codex CLI의 Hook 점유, 실행기 오류 740, Git 소유권, 실제 파일 접근 실패의 구분
 
 - [개발 실행 종료 후 backend가 남는 경우](dev-server-process-shutdown.md): Node wrapper의 신호 전달·하위 서버 정리와 OS별 검증
 
