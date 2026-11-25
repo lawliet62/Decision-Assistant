@@ -33,6 +33,7 @@
 ### BR-LIST-01: 결정 목록은 소유자 범위에서 분류·정렬·페이지 처리한다
 
 - **동작:** 상태 그룹은 기본으로 접고 건수를 표시한다. 복수 상태 선택과 그룹별 페이지 이동을 제공하며 기본 10개·수정일 최신순이다. 생성일·제목·제품군 정렬도 지원하고 동일 값은 ID로 안정적으로 정렬한다. 필터·정렬 변경은 페이지를 초기화하고 상세에서 돌아오면 탐색 상태를 복원한다.
+- **동작:** 기존 호환 `ARCHIVED` 상태의 ‘보관됨’ 그룹과 상태 필터 선택지는 해당 결정이 있을 때만 표시한다. 새 보관 기능으로 보관한 결정은 진행 상태가 바뀌지 않으므로 이 그룹이 아니라 보관함에서 조회한다. 해당 결정이 없을 때 이 상태를 지정한 이전 링크는 오류 없이 빈 목록 안내를 표시한다.
 - **이유:** 결정이 늘어도 불필요한 전체 다운로드와 화면 혼잡 없이 필요한 기록을 찾게 한다.
 
 ### BR-DELETE-01: 보관과 삭제를 구분하고 휴지통 기한 후 영구 삭제한다
@@ -45,6 +46,8 @@
 
 - **동작:** Auth0가 제공한 verified email이 배포의 exact-email allowlist에 포함될 때만 로컬 사용자를 생성하고 접근을 허용한다. 같은 이메일의 다른 issuer/subject identity는 자동 병합하지 않는다.
 - **이유:** 초기 dogfooding의 사용자·AI 비용 범위를 제한하고 이메일 일치만으로 다른 identity가 기존 데이터 ownership을 가져가지 못하게 한다.
+- **동작:** 로그인이 실패하면(접근 거부 포함) 서버 session에 재인증 표시를 남기고, 같은 session의 다음 로그인 요청부터 Auth0 authorization request에 `prompt=login`을 붙여 Auth0 로그인 화면을 다시 요구한다. 표시는 로그인 성공 시 지우며 그 전까지는 재시도마다 유지한다. 첫 로그인은 `prompt`를 보내지 않는다. 허용 대상은 바뀌지 않는다.
+- **이유:** 접근 거부 뒤 다른 계정으로 전환하지 못하는 문제([#84](https://github.com/lawliet62/Decision-Assistant/issues/84))를 줄이기 위한 것이다. 살아 있는 Auth0 session이 같은 계정을 다시 사용하는 것이 원인이라고 추정하며, 원인과 이 동작의 효과는 운영 tenant에서 검증하지 않았다. 표시는 서버 session에만 있으므로 요청 parameter로 해제하거나 다른 authorization parameter를 넣을 수 없다.
 
 ### BR-OWN-01: 사용자 데이터는 소유자에게만 보인다
 
@@ -291,7 +294,7 @@
 | --- | --- |
 | BR-LIST-01, BR-DELETE-01 | `DecisionApiIntegrationTest`, `DiscoveryApiIntegrationTest.lateAiCompletionCannotRecreateADeletedDecision`, `frontend/e2e/decision-list.spec.ts` |
 | BR-CMP-01~02 | `ComparisonTest`, `DecisionApiIntegrationTest.comparisonConditionsConfirmationAndResolutionSnapshotSurviveReopening`, `frontend/e2e/comparison-flow.spec.ts` |
-| BR-AUTH-01 | `UserProvisioningServiceTest` |
+| BR-AUTH-01 | `UserProvisioningServiceTest`, `LoginRetrySecurityTest` |
 | BR-CAT-01~03 | `CatalogPolicyTest`, `CatalogApiIntegrationTest`, `frontend/e2e/catalog.spec.ts`, `scripts/catalog/report.test.mjs` |
 | BR-CAT-04 | `CatalogBrandTest`, `CatalogBrandMigrationIntegrationTest` |
 | BR-OWN-01 | `DecisionApiIntegrationTest.isolatesEveryDecisionOperationByOwner`, `DecisionApiIntegrationTest.requiresAuthenticationAndCsrf` |
