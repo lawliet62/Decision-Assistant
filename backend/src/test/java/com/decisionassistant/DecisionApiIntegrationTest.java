@@ -958,6 +958,59 @@ class DecisionApiIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    @Test
+    void creationTitleIsTrimmedFallsBackWhenBlankAndDrivesListSorting() throws Exception {
+        var owner = createOtherUser();
+        // 직접 추가 경로: 입력한 제목을 trim해 쓰고, 없거나 공백뿐이면 상황 설명으로 자동 제목을 만든다.
+        var titled = createDirect(owner, "\"  가 내가 정한 이어폰  \"");
+        org.assertj.core.api.Assertions.assertThat(titled.path("title").asText()).isEqualTo("가 내가 정한 이어폰");
+        // 공백·제어 문자(U+0020 이하)만 있어 trim하면 비는 제목도 자동 제목을 쓴다. JSON escape로 보낸다.
+        for (var blank : List.of("null", "\"\"", "\"   \"", "\"\\u0001\"", "\" \\u0001\\t\"")) {
+            org.assertj.core.api.Assertions.assertThat(createDirect(owner, blank).path("title").asText()).isEqualTo("하 출퇴근용 무선 이어폰");
+        }
+        mvc.perform(post("/api/v1/decisions").with(signedIn(owner)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(directBody("\"" + "가".repeat(201) + "\""))).andExpect(status().isBadRequest());
+        // 길이는 trim 전 원문 기준이다. trim 후 199자여도 원문이 201자면 거절한다.
+        mvc.perform(post("/api/v1/decisions").with(signedIn(owner)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(directBody("\" " + "가".repeat(199) + " \""))).andExpect(status().isBadRequest());
+        // 제목과 templateKey만 받는 기존 생성 경로도 같은 trim 규칙을 따른다.
+        var legacy = mapper.readTree(mvc.perform(post("/api/v1/decisions").with(signedIn(owner)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"title":"  나 새 노트북  ", "templateKey":"LAPTOP"}
+                        """))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+        org.assertj.core.api.Assertions.assertThat(legacy.path("title").asText()).isEqualTo("나 새 노트북");
+        // 자동 제목이 없는 경로는 trim하면 비는 제목(공백·제어 문자만)을 빈 제목과 같이 422로 거절한다.
+        for (var empty : List.of("\"   \"", "\"\\u0001\"", "\"\\u0000\"", "\" \\u0001\\t\"")) {
+            mvc.perform(post("/api/v1/decisions").with(signedIn(owner)).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"title\":" + empty + ", \"templateKey\":\"LAPTOP\"}")).andExpect(status().isUnprocessableEntity());
+        }
+        // 다시 조회한 상세·목록과 제목 정렬이 저장한 제목을 사용한다.
+        mvc.perform(get("/api/v1/decisions/{id}", titled.path("id").asText()).with(signedIn(owner)))
+                .andExpect(jsonPath("$.title").value("가 내가 정한 이어폰"));
+        var asc = mapper.readTree(mvc.perform(get("/api/v1/decisions").with(signedIn(owner))
+                        .param("sort", "TITLE").param("direction", "ASC").param("size", "50"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).path("items");
+        var titles = new java.util.ArrayList<String>();
+        asc.forEach(item -> titles.add(item.path("title").asText()));
+        org.assertj.core.api.Assertions.assertThat(titles).containsExactly(
+                "가 내가 정한 이어폰", "나 새 노트북", "하 출퇴근용 무선 이어폰", "하 출퇴근용 무선 이어폰", "하 출퇴근용 무선 이어폰",
+                "하 출퇴근용 무선 이어폰", "하 출퇴근용 무선 이어폰");
+    }
+
+    private tools.jackson.databind.JsonNode createDirect(AppUserPrincipal owner, String title) throws Exception {
+        return mapper.readTree(mvc.perform(post("/api/v1/decisions").with(signedIn(owner)).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(directBody(title)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
+    }
+
+    private String directBody(String title) {
+        return """
+                {"title":%s, "intentText":"  하 출퇴근용   무선 이어폰 ", "templateKey":"EARBUDS", "webConsent":false,
+                 "selectedSources":[{"url":"https://example.com/buds", "name":"Buds Pro"}]}
+                """.formatted(title);
+    }
+
     private tools.jackson.databind.node.ObjectNode option(String id, String name) {
         return mapper.createObjectNode().put("id", id).put("name", name);
     }

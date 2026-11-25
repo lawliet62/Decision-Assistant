@@ -650,4 +650,48 @@ class DiscoveryApiIntegrationTest {
         assertThat(output.getAll()).contains("product_event=discovery_page_failed", "code=COLLECTION_RESPONSE_INVALID")
                 .doesNotContain("fixture-private-provider-body");
     }
+
+    @Test void recommendationStartUsesAProvidedTitleAndKeepsTheAutomaticTitleWhenBlank() throws Exception {
+        var ids = new ArrayList<String>();
+        Throwable primary = null;
+        try { assertRecommendationTitles(ids); }
+        catch (Throwable failure) { primary = failure; throw failure; }
+        finally {
+            // 다른 테스트의 worker.processNext()가 이 테스트의 대기 실행을 가져가지 않도록 모두 처리한다.
+            // 정리 실패는 원래 검증 실패를 가리지 않도록 suppressed로 덧붙인다.
+            try {
+                for (int i = 0; i < 20 && ids.stream().anyMatch(id -> runs.findById(UUID.fromString(id))
+                        .map(run -> run.status() == ProductDiscovery.Status.PENDING).orElse(false)); i++)
+                    worker.processNext();
+            } catch (RuntimeException cleanup) {
+                if (primary == null) throw cleanup;
+                primary.addSuppressed(cleanup);
+            }
+        }
+    }
+
+    private void assertRecommendationTitles(List<String> ids) throws Exception {
+        var automaticId = create(); ids.add(automaticId);
+        var automatic = mapper.readTree(mvc.perform(get("/api/v1/decisions/" + automaticId).with(owner))
+                .andReturn().getResponse().getContentAsString()).path("title").asText();
+        assertThat(automatic).endsWith(" 비교");
+        // 입력한 제목은 앞뒤 공백을 제거해 저장하고 상세와 목록에 그대로 보인다.
+        var titled = create(titled("\"  출근길 이어폰 고르기  \"")); ids.add(titled);
+        mvc.perform(get("/api/v1/decisions/" + titled).with(owner)).andExpect(jsonPath("$.title").value("출근길 이어폰 고르기"));
+        mvc.perform(get("/api/v1/decisions").with(owner).param("sort", "TITLE").param("direction", "ASC"))
+                .andExpect(jsonPath("$.items[?(@.id == '" + titled + "')].title").value("출근길 이어폰 고르기"));
+        // 비었거나 공백뿐인 제목은 기존 자동 제목을 사용한다.
+        for (var blank : List.of("null", "\"\"", "\"   \"", "\"\\u0001\"", "\" \\u0001\\t\"")) {
+            var id = create(titled(blank)); ids.add(id);
+            mvc.perform(get("/api/v1/decisions/" + id).with(owner)).andExpect(jsonPath("$.title").value(automatic));
+        }
+        // 길이는 기존 @Size(max = 200) 검증을 그대로 따른다.
+        ids.add(create(titled("\"" + "가".repeat(200) + "\"")));
+        mvc.perform(post("/api/v1/decisions").with(owner).with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(titled("\"" + "가".repeat(201) + "\""))).andExpect(status().isBadRequest());
+    }
+
+    private String titled(String title) {
+        return BODY.replace("{\"templateKey\":\"EARBUDS\"", "{\"title\":" + title + ",\"templateKey\":\"EARBUDS\"");
+    }
 }

@@ -101,11 +101,12 @@ public class DecisionService {
     public DecisionResponse create(CreateDecisionRequest request) {
         if (request.discovery() != null) return createDiscovery(request);
         if (request.intentText() != null && !request.intentText().isBlank()) return createGuided(request);
-        if (request.title() == null || request.title().isBlank() || request.templateKey() == null) {
+        var title = providedTitle(request.title());
+        if (title == null || request.templateKey() == null) {
             throw new InvalidDecisionException(List.of("결정 설명과 후보 링크 또는 title/templateKey가 필요합니다."));
         }
         var now = Instant.now(clock);
-        var decision = new Decision(currentUser.current().id(), request.title(), request.templateKey(),
+        var decision = new Decision(currentUser.current().id(), title, request.templateKey(),
                 templates.version(request.templateKey()), now);
         templates.apply(decision);
         decisions.saveAndFlush(decision);
@@ -124,7 +125,9 @@ public class DecisionService {
                 + MinimumRequirementMatcher.conditions(template.minimumRequirements(), conditions.selectedRequirements()).stream()
                         .map(item -> " · " + item.label() + " " + item.requiredValue()).collect(Collectors.joining());
         var now = Instant.now(clock);
-        var decision = new Decision(currentUser.current().id(), template.label() + " 비교", template.key(), templates.version(template.key()), now);
+        var title = providedTitle(request.title());
+        var decision = new Decision(currentUser.current().id(), title == null ? template.label() + " 비교" : title,
+                template.key(), templates.version(template.key()), now);
         var catalog = com.decisionassistant.guidance.CatalogDiscovery.isCatalog(conditions);
         decision.startGuidedIntake(intent, !catalog, !catalog, catalog ? "catalog-v1" : "discovery-v1", now);
         decision.processingStatus(DecisionTypes.ProcessingStatus.NEEDS_INPUT, now);
@@ -168,8 +171,8 @@ public class DecisionService {
         var now = Instant.now(clock);
         var template = request.templateKey() == null ? inferTemplate(request.intentText(), urls) : request.templateKey();
         if (template == DecisionTypes.TemplateKey.CUSTOM) template = DecisionTypes.TemplateKey.LAPTOP;
-        var title = request.title() == null || request.title().isBlank()
-                ? conciseTitle(request.intentText()) : request.title().trim();
+        var provided = providedTitle(request.title());
+        var title = provided == null ? conciseTitle(request.intentText()) : provided;
         var decision = new Decision(currentUser.current().id(), title, template, templates.version(template), now);
         decision.startGuidedIntake(request.intentText().trim(), Boolean.TRUE.equals(request.aiConsent()),
                 Boolean.TRUE.equals(request.webConsent()), "guided-v1", now);
@@ -710,6 +713,16 @@ public class DecisionService {
         if (text.contains("tablet") || text.contains("태블릿") || text.contains("ipad")) return DecisionTypes.TemplateKey.TABLET;
         if (text.contains("phone") || text.contains("스마트폰") || text.contains("휴대폰") || text.contains("iphone")) return DecisionTypes.TemplateKey.PHONE;
         return DecisionTypes.TemplateKey.LAPTOP;
+    }
+
+    /**
+     * 생성 요청에서 사용자가 지정한 제목. 저장할 값(trim 결과)이 비면 null이며 경로별 자동 제목을 쓴다.
+     * 공백·제어 문자(U+0020 이하)만 있는 값도 여기에 해당한다. 길이는 DTO의 @Size가 trim 전 원문으로 검증한다.
+     */
+    private static String providedTitle(String title) {
+        if (title == null) return null;
+        var trimmed = title.trim();
+        return trimmed.isBlank() ? null : trimmed;
     }
 
     private String conciseTitle(String intent) {

@@ -8,7 +8,7 @@
 
 ## 모델과 관계
 
-Decision은 optimistic version을 가진 수정 가능한 aggregate root다. ownerUserId가 소유자를, templateKey/templateVersion이 초기 기준의 출처를 식별한다.
+Decision은 optimistic version을 가진 수정 가능한 aggregate root다. ownerUserId가 소유자를, templateKey/templateVersion이 초기 기준의 출처를 식별한다. 제목은 두 생성 화면에서 선택으로 지정하며, 비워 두면 생성 경로별 자동 제목을 쓴다([API contract](../api-contract.md#결정-생성-제목)).
 
 | 소유 모델·속성 | 의미 |
 |---|---|

@@ -56,7 +56,7 @@
 
 ### BR-DEC-01: Decision은 versioned template의 draft로 시작한다
 
-- **동작:** 새 Decision은 선택한 template의 현재 version을 보존하고 `DRAFT` 상태로 시작한다.
+- **동작:** 새 Decision은 선택한 template의 현재 version을 보존하고 `DRAFT` 상태로 시작한다. 제목은 생성할 때 사용자가 지정할 수 있으며, 비워 두면 생성 경로별 자동 제목을 쓴다([API contract](api-contract.md#결정-생성-제목)). 완료 후 제목 변경은 BR-DEC-02의 정정·재검토를 따른다.
 - **이유:** 나중에 template이 바뀌어도 기존 결정의 출발점을 해석할 수 있어야 한다.
 
 ### BR-DEC-02: 수정은 최신의 수정 가능한 draft에만 적용한다
