@@ -88,8 +88,9 @@ test("condition 5: only regenerable ignored entries are allowed", () => {
     "frontend/node_modules/", "frontend/.next/", "backend/build/", "frontend/out/", "frontend/coverage/",
     "backend/.gradle/", "frontend/test-results/", "frontend/playwright-report/", "frontend/tsconfig.tsbuildinfo",
     "frontend/next-env.d.ts", "scripts/__pycache__/", ".claude/settings.local.json", "frontend/node_modules/x/y.js",
+    ".idea/", "backend/.idea/workspace.xml", "decision-assistant.iml", "backend/backend.iml",
   ]) assert.equal(isRegenerable(path), true, path);
-  for (const path of ["backend/.env", "frontend/.env.local", ".env", "local-notes/", ".idea/", "build", "notes/out.txt"]) {
+  for (const path of ["backend/.env", "frontend/.env.local", ".env", "local-notes/", ".iml/", "build", "notes/out.txt"]) {
     assert.equal(isRegenerable(path), false, path);
   }
   const reason = statusKeepReason({ changes: [], ignored: ["frontend/node_modules/", "backend/.env"] });

@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 export const REPOSITORY = "lawliet62/Decision-Assistant";
 export const AGENT_HELPER = "C:\\Users\\dlwld\\Tools\\github-agent\\agent.ps1";
 export const MANAGED_PARENTS = [".worktrees", ".claude/worktrees"];
-const REGENERABLE_DIRECTORIES = new Set(["node_modules", ".next", "build", "out", "coverage", ".gradle", "test-results", "playwright-report", "__pycache__"]);
+const REGENERABLE_DIRECTORIES = new Set(["node_modules", ".next", "build", "out", "coverage", ".gradle", "test-results", "playwright-report", "__pycache__", ".idea"]);
 
 export function normalizePath(path, caseInsensitive = process.platform === "win32") {
   const normalized = String(path).replace(/\\/g, "/").replace(/\/+/g, "/").replace(/\/$/, "");
@@ -63,7 +63,7 @@ export function isRegenerable(path) {
   const isDirectory = normalized.endsWith("/");
   const segments = normalized.replace(/\/$/, "").split("/");
   const name = segments.at(-1);
-  if (!isDirectory && (name.endsWith(".tsbuildinfo") || name === "next-env.d.ts")) return true;
+  if (!isDirectory && (name.endsWith(".tsbuildinfo") || name.endsWith(".iml") || name === "next-env.d.ts")) return true;
   const directories = isDirectory ? segments : segments.slice(0, -1);
   return directories.some((segment) => REGENERABLE_DIRECTORIES.has(segment));
 }
