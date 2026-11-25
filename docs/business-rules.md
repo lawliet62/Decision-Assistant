@@ -265,7 +265,7 @@
 
 ### BR-PREF-01: 성향 기억은 검토 가능한 projection이다
 
-- **동작:** outcome은 category·criterion·근거 Decision을 가진 `PROPOSED` PreferenceMemory를 만들 수 있다. 원본이 휴지통에 없고 개인화 활용이 켜져 있으며 사용자가 확인한 기억만 같은 category의 다음 Decision 기본 weight에 적용하고 적용 내역을 표시한다. category를 넘는 자동 전이, vector retrieval, 숨은 weight 변경은 하지 않는다.
+- **동작:** outcome은 category·criterion·근거 Decision을 가진 `PROPOSED` PreferenceMemory를 만들 수 있다. 원본이 휴지통에 없고 개인화 활용이 켜져 있으며 사용자가 확인한 기억만 같은 category의 다음 Decision 기본 weight에 적용하고 적용 내역을 표시한다. category를 넘는 자동 전이, vector retrieval, 숨은 weight 변경은 하지 않는다. 결정별 개인화 활용 설정은 홈의 개인화 활용 관리·보관함과 완료한 결정(CHOSEN·DEFERRED·ABANDONED, 보관 여부 무관)의 화면에서 확인하고 바꿀 수 있다. 비교 중인 결정 화면에서는 설정 변경으로 version이 바뀌어 저장하지 않은 입력이 충돌하지 않도록 제공하지 않는다.
 - **이유:** 개인화의 근거와 통제권을 사용자에게 남기면서 실제 outcome을 다음 선택에 재사용한다.
 
 ### BR-MEM-01: 과거 이유의 AI 해석은 현재 조건에 따른 참고 자료다

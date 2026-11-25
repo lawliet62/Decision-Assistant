@@ -57,7 +57,7 @@ CHOSEN의 회고에서 잘 맞은 criterion은 strength 3, 아쉬운 criterion�
 
 새 Decision 생성 시 같은 소유자·templateKey의 CONFIRMED 기억 중 criterionName이 일치하는 기준의 기본 weight에 strength를 1-3으로 제한해 적용한다. 적용 내역을 표시하며 이미 만들어진 다른 결정의 값을 자동 갱신하지 않는다.
 
-적용에는 원본이 휴지통에 없고 personalizationEnabled가 켜져 있으며 정정 중이 아니고 기억이 superseded되지 않았다는 조건이 추가된다. 보관은 활용을 막지 않는다. 정정 완료는 원본 Resolution 및 연결 불명 과거 회고에서 나온 기억을 활용·재확인 대상에서 제외하며 삭제하지는 않는다. 재검토는 과거 유효한 기억을 무효화하지 않는다.
+적용에는 원본이 휴지통에 없고 personalizationEnabled가 켜져 있으며 정정 중이 아니고 기억이 superseded되지 않았다는 조건이 추가된다. 보관은 활용을 막지 않는다. personalizationEnabled는 홈의 개인화 활용 관리·보관함과 완료한 결정 화면에서 바꿀 수 있고 비교 중인 결정 화면에서는 제공하지 않는다([BR-PREF-01](../business-rules.md#br-pref-01-성향-기억은-검토-가능한-projection이다)). 정정 완료는 원본 Resolution 및 연결 불명 과거 회고에서 나온 기억을 활용·재확인 대상에서 제외하며 삭제하지는 않는다. 재검토는 과거 유효한 기억을 무효화하지 않는다.
 
 원본 삭제 시 기억을 조회·활용에서 제외하고 복구하면 기존 기억을 다시 사용할 수 있다. 유예 만료 후 원본의 모든 상태 기억도 연쇄 삭제한다. 다른 결정에 이미 복사된 기본값은 유지한다.
 
@@ -65,4 +65,4 @@ CHOSEN의 회고에서 잘 맞은 criterion은 strength 3, 아쉬운 criterion�
 
 - 규칙: [BR-REASON-01, BR-DEC-05-06, BR-PREF-01, BR-DELETE-01](../business-rules.md), [ADR 0006](../decisions/0006-guided-evidence-and-inspectable-memory.md), [ADR 0020](../decisions/0020-decision-retention-and-personalization.md), [ADR 0021](../decisions/0021-decision-completion-and-revisions.md), [ADR 0022](../decisions/0022-decision-reasons-and-reusable-history.md).
 - 구현: [OutcomeCheckIn](../../backend/src/main/java/com/decisionassistant/decision/OutcomeCheckIn.java), [OutcomeReminder](../../backend/src/main/java/com/decisionassistant/notification/OutcomeReminder.java), [OutcomeReminderWorker](../../backend/src/main/java/com/decisionassistant/notification/OutcomeReminderWorker.java), [PreferenceService](../../backend/src/main/java/com/decisionassistant/preference/PreferenceService.java), [PreferenceMemoryRepository](../../backend/src/main/java/com/decisionassistant/preference/PreferenceMemoryRepository.java).
-- 검증: `DecisionApiIntegrationTest`의 회고·성향·정정·삭제·알림 경합 사례, `frontend/e2e/decision-revisions.spec.ts`, `frontend/e2e/decision-list.spec.ts`.
+- 검증: `DecisionApiIntegrationTest`의 회고·성향·정정·삭제·알림 경합 사례, `frontend/e2e/decision-revisions.spec.ts`, `frontend/e2e/decision-list.spec.ts`, `frontend/e2e/decision-personalization.spec.ts`.

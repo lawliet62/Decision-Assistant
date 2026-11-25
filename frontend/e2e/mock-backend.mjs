@@ -52,7 +52,7 @@ function create(body) {
       processingStatus: body.intentText.includes("slow") ? "IMPORTING" : "NEEDS_INPUT", readiness: "PROVISIONAL",
       summary: "비교할 제품의 정보와 출처를 확인하세요.", questions: structuredClone(questions),
       evidence: [], candidateSuggestions: [], appliedPreferences: [], reminders: [] },
-    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), personalizationEnabled: true };
 }
 function createDiscovery(body) {
   const catalog = body.discovery.templateVersion === "intake-catalog-v1";
@@ -132,6 +132,13 @@ const server = http.createServer(async (request, response) => {
     const rows = (listFixture ?? []).filter(d => view === "TRASH" ? d.deletedAt : !d.deletedAt && (view === "ARCHIVE" ? d.archivedAt : !d.archivedAt));
     const page = Number(url.searchParams.get("page") ?? 0);
     return send(200, { items: rows.slice(page * 10, page * 10 + 10).map(d => ({ ...d, personalizationEnabled: d.personalizationEnabled ?? true, recoverable: !!d.deletedAt, recoverableUntil: d.deletedAt ? new Date(Date.parse(d.deletedAt) + 30 * 86400000).toISOString() : null })), page, hasNext: rows.length > page * 10 + 10 });
+  }
+  // 결정 상세 화면의 개인화 활용 변경. 응답은 실제 API처럼 RetentionItem 형태다.
+  if (request.method === "PATCH" && current && !listFixture && url.pathname === `/api/v1/decisions/${decisionId}/retention`) {
+    if (current.version !== body.expectedVersion) return send(409, { detail: "결정이 변경되었습니다. 목록을 새로고침하세요." });
+    if (!["PERSONALIZATION_ON", "PERSONALIZATION_OFF"].includes(body.action)) return send(400, { detail: "Unsupported in mock" });
+    current.personalizationEnabled = body.action === "PERSONALIZATION_ON"; current.version++;
+    return send(200, { id: current.id, version: current.version, title: current.title, status: current.status, recoverable: false, personalizationEnabled: current.personalizationEnabled });
   }
   if (request.method === "PATCH" && url.pathname.endsWith("/retention")) {
     const row = listFixture?.find(d => url.pathname === `/api/v1/decisions/${d.id}/retention`);

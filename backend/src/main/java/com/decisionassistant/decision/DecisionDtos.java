@@ -88,7 +88,8 @@ public final class DecisionDtos {
             DecisionTypes.DecisionResult result,
             DecisionTypes.EditMode editMode,
             UUID currentResolutionId,
-            UUID revisionBaseId
+            UUID revisionBaseId,
+            boolean personalizationEnabled
     ) {
     }
 

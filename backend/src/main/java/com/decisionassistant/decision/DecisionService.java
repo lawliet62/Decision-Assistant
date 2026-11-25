@@ -818,7 +818,8 @@ public class DecisionService {
                 DecisionTypes.phase(decision.status()), DecisionTypes.result(decision.status()), decision.editMode(),
                 decision.currentResolutionId() != null ? decision.currentResolutionId() :
                         (DecisionTypes.phase(decision.status()) == DecisionTypes.DecisionPhase.COMPLETED && currentResolution(decision) != null
-                                ? currentResolution(decision).id() : null), decision.revisionBaseId());
+                                ? currentResolution(decision).id() : null), decision.revisionBaseId(),
+                decision.personalizationEnabled());
     }
 
     private List<DiscoveryContracts.RequirementCheck> requirementChecks(Decision decision, java.util.Map<String, String> selected,
