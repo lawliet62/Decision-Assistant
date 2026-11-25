@@ -38,6 +38,7 @@ function resetPages(params: URLSearchParams) { statuses.forEach(s => params.dele
 
 export function DecisionList() {
   const [revision, setRevision] = useState(0);
+  const [retentionRevision, setRetentionRevision] = useState(0);
   const [notice, setNotice] = useState("");
   const refreshButton = useRef<HTMLButtonElement>(null);
   return <section aria-labelledby="decision-list-title" className="decision-workspace space-y-4">
@@ -45,13 +46,13 @@ export function DecisionList() {
       <button ref={refreshButton} className={button} onClick={() => setRevision(v => v + 1)}>목록 새로고침</button></div>
     <p className="text-sm text-zinc-600">상태를 선택하고 그룹을 펼쳐 저장한 결정을 확인하세요.</p>
     <RecoveryNotice />
-    <RetentionPanel onChanged={() => setRevision(v => v + 1)} />
+    <RetentionPanel refresh={retentionRevision} onChanged={() => setRevision(v => v + 1)} />
     <p role="status" className="text-sm text-emerald-800">{notice}</p>
-    <LoadedList key={revision} onRefresh={() => { setRevision(v => v + 1); refreshButton.current?.focus(); }} onDeleted={() => { setNotice("휴지통으로 이동했습니다. 30일 동안 복구할 수 있습니다."); refreshButton.current?.focus(); }} />
+    <LoadedList key={revision} onRefresh={() => { setRevision(v => v + 1); refreshButton.current?.focus(); }} onDeleted={() => { setNotice("휴지통으로 이동했습니다. 30일 동안 복구할 수 있습니다."); refreshButton.current?.focus(); }} onArchived={() => setRetentionRevision(v => v + 1)} />
   </section>;
 }
 
-function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted: () => void }) {
+function LoadedList({ onRefresh, onDeleted, onArchived }: { onRefresh: () => void; onDeleted: () => void; onArchived: () => void }) {
   const query = useSyncExternalStore(subscribeQuery, querySnapshot, serverQuerySnapshot);
   const params = new URLSearchParams(query);
   const [counts, setCounts] = useState<Count[]>();
@@ -73,7 +74,12 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
     }).catch(() => { if (!controller.signal.aborted) setError(true); });
     return () => controller.abort();
   }, [revision]);
-  const selected = params.has("statuses") ? statuses.filter(s => params.get("statuses")!.split(",").map(value => (value === "ABANDONED" || value === "DEFERRED") ? "CHOSEN" : value).includes(s)) : statuses;
+  // 기존 호환 ARCHIVED 상태는 해당 결정이 있을 때만 그룹·필터 선택지로 표시한다. 보관함(archivedAt)과 별개다.
+  // counts를 받기 전(로딩)과 실패 시에는 그룹을 그리지 않으므로 빈 그룹이 잠시 보이거나 실패로 숨겨지지 않는다.
+  const shown = statuses.filter(s => s !== "ARCHIVED" || (counts?.find(item => item.status === s)?.count ?? 0) > 0);
+  // URL이 지정한 상태는 결과 없음 안내에 사용하고, 화면의 선택·그룹·일괄 선택은 표시하는 상태로 제한한다.
+  const requested = params.has("statuses") ? statuses.filter(s => params.get("statuses")!.split(",").map(value => (value === "ABANDONED" || value === "DEFERRED") ? "CHOSEN" : value).includes(s)) : shown;
+  const selected = requested.filter(s => shown.includes(s));
   const opened = (params.get("open") ?? "").split(",").map(s => (s === "ABANDONED" || s === "DEFERRED") ? "CHOSEN" : s);
   const rawSort = params.get("sort");
   const sort: Sort = rawSort && Object.hasOwn(sorts, rawSort) ? rawSort as Sort : "UPDATED_AT";
@@ -124,10 +130,10 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
   return <>
     <fieldset className="rounded-xl border border-zinc-200 p-4">
       <legend className="px-1 text-sm font-semibold">표시할 상태 (복수 선택)</legend>
-      <div className="flex flex-wrap gap-x-5 gap-y-3">{statuses.map(s => <label key={s} className="flex items-center gap-2 text-sm">
+      <div className="flex flex-wrap gap-x-5 gap-y-3">{shown.map(s => <label key={s} className="flex items-center gap-2 text-sm">
         <input type="checkbox" disabled={selecting} checked={selected.includes(s)} onChange={e => select(e.target.checked ? [...selected, s] : selected.filter(item => item !== s))} />{labels[s]}
       </label>)}</div>
-      <div className="mt-4 flex gap-2"><button className={button} disabled={selecting} onClick={() => select(statuses)}>전체 선택</button><button className={button} disabled={selecting} onClick={() => select([])}>전체 해제</button></div>
+      <div className="mt-4 flex gap-2"><button className={button} disabled={selecting} onClick={() => select(shown)}>전체 선택</button><button className={button} disabled={selecting} onClick={() => select([])}>전체 해제</button></div>
     </fieldset>
     <div className="flex flex-wrap items-center gap-2" aria-label="결정 선택">
       <button className={pressedButton} aria-pressed={scopeIsSelected(selected)} aria-disabled={selecting} disabled={selected.length === 0} onClick={() => selectAll(selected)}>선택한 상태 결정 모두 선택</button>
@@ -146,8 +152,8 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
       </select></label><span className="text-sm text-zinc-500">그룹별 10개씩 표시</span>
     </div>
     {counts.every(item => !item.count) && <p className="rounded-xl border border-dashed p-6 text-zinc-600">아직 저장한 결정이 없습니다. 새 비교를 시작해 보세요.</p>}
-    {selected.length === 0 && <p className="rounded-xl border border-dashed p-6">선택한 상태가 없습니다. 표시할 상태를 선택하세요.</p>}
-    {selected.length > 0 && counts.some(item => (item.count ?? 0) > 0) && !counts.some(item => item.status && selected.includes(item.status) && (item.count ?? 0) > 0) && <p>선택한 상태의 결정이 없습니다.</p>}
+    {requested.length === 0 && <p className="rounded-xl border border-dashed p-6">선택한 상태가 없습니다. 표시할 상태를 선택하세요.</p>}
+    {requested.length > 0 && counts.some(item => (item.count ?? 0) > 0) && !counts.some(item => item.status && requested.includes(item.status) && (item.count ?? 0) > 0) && <p>선택한 상태의 결정이 없습니다.</p>}
     {statuses.filter(s => selected.includes(s)).map(s => {
       const open = opened.includes(s);
       const pageParam = Number(params.get(`page.${s}`) ?? 0);
@@ -156,7 +162,7 @@ function LoadedList({ onRefresh, onDeleted }: { onRefresh: () => void; onDeleted
         <h3><button aria-expanded={open} aria-controls={`group-${s}`} className="flex w-full items-center justify-between gap-4 p-4 text-left font-semibold hover:bg-zinc-50" onClick={() => changeQuery(p => p.set("open", (open ? opened.filter(item => item !== s) : [...opened.filter(Boolean), s]).join(",")))}>
           <span>{labels[s]} <span className="ml-2 text-sm font-normal text-zinc-500">{counts.find(item => item.status === s)?.count ?? 0}건</span></span><span aria-hidden="true">{open ? "−" : "+"}</span>
         </button></h3>
-        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}-${revision}`} onChanged={() => { setChosen({}); setRevision(v => v + 1); }} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} chosen={chosen} onToggle={toggle} updateVisible={updateVisible} selecting={selecting} onSelectItems={selectItems} onUnselectItems={unselectItems} onSelectStatus={() => selectAll([s], s)} statusSelected={!!scopeIsSelected([s])} allSelected={!!scopeIsSelected(selected)} onSelectAll={() => selectAll(selected, s)} onClear={() => setChosen({})} onBulkDelete={() => setBulkOpen(true)} selectionError={errorStatus === s ? selectionError : ""} />}</div>
+        <div id={`group-${s}`} hidden={!open}>{open && <DecisionGroup key={`${s}-${page}-${sort}-${direction}-${revision}`} onChanged={() => { setChosen({}); setRevision(v => v + 1); onArchived(); }} status={s} page={page} sort={sort} direction={direction} onDelete={setDeleting} chosen={chosen} onToggle={toggle} updateVisible={updateVisible} selecting={selecting} onSelectItems={selectItems} onUnselectItems={unselectItems} onSelectStatus={() => selectAll([s], s)} statusSelected={!!scopeIsSelected([s])} allSelected={!!scopeIsSelected(selected)} onSelectAll={() => selectAll(selected, s)} onClear={() => setChosen({})} onBulkDelete={() => setBulkOpen(true)} selectionError={errorStatus === s ? selectionError : ""} />}</div>
       </section>;
     })}
     {deleting && <DeleteDialog decision={deleting} onCancel={() => setDeleting(undefined)} onDeleted={() => { if (deleting.id) setChosen(previous => { const next = { ...previous }; delete next[deleting.id!]; return next; }); setDeleting(undefined); setRevision(v => v + 1); onDeleted(); }} onRefresh={onRefresh} />}

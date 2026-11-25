@@ -36,7 +36,8 @@ export function ArchiveButton({ id, version, onChanged }: { id: string; version:
   return <span><button className={button} disabled={busy} onClick={archive}>보관하기</button>{error && <span role="alert">{error}</span>}</span>;
 }
 
-export function RetentionPanel({ onChanged }: { onChanged: () => void }) {
+// refresh: 목록에서 보관하는 등 패널 밖에서 바뀐 경우 열려 있는 관리 목록을 다시 불러온다.
+export function RetentionPanel({ refresh, onChanged }: { refresh: number; onChanged: () => void }) {
   const [view, setView] = useState<"ACTIVE" | "ARCHIVE" | "TRASH">();
   const [page, setPage] = useState(0);
   const [revision, setRevision] = useState(0);
@@ -51,7 +52,7 @@ export function RetentionPanel({ onChanged }: { onChanged: () => void }) {
       .then(({ data }) => { if (!controller.signal.aborted) { setData(data); setError(data ? "" : "목록을 불러오지 못했습니다."); } })
       .catch(() => { if (!controller.signal.aborted) setError("연결을 확인하고 다시 시도하세요."); });
     return () => controller.abort();
-  }, [view, page, revision]);
+  }, [view, page, revision, refresh]);
   async function change(item: Item, action: Action | "DELETE") {
     if (!item.id || item.version === undefined) return;
     if (action === "DELETE" && !window.confirm("휴지통으로 이동하고 개인화 활용을 중단합니다. 30일 동안 복구할 수 있으며 이후 연결 기록·성향 기억과 함께 영구 삭제됩니다.")) return;
