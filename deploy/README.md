@@ -77,6 +77,7 @@ python3 deploy/release.py verify "$bundle" "$runtime" --running
 5. `backup.conf`에 `BACKUP_BUCKET`, `DEPLOY_ENV_FILE`을 설정하고 service/timer를 설치한다. 백업은 매일 UTC 03시, 실패/24시간 이상 미생성은 경보 대상이다. 일일 백업의 RPO는 최대 24시간이며 RTO는 실제 복원 시험 전에는 약속하지 않는다.
 6. 앱 로그를 VM 밖의 제한된 Cloud Logging bucket에 보존하고 retention 14일을 설정한다. 요청 본문·쿠키·토큰·사용자 메모는 수집하지 않는다. 삭제 audit에는 UUID·시각만 남긴다. Docker 로컬 로그는 디스크 보호를 위한 30MB rotation이고 **14일 보존의 대체물이 아니다**. 외부 수집과 TTL이 검증되기 전에는 운영 준비 완료로 표시하지 않는다.
 7. 실제 배포 시 인증/초대 거부/CSRF/다른 계정 격리, HTTPS cookie, 외부 기능 비활성화, 목록·삭제·재로그인을 확인한다. health 응답만으로 성공 처리하지 않는다.
+8. 초대 거부 뒤 다시 로그인하면 backend가 `prompt=login`을 보내 Auth0 로그인 화면이 다시 나오고 다른 계정으로 로그인할 수 있는지 운영 tenant에서 확인한다. 이 동작은 아직 운영 tenant에서 검증하지 않았다. Auth0 화면에서 Google을 고를 때 Google 계정 선택 화면까지 보장하려면 tenant의 Google connection이 `prompt=select_account`를 upstream으로 전달해야 한다([Auth0 Pass Parameters to Identity Providers](https://auth0.com/docs/authenticate/identity-providers/pass-parameters-to-idps)의 `options.upstream_params`). 이 tenant 설정은 저장소가 관리하지 않으며 적용 여부와 효과를 검증하지 않았다.
 
 ## 백업·복원과 삭제 재적용
 

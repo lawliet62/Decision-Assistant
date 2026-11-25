@@ -7,8 +7,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
 import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInitiatedLogoutSuccessHandler;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
@@ -26,18 +24,19 @@ public class SecurityConfiguration {
                                             ClientRegistrationRepository registrations,
                                             OidcApplicationUserService oidcUsers,
                                             AuthProperties properties) throws Exception {
-        var authorizationResolver = new DefaultOAuth2AuthorizationRequestResolver(
+        var authorizationResolver = LoginRetryReauthentication.authorizationRequestResolver(
                 registrations, "/oauth2/authorization");
-        authorizationResolver.setAuthorizationRequestCustomizer(OAuth2AuthorizationRequestCustomizers.withPkce());
 
         var logoutSuccessHandler = new OidcClientInitiatedLogoutSuccessHandler(registrations);
         logoutSuccessHandler.setPostLogoutRedirectUri(properties.publicBaseUrl() + "/login");
 
-        var failureHandler = new SimpleUrlAuthenticationFailureHandler(
-                properties.publicBaseUrl() + "/login?error=access_denied");
+        var failureHandler = LoginRetryReauthentication.requireOnFailure(new SimpleUrlAuthenticationFailureHandler(
+                properties.publicBaseUrl() + "/login?error=access_denied"));
 
         configureCsrf(http, true);
         http
+                .sessionManagement(session -> session
+                        .addSessionAuthenticationStrategy(LoginRetryReauthentication.clearOnSuccess()))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/actuator/health", "/actuator/info", "/oauth2/**", "/login/**", "/error")
                         .permitAll()
