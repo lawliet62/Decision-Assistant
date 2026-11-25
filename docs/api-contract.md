@@ -24,6 +24,8 @@
 
 `GET /api/v1/decisions/management?view=ACTIVE|ARCHIVE|TRASH&page=N`은 소유자별 관리 목록을 10개씩 `items/page/hasNext`로 반환한다. 항목에는 진행 상태·보관/삭제 시각·복구 기한·서버 기준 복구 가능 여부·개인화 활용 설정을 포함한다. `PATCH /api/v1/decisions/{id}/retention`은 `{expectedVersion, action}`을 받으며 action은 `ARCHIVE/UNARCHIVE/RESTORE/PERSONALIZATION_ON/PERSONALIZATION_OFF`다. 보관은 CHOSEN·ABANDONED만 허용한다. 복구 기한 경과·stale version은 409, 허용되지 않은 상태의 보관은 422다. 모든 변경에 소유권·CSRF를 검증한다.
 
+`DecisionResponse.personalizationEnabled`는 해당 결정의 개인화 활용 설정이다(기본값 true). 결정 완료 화면은 이 값을 표시하고 같은 `PATCH /api/v1/decisions/{id}/retention`으로 변경한다. 이 PATCH의 응답은 `RetentionItem`이므로 화면은 변경 후 결정 상세를 다시 조회해 증가한 version으로 후속 요청을 보낸다.
+
 `GET /api/v1/decisions/recovery-notice`는 운영자가 지정한 복원 기준 시각 `restoredTo` 또는 null을 반환한다.
 
 Backend controller와 DTO annotation이 code-first source다. 실행된 integration test가 `/api/openapi` 결과를 `backend/build/generated/openapi.json`에 저장하며, review 가능한 계약은 `docs/api/openapi.json`에 commit한다.

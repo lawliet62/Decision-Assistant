@@ -364,6 +364,26 @@ class DecisionApiIntegrationTest {
         changeRetention(owner, id, 6, "RESTORE", 409);
     }
 
+    @Test
+    void decisionDetailExposesPersonalizationSettingAndItsVersion() throws Exception {
+        var owner = createOtherUser();
+        var id = seedDecision(owner, "완료 기록", "CHOSEN", "EARBUDS");
+        // 기본값은 활용 허용이다.
+        mvc.perform(get("/api/v1/decisions/{id}", id).with(signedIn(owner)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.personalizationEnabled").value(true))
+                .andExpect(jsonPath("$.version").value(0));
+        changeRetention(owner, id, 0, "PERSONALIZATION_OFF", 200);
+        // 변경 결과와 증가한 version을 상세 응답으로 다시 읽어 후속 요청에 사용할 수 있다.
+        mvc.perform(get("/api/v1/decisions/{id}", id).with(signedIn(owner)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.personalizationEnabled").value(false))
+                .andExpect(jsonPath("$.version").value(1));
+        changeRetention(owner, id, 0, "PERSONALIZATION_ON", 409);
+        mvc.perform(get("/api/v1/decisions/{id}", id).with(signedIn(createOtherUser()))).andExpect(status().isNotFound());
+        changeRetention(owner, id, 1, "PERSONALIZATION_ON", 200);
+        mvc.perform(get("/api/v1/decisions/{id}", id).with(signedIn(owner)))
+                .andExpect(jsonPath("$.personalizationEnabled").value(true)).andExpect(jsonPath("$.version").value(2));
+    }
+
     private void assertPersonalizationCount(AppUserPrincipal owner, int expected) {
         org.assertj.core.api.Assertions.assertThat(preferenceMemories.findByOwnerUserIdAndStatusAndTemplateKey(
                 owner.userId(), com.decisionassistant.preference.PreferenceMemory.Status.CONFIRMED,
