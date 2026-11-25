@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/shared/api/client";
 import type { AiCapabilitiesResponse, DecisionResponse } from "@/shared/api/types";
@@ -9,6 +9,8 @@ import { ProductPicker, problemMessage, type SelectedSource, type LookupCapabili
 export function DecisionCreateForm() {
   const router = useRouter();
   const [intentText, setIntentText] = useState("");
+  const [title, setTitle] = useState("");
+  const titleHint = useId();
   const [sources, setSources] = useState<SelectedSource[]>([]);
   const [templateKey, setTemplateKey] = useState<DecisionResponse["templateKey"]>("EARBUDS");
   const [aiConsent, setAiConsent] = useState(false);
@@ -37,7 +39,7 @@ export function DecisionCreateForm() {
     inFlight.current = true; setPending(true); setError(undefined);
     try {
       const { data, error } = await api.POST("/api/v1/decisions", { body: {
-        intentText, selectedSources: sources, templateKey,
+        intentText, title: title.trim() || undefined, selectedSources: sources, templateKey,
         aiConsent: aiConsent && Boolean(ai?.enabled), webConsent: webConsent && Boolean(web?.importEnabled),
         sensitiveDataAcknowledged: aiConsent && acknowledged,
       } });
@@ -51,6 +53,8 @@ export function DecisionCreateForm() {
     <fieldset disabled={pending} className="space-y-5">
       <legend className="mb-3 text-lg font-semibold">1. 비교할 상황</legend>
       <label className="block text-sm font-medium">어떤 상황에서 무엇을 고르고 있나요?<textarea required maxLength={4000} value={intentText} onChange={(e) => setIntentText(e.target.value)} placeholder="예: 출퇴근에 쓸 무선 이어폰을 비교하고 있어요. 오래 착용해도 편했으면 해요." className="mt-2 min-h-24 w-full rounded-xl border border-zinc-300 px-4 py-3" /></label>
+      <div><label className="block text-sm font-medium">비교 제목 (선택)<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} aria-describedby={titleHint} placeholder="예: 출퇴근 이어폰 고르기" className="mt-2 w-full rounded-xl border border-zinc-300 px-4 py-3" /></label>
+        <p id={titleHint} className="mt-1 text-xs text-zinc-500">비워 두면 상황 설명 앞부분으로 제목을 자동으로 만듭니다. 최대 200자입니다.</p></div>
       <label className="block text-sm font-medium">제품 범주<select value={templateKey} onChange={(e) => setTemplateKey(e.target.value as typeof templateKey)} className="mt-2 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3">
         <option value="EARBUDS">완전 무선 이어폰</option><option value="LAPTOP">노트북</option><option value="PHONE">휴대폰</option><option value="TABLET">태블릿</option><option value="MONITOR">모니터</option>
       </select></label>

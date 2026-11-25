@@ -189,6 +189,8 @@ const server = http.createServer(async (request, response) => {
     listFixture = undefined;
     current = body.discovery ? createDiscovery(body) : create(body);
     if (body.title === "조건 비교 브라우저 검증 (가상제품)") comparisonFixture(current);
+    // 생성 시 지정한 제목은 실제 API처럼 앞뒤 U+0020 이하 문자를 제거하고, 비면 자동 제목을 둔다. 위 고정 사례 제목은 기존 화면 기대값을 위해 반영하지 않는다.
+    else if (typeof body.title === "string" && body.title.replace(/^[\x00-\x20]+|[\x00-\x20]+$/g, "").trim()) current.title = body.title.replace(/^[\x00-\x20]+|[\x00-\x20]+$/g, "");
     discoveryHistoryCandidates = current.guidance.candidateSuggestions; pendingCandidates = undefined;
     if (body.legacyFixture) { current.title = body.title; delete current.guidance; }
     if (body.webConsent) current.guidance.evidence = current.options.map(item => ({
