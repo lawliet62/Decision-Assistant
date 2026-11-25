@@ -58,7 +58,7 @@ branch, commit, push, Pull Request, CI 대응의 상세 절차는 [Development w
 - API 변경 시 backend OpenAPI, `docs/api/openapi.json`, generated frontend types를 함께 갱신한다.
 - schema 변경은 기존 Flyway migration을 수정하지 않고 새 migration으로 추가한다.
 - LLM output과 deterministic result를 하나의 임의 점수로 합치지 않는다.
-- 사용자 경로의 외부 URL 수집(사용자가 제공·승인한 URL, 클릭 추천의 검색 결과 URL)은 명시적 동의와 공개 HTTP(S) 검증을 거친 provider adapter로만 수행한다([BR-EVD-01](docs/business-rules.md#br-evd-01-사용자-동의로-공개-url만-통제해-수집한다)). 직접 확인의 출처 URL처럼 참조용으로 받은 URL은 가져오지 않는다. 운영자 카탈로그의 고정 URL 갱신은 [ADR 0016](docs/decisions/0016-curated-catalog.md)의 별도 경계를 따른다.
+- 사용자 경로의 외부 URL 수집(사용자가 제공·승인한 URL, 클릭 추천의 검색 결과 URL)은 명시적 동의와 공개 HTTP(S) 검증을 거친 provider adapter로만 수행한다([BR-EVD-01](docs/business-rules.md#br-evd-01-사용자-동의로-공개-url만-통제해-수집한다)). 직접 확인의 출처 URL처럼 참조용으로 받은 URL은 가져오지 않는다. 운영자 카탈로그의 갱신·조사는 [ADR 0016](docs/decisions/0016-curated-catalog.md)의 별도 경계를 따른다.
 - 도메인 동작을 변경할 때는 `docs/business-rules.md`의 영향 규칙을 확인하고, 규칙과 관련 검증을 함께 갱신한다.
 - architecture/workflow 규칙을 바꿀 때는 이유와 영향 범위를 제시하고 검토 가능한 문서 또는 ADR로 남긴다.
 
