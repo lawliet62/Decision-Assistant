@@ -1,6 +1,6 @@
 {
-  "capturedAt": "2026-11-17T13:17:46.268Z",
-  "applicationCommit": "1c86ff57df1b9e96a85f1862789693685a0167f9",
+  "capturedAt": "2026-11-25T18:52:10.627Z",
+  "applicationCommit": "295ea507271e61d6722afd59d7b4904507b2d0c9",
   "data": "기존 E2E mock backend의 가상 데이터. 이유 템플릿은 backend 소스에서 읽고 성향·알림 설정·원문 조회·AI 입력/결과/실패는 촬영용 응답. 실제 AI 호출 없음.",
   "command": "npm.cmd --prefix frontend run test:e2e -- --config playwright.docs.config.ts",
   "browser": "chromium",

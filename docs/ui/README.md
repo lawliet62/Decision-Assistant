@@ -6,7 +6,7 @@
 
 ## 촬영 기준과 한계
 
-- 촬영일: 2026-11-17. PR #75가 병합된 애플리케이션을 기준으로 한다. 정확한 commit·실행 시각·경로·상태·viewport는 [capture-manifest.json](capture-manifest.json)이 원본이다.
+- 촬영일: 2026-11-26. PR #97이 병합된 애플리케이션을 기준으로 한다. 정확한 commit·실행 시각·경로·상태·viewport는 [capture-manifest.json](capture-manifest.json)이 원본이다.
 - 환경: 현재 worktree의 Next.js 개발 서버 + 기존 Playwright mock backend + Chromium, ko-KR, Asia/Seoul.
 - 데이터: 가상 Alpha/Beta 등의 E2E fixture다. 이유 목록은 현재 backend의 DecisionReasons 소스에서 읽어 전체 템플릿을 표시하며, 성향·email 설정·과거 원문 기록 조회와 AI 입력·결과·실패는 촬영용 응답이다. 실제 AI provider 호출·외부 전송은 없다. 실제 사용자·개발 DB·외부 provider·상품 이미지를 사용하지 않는다.
 - 목록 화면의 제품군 navigation은 서버 측 기존 mock capabilities에 따라 5개 제품군을 표시한다. 실제 기본 카탈로그의 추천 범위는 이어폰이며 이 모음이 다른 제품군 카탈로그 지원을 뜻하지 않는다.
@@ -168,7 +168,7 @@
 
 ## 9. 완료에서 필수 흐름 종료
 
-진입: `/decisions/{id} · 완료`. 제품 선택 완료와 구매를 분리한다. 구매 미기록은 미구매의 증거가 아니며 구매·회고는 선택 사항이다. 새 자동 회고 알림을 만들지 않는다.
+진입: `/decisions/{id} · 완료`. 제품 선택 완료와 구매를 분리한다. 구매 미기록은 미구매의 증거가 아니며 구매·회고는 선택 사항이다. 새 자동 회고 알림을 만들지 않는다. 완료한 결정의 개인화 활용 상태를 이 화면에서 확인하고 켜거나 끌 수 있다.
 
 ![완료에서 필수 흐름 종료 데스크톱](screenshots/completion/15-completed-desktop.png)
 
