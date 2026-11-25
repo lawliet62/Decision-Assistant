@@ -160,6 +160,8 @@ const server = http.createServer(async (request, response) => {
     listRow.version++;
     return send(204);
   }
+  // 비로그인 상태는 브라우저 컨텍스트에 넣은 test 전용 cookie로만 재현한다. 다른 spec의 기본 로그인 상태에 영향을 주지 않는다.
+  if (request.url === "/api/v1/me" && /(?:^|;\s*)mock-auth=anonymous(?:;|$)/.test(request.headers.cookie ?? "")) return send(401, {});
   if (request.url === "/api/v1/me") return send(200, { id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", email: "user@example.com" }, { "set-cookie": "XSRF-TOKEN=test-token; Path=/; SameSite=Lax" });
   if (request.url === "/api/v1/intake-templates") return send(200, templates);
   if (request.url === "/api/v1/product-lookups/capabilities") return send(200, {
