@@ -12,7 +12,7 @@ const gradle = isWindows ? "backend\\gradlew.bat" : "./backend/gradlew";
 const npm = isWindows ? "npm.cmd" : "npm";
 
 const commands = [
-  [process.execPath, ["--test", "scripts/backend-env.test.mjs", "scripts/restack/restack.test.mjs", "scripts/discovery-evaluation/summarize.test.mjs", "scripts/discovery-evaluation/plan.test.mjs", "scripts/catalog/report.test.mjs", "scripts/catalog/check-sources.test.mjs", "scripts/worktree-guard.test.mjs"]],
+  [process.execPath, ["--test", "scripts/backend-env.test.mjs", "scripts/restack/restack.test.mjs", "scripts/discovery-evaluation/summarize.test.mjs", "scripts/discovery-evaluation/plan.test.mjs", "scripts/catalog/report.test.mjs", "scripts/catalog/check-sources.test.mjs", "scripts/worktree-guard.test.mjs", "scripts/cleanup-merged-worktrees.test.mjs"]],
   [process.execPath, ["--test", "scripts/catalog/sony-facts.test.mjs"]],
   [process.execPath, ["--test", "scripts/gradle-wrapper.test.mjs"]],
   [gradle, ["-p", "backend", "test"]],
