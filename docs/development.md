@@ -113,9 +113,17 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 
 ## Git workflow details
 
-### Codex worktree 점유
+### Worktree 격리
 
-탐색·검증·개발 명령은 task의 worktree에서 실행한다. 커밋된 다른 branch의 내용은 이 worktree에서 `git show <ref>:<path>`로 확인한다. 원본 checkout에만 있는 파일이 필요하면 작업 디렉터리를 옮기지 않고 `Get-Content -LiteralPath <절대경로>` 등으로 필요한 범위만 읽는다. 점유 보호는 다른 worktree의 변경·개발 실행 충돌을 방지하기 위한 것이며, 필요한 파일 읽기를 금지하는 정책이 아니다. 읽는 도중 다른 세션이 파일을 바꿀 수 있으므로 검증 근거는 가능하면 고정된 commit을 사용한다. 원본의 의존성·설정·실행 결과를 현재 worktree의 검증 결과로 간주하지 않는다.
+탐색·검증·개발 명령은 task의 worktree에서 실행한다. 커밋된 다른 branch의 내용은 이 worktree에서 `git show <ref>:<path>`로 확인한다. 원본 checkout에만 있는 파일이 필요하면 작업 디렉터리를 옮기지 않고 `Get-Content -LiteralPath <절대경로>` 등으로 필요한 범위만 읽는다. 격리는 다른 worktree의 변경·개발 실행 충돌을 방지하기 위한 것이며, 필요한 파일 읽기를 금지하는 정책이 아니다. 읽는 도중 다른 세션이 파일을 바꿀 수 있으므로 검증 근거는 가능하면 고정된 commit을 사용한다. 원본의 의존성·설정·실행 결과를 현재 worktree의 검증 결과로 간주하지 않는다. 독립 세션은 worktree를 독점하고, 하위 agent는 부모의 worktree를 공유하므로 부모가 작업 충돌을 조정한다. Windows에서 worktree의 명령이 실패하면 [Windows worktree 명령 진단](troubleshooting/windows-worktree-permissions.md)으로 프로세스 시작 실패, Git 소유권, 파일 접근 실패를 구분한다.
+
+#### Claude Code
+
+`claude --worktree <작업명>`으로 세션을 시작한다. worktree는 `.claude/worktrees/<작업명>/`에, branch는 fetch한 origin 기본 branch를 기준으로 `worktree-<작업명>`이라는 이름으로 만들어진다. 첫 push 전에 `git branch -m <type>/<short-kebab-description>`으로 이름을 바꾼다. 새 worktree에는 `frontend/node_modules`와 `backend/.env`가 없으므로 필요한 의존성은 그 worktree에서 설치한다.
+
+세션 간 점유를 강제하는 Hook은 두지 않는다. worktree 하나에 리드 세션 하나만 둔다는 규칙과 `--worktree` 시작으로 격리하며, subagent는 리드의 worktree를 공유한다. 리드·subagent 운영과 리뷰 사이클은 루트 `CLAUDE.md`가, 결정의 배경은 [ADR 0024](decisions/0024-claude-code-harness.md)가 다룬다. 지침 파일이 기대대로 로드되지 않으면 [Claude Code 지침 로드 진단](troubleshooting/claude-code-instruction-loading.md)을 따른다.
+
+#### Codex CLI worktree guard
 
 현재 Hook은 호출의 작업 디렉터리를 기준으로 점유를 확인하므로 읽기 명령이어도 점유된 checkout을 `workdir`로 지정하면 차단된다. shell 명령 문자열을 읽기 전용으로 추측해 통과시키지 않으며, 자기 worktree에서 읽는다. OS 읽기 권한과 Hook 점유는 별개다. [Windows worktree 명령 진단](troubleshooting/windows-worktree-permissions.md)을 참조한다.
 

@@ -60,6 +60,7 @@
 - [Troubleshooting](troubleshooting/README.md): 재사용 가능한 문제 진단·개선 효과 분석과 작성 기준
 - [Stacked PR 운영](stacked-prs.md): App 초기 설정·등록·순차 squash merge·restack 복구
 - [Stacked PR 자동화 결정](decisions/0012-stacked-pr-restack.md): 사람의 병합과 AI 없는 후속 기반 정리
+- [Claude Code 하네스 결정](decisions/0024-claude-code-harness.md): worktree 격리·리드와 subagent 운영·리뷰 사이클·지침 파일 배치
 - [Deployment runbook](deployment.md): MVP 설정·검색 비용 한도·장애 대응·staging smoke
 - [Known limitations](known-limitations.md): 배포 blocker와 deferred decision
 - [클릭 중심 추천](decisions/0009-click-first-product-discovery.md): 템플릿 진입·외부 동의·표시용 사양 경계
@@ -71,4 +72,4 @@
 - [ADR](decisions/): 장기간 유지할 architecture decision과 trade-off
 - [Identity-based secrets](decisions/0008-identity-based-secret-management.md): Dev/Prod 격리, runtime 조회와 cloud-free 테스트 전략
 
-AGENTS.md는 작업 시 반드시 필요한 짧은 지침과 링크만 담는다. 설계의 이유와 상세 설명은 이곳에서 관리한다.
+AGENTS.md는 작업 시 반드시 필요한 짧은 지침과 링크만 담는다. Claude Code에만 해당하는 운영 규칙은 루트 `CLAUDE.md`에 둔다. 설계의 이유와 상세 설명은 이곳에서 관리한다.

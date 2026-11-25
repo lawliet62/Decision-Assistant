@@ -1,8 +1,10 @@
 # Windows 임시 worktree에서 로컬 명령이 실패하는 경우
 
+이 문서의 Hook·sandbox 진단은 Codex CLI 실행 환경에서 관찰한 것이다. Claude Code에는 worktree guard Hook을 두지 않는다.
+
 ## 기대 동작과 실행 위치
 
-임시 worktree도 로컬 파일 시스템의 checkout이다. 탐색·검증·개발 명령은 해당 task의 worktree에서 실행하며, 필요한 원본 파일의 읽기는 별도로 허용한다. 원본 checkout으로 이동해 검증하거나 원본의 `node_modules`를 현재 worktree의 설치 상태로 간주하지 않는다. [worktree 점유 절차](../development.md#codex-worktree-점유)를 따른다.
+임시 worktree도 로컬 파일 시스템의 checkout이다. 탐색·검증·개발 명령은 해당 task의 worktree에서 실행하며, 필요한 원본 파일의 읽기는 별도로 허용한다. 원본 checkout으로 이동해 검증하거나 원본의 `node_modules`를 현재 worktree의 설치 상태로 간주하지 않는다. [worktree 점유 절차](../development.md#codex-cli-worktree-guard)를 따른다.
 
 ## 실패 단계를 먼저 구분한다
 

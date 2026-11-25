@@ -8,6 +8,6 @@ Windows의 Codex CLI 0.165.0에서 연결 worktree의 `.codex/hooks.json`에 Hoo
 
 ## 해결과 검증
 
-[개발 workflow](../development.md#codex-worktree-점유)의 사용자 Hook 설치기는 Git 공통 디렉터리를 기준으로 적용 대상을 구분한다. 임시 연결 worktree에서 첫 Codex 세션의 점유, 두 번째 세션의 모델 요청 전 중단, 첫 세션 종료 후 재진입을 확인했다. 등록하지 않은 다른 임시 Git 저장소의 세션도 정상 응답했다.
+[개발 workflow](../development.md#codex-cli-worktree-guard)의 사용자 Hook 설치기는 Git 공통 디렉터리를 기준으로 적용 대상을 구분한다. 임시 연결 worktree에서 첫 Codex 세션의 점유, 두 번째 세션의 모델 요청 전 중단, 첫 세션 종료 후 재진입을 확인했다. 등록하지 않은 다른 임시 Git 저장소의 세션도 정상 응답했다.
 
 이 검증은 동일 사용자·동일 머신의 Codex CLI에 한정된다. Hook 미실행, 다른 agent 제품, 다른 머신, 동일 세션 ID의 동시 재개는 별도 보호 대상이 아니다. 새 버전이나 다른 실행 환경에서는 `/hooks`와 실제 차단을 다시 확인한다.

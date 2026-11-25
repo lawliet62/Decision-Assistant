@@ -16,5 +16,4 @@ root `AGENTS.md`가 우선 적용된다. 위 Next.js generated block은 유지�
 - backend 호출은 generated `shared/api/schema.d.ts` 타입을 사용한다. API payload를 별도 수기 interface로 복제하지 않는다.
 - browser 요청은 same-origin `/api` rewrite를 사용하고 server component는 `BACKEND_URL`을 사용한다.
 - AI 제안은 자동 적용하지 않고 사용자가 검토하도록 표시한다. AI 실행 전 consent UI를 유지한다.
-- validation: `npm run lint`, `npm run typecheck`, `npm run build`.
-- API contract 갱신: `npm run api:generate`.
+- 검증은 `npm run lint`, `npm run typecheck`, `npm run build`, API contract 갱신은 `npm run api:generate`다.
