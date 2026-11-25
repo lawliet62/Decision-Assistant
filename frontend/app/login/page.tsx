@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ApiError, serverApi } from "@/shared/api/server";
 
@@ -30,12 +29,13 @@ export default async function LoginPage({
             허용되지 않은 계정이거나 처음 사용한 로그인 방식과 다릅니다.
           </p>
         )}
-        <Link
+        {/* backend가 cross-origin Auth0로 리다이렉트하는 경로다. <Link>의 RSC fetch·prefetch는 CORS로 실패하므로 문서 탐색을 쓴다. */}
+        <a
           href="/oauth2/authorization/auth0"
           className="mt-7 block rounded-full bg-zinc-950 px-5 py-3 text-center font-semibold text-white hover:bg-zinc-800"
         >
           Google 또는 이메일로 계속
-        </Link>
+        </a>
       </section>
     </main>
   );
