@@ -28,9 +28,10 @@ ADR 0019의 단일 VM은 image 전달·Compose 기동·백업 timer·TLS 인증�
 대체하는 부분:
 
 - 단일 GCP VM에서 Next.js·Spring Boot·PostgreSQL·HTTPS proxy를 함께 운영하는 runtime과 VM attached Identity bootstrap
-- 관리형 DB와 별도 배포 자동화를 도입하지 않는다는 결정. DB는 Neon, 배포는 GitHub Actions로 바뀐다.
-- 소형 VM에서 build하지 않고 외부에서 만든 image 아카이브를 전달하는 방식. Cloud Run은 registry의 image를 받아 실행하므로 VM의 build·registry pull 금지 전제가 사라진다.
-- Cloud Run + Cloud SQL을 선택하지 않은 이유 중 "관리 부담" 판단. 관리형 runtime은 채택하되 DB는 Cloud SQL 대신 Neon을 쓴다(아래 대안 참고).
+- 관리형 DB를 추가하지 않는다는 결정. DB는 관리형 서비스인 Neon으로 바뀐다. 운영자가 image 아카이브를 직접 전달하던 배포는 GitHub Actions 자동 배포로 바뀐다.
+- 기존 단일 인스턴스의 예약 작업을 유지한다는 결정 중 휴지통 만료 삭제. 결정 4의 일회 실행 경로로 바뀐다.
+- 소형 VM에서 build하지 않고 외부에서 만든 image 아카이브를 전달하는 방식. Cloud Run은 registry의 image를 받아 실행하므로, [배포 자산](../../deploy/README.md)의 VM build·registry pull 금지 규칙은 전환 뒤 적용 대상이 없어진다.
+- 상시 Cloud Run + Cloud SQL을 선택하지 않은 결정 중 runtime 부분. ADR 0019는 이 대안이 관리 부담을 줄이지만 비용과 연결 설정이 늘어난다고 보았다. 이번에는 관리 부담 감소를 우선해 관리형 runtime을 채택한다. Cloud SQL의 비용 판단은 유지하며 DB는 Neon을 쓴다(아래 대안 참고).
 
 유지하는 부분:
 
