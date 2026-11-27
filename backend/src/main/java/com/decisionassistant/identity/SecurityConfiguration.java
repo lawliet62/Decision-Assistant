@@ -14,6 +14,7 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationFa
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.savedrequest.NullRequestCache;
 
 @Configuration(proxyBeanMethods = false)
 @Profile("!local & !test")
@@ -35,6 +36,9 @@ public class SecurityConfiguration {
 
         configureCsrf(http, true);
         http
+                // 페이지는 Next.js가 제공하므로 Spring이 로그인 뒤 되돌려 보낼 요청이 없다. 저장하면 server-side
+                // 조회의 내부 주소(예: http://backend:8080/api/v1/me)로 redirect되므로 저장하지 않고 항상 "/"로 보낸다.
+                .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .sessionManagement(session -> session
                         .addSessionAuthenticationStrategy(LoginRetryReauthentication.clearOnSuccess()))
                 .authorizeHttpRequests(authorize -> authorize

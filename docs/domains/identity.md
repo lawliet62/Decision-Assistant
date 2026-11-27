@@ -31,7 +31,7 @@ flowchart LR
     Session --> Owner[요청 resource의 소유권 확인]
 ```
 
-운영에서는 OpenID Connect(OIDC) Authorization Code + PKCE와 서버 측 session을 사용한다. Google 또는 email OTP 로그인을 Auth0 Universal Login에서 수행한다. verified email이 배포의 exact-email allowlist에 있을 때만 provision·접근을 허용한다. 이메일이 같아도 다른 issuer/subject를 자동 병합하지 않는다.
+운영에서는 OpenID Connect(OIDC) Authorization Code + PKCE와 서버 측 session을 사용한다. Google 또는 email OTP 로그인을 Auth0 Universal Login에서 수행한다. verified email이 배포의 exact-email allowlist에 있을 때만 provision·접근을 허용한다. 이메일이 같아도 다른 issuer/subject를 자동 병합하지 않는다. 로그인에 성공하면 이전에 요청한 경로와 관계없이 항상 `/`로 이동한다. 페이지는 Next.js가 제공하므로 backend는 인증되지 않은 요청을 저장해 두었다가 되돌려 보내지 않는다([로그인 직후 backend 내부 주소로 이동하는 경우](../troubleshooting/login-saved-request-redirect.md)).
 
 로그인이 실패하면(allowlist·verified email·identity 충돌에 따른 접근 거부와 Auth0 오류 응답 포함) 실패 처리기가 서버 session에 재인증 표시를 남긴다. 표시가 있는 session의 authorization request에는 PKCE와 함께 `prompt=login`을 붙여 Auth0에 로그인 화면을 다시 요구한다. 접근 거부 뒤 살아 있는 Auth0 session이 같은 계정을 다시 사용하는 것이 계정 전환 실패([#84](https://github.com/lawliet62/Decision-Assistant/issues/84))의 원인이라고 추정하지만 운영 tenant에서 확인하지 않았다. 표시는 첫 재시도에서 소모하지 않고 로그인 성공 시 지운다. 따라서 Auth0 화면을 벗어났다가 다시 로그인해도 요청에 `prompt=login`이 계속 붙는다. session fixation 보호가 session 속성을 새 session으로 옮기므로 성공 시 명시적으로 지우며, 이후 같은 browser session의 로그인이나 로그아웃 뒤 로그인은 첫 로그인처럼 `prompt`를 보내지 않는다. 표시는 요청 parameter로 해제할 수 없고 요청으로 다른 authorization parameter를 넣을 수도 없다. 다만 실패로 끝나는 callback 요청은 표시를 설정하며, 그 영향은 같은 session에서 로그인이 성공할 때까지 Auth0 로그인 화면을 다시 요구하는 것이다. 표시는 session이 만료되면 함께 사라진다. Auth0 로그아웃 호출이나 tenant 설정 변경은 하지 않는다.
 
@@ -51,4 +51,4 @@ Decision 삭제는 계정·ExternalIdentity를 삭제하지 않는다. 카탈로
 
 - 규칙: [BR-AUTH-01, BR-OWN-01](../business-rules.md), [인증·운영 경계](../architecture.md#securityoperations-baseline).
 - 구현: [ApplicationUser](../../backend/src/main/java/com/decisionassistant/identity/ApplicationUser.java), [ExternalIdentity](../../backend/src/main/java/com/decisionassistant/identity/ExternalIdentity.java), [UserProvisioningService](../../backend/src/main/java/com/decisionassistant/identity/UserProvisioningService.java), [SecurityConfiguration](../../backend/src/main/java/com/decisionassistant/identity/SecurityConfiguration.java), [LoginRetryReauthentication](../../backend/src/main/java/com/decisionassistant/identity/LoginRetryReauthentication.java).
-- 검증: `DecisionApiIntegrationTest`의 인증·CSRF·소유권 사례, 실패 후 재로그인의 `prompt=login` 수명을 OIDC filter chain으로 확인하는 `LoginRetrySecurityTest`와 [규칙별 검증 표](../business-rules.md#현재-검증-상태). UI mock 화면은 Auth0 로그인이나 실제 세션 보안을 검증하지 않는다.
+- 검증: `DecisionApiIntegrationTest`의 인증·CSRF·소유권 사례, 실패 후 재로그인의 `prompt=login` 수명과 로그인 성공 뒤 `/` 이동을 OIDC filter chain으로 확인하는 `LoginRetrySecurityTest`와 [규칙별 검증 표](../business-rules.md#현재-검증-상태). UI mock 화면은 Auth0 로그인이나 실제 세션 보안을 검증하지 않는다.

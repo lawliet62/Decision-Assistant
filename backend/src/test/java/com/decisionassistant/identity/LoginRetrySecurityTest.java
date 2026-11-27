@@ -45,7 +45,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.endsWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -57,7 +56,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 접근 거부 이후의 재로그인만 Auth0 로그인 화면을 다시 요구하는지 OIDC filter chain 전체로 검증한다(이슈 #84).
+ * 접근 거부 이후의 재로그인만 Auth0 로그인 화면을 다시 요구하는지(이슈 #84)와, 로그인 성공 뒤 저장된 요청이 아니라
+ * 항상 "/"로 이동하는지를 OIDC filter chain 전체로 검증한다.
  */
 @SpringJUnitWebConfig(LoginRetrySecurityTest.WebConfig.class)
 class LoginRetrySecurityTest {
@@ -66,6 +66,8 @@ class LoginRetrySecurityTest {
     private static final String CLIENT_ID = "fixture-client";
     private static final String AUTHORIZE = APP_URL + "/oauth2/authorization/auth0";
     private static final String DENIED_TARGET = APP_URL + "/login?error=access_denied";
+    /** 운영 frontend container의 `BACKEND_URL`(deploy/frontend.Dockerfile)로 보내는 server-side 조회 주소다. */
+    private static final String INTERNAL_ME = "http://backend:8080/api/v1/me";
 
     @Autowired
     WebApplicationContext context;
@@ -145,20 +147,49 @@ class LoginRetrySecurityTest {
     }
 
     @Test
-    void successfulLoginStillReturnsToSavedRequest() throws Exception {
+    void successfulLoginGoesToRootEvenAfterAnonymousPageRequest() throws Exception {
         var session = new MockHttpSession(context.getServletContext());
         mvc.perform(get(APP_URL + "/decisions/fixture").session(session).accept(MediaType.TEXT_HTML))
                 .andExpect(status().isFound())
                 .andExpect(header().string("Location", "/oauth2/authorization/auth0"));
 
+        // 운영의 페이지는 Next.js가 제공하므로 Spring은 이전에 요청된 경로로 되돌려 보내지 않는다.
         allowNextLogin();
-        // MockMvc는 절대 https URI에도 기본 port 80을 붙이므로 host·port가 아닌 저장된 경로만 비교한다.
-        mvc.perform(get(APP_URL + "/login/oauth2/code/auth0")
-                        .session(session)
-                        .param("code", "fixture-code")
-                        .param("state", authorize(session).getFirst("state")))
-                .andExpect(status().isFound())
-                .andExpect(header().string("Location", endsWith("/decisions/fixture?continue")));
+        callback(session, authorize(session), "/");
+    }
+
+    @Test
+    void loginAfterDenialAndServerSideMeLookupGoesToRoot() throws Exception {
+        var session = new MockHttpSession(context.getServletContext());
+        denyNextLogin();
+        callback(session, authorize(session), DENIED_TARGET);
+
+        // /login 화면을 렌더링하는 Next.js server component가 Accept 없이 내부 주소로 보내는 조회와 같다.
+        anonymousInternalMeLookup(session);
+
+        allowNextLogin();
+        callback(session, authorize(session), "/");
+    }
+
+    @Test
+    void loginAfterAbandonedAuthorizationAndServerSideMeLookupGoesToRoot() throws Exception {
+        var session = new MockHttpSession(context.getServletContext());
+        // 로그인 버튼을 누른 뒤 Auth0 화면에서 뒤로 가기를 해 session만 남은 경우와 같다.
+        var authorization = authorize(session);
+
+        anonymousInternalMeLookup(session);
+
+        allowNextLogin();
+        callback(session, authorization, "/");
+    }
+
+    @Test
+    void anonymousApiRequestDoesNotCreateSession() throws Exception {
+        var result = mvc.perform(get(INTERNAL_ME))
+                .andExpect(status().isUnauthorized())
+                .andReturn();
+
+        assertThat(result.getRequest().getSession(false)).isNull();
     }
 
     @Test
@@ -204,6 +235,10 @@ class LoginRetrySecurityTest {
         var retry = authorize(session, Map.of("prompt", "none", "reauthenticate", "false"));
         assertThat(retry.get("prompt")).containsExactly("login");
         assertThat(retry).doesNotContainKey("reauthenticate");
+    }
+
+    private void anonymousInternalMeLookup(MockHttpSession session) throws Exception {
+        mvc.perform(get(INTERNAL_ME).session(session)).andExpect(status().isUnauthorized());
     }
 
     private MultiValueMap<String, String> authorize(MockHttpSession session) throws Exception {
