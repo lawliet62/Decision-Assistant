@@ -34,6 +34,7 @@
 - [결정 전체 선택에서 403이 반환되는 경우](stale-decision-selection-api.md): 구버전 backend와 최신 frontend의 실행 버전 불일치
 
 - [로컬 배포·브라우저 검증의 실패 단계 구분](mvp-local-validation.md): Compose Secret 참조 병합과 fixture 전송 오류 구분
+- [읽기 전용 VM 점검에서 `gcloud compute ssh`가 프로젝트 메타데이터를 변경하려는 경우](gcloud-ssh-project-metadata-write.md): IAP 터널과 SSH 클라이언트 분리, 호스트 키 확인, Windows 키 권한·PowerShell 인수 손상
 
 - [ANC·호환성 필수 조건의 미확인 원인 분리](required-audio-evidence.md): 실제 등록 근거 범위, 앱·기본 연결 구분, ANC 최대 감쇠량과 멀티포인트 근거 누락
 
