@@ -4,6 +4,8 @@
 
 단일 backend + Next.js + PostgreSQL 배포를 전제로 한다. 이 문서는 자동 배포나 외부 유료 구매 권한을 의미하지 않는다. 준비 대상은 단일 GCP VM이며 [배포 자산](../deploy/README.md)과 [ADR 0019](decisions/0019-portfolio-deployment-preparation.md)를 따른다. 추가 유료 지출 승인액은 0원이며 실제 배포·자원 생성은 별도 절차다. Secret은 GCP Secret Manager에서 backend가 직접 조회하며 리소스·IAM·운영 Identity 준비는 운영자가 수행한다.
 
+[ADR 0025](decisions/0025-cloud-run-neon-deployment.md)로 Cloud Run·Neon 구성으로의 전환이 결정되었다. 전환이 완료될 때까지는 이 문서의 단일 VM 절차가 운영 기준이다.
+
 ## 출시 전 확인
 
 1. human이 PR을 검토·merge한다. `npm run check`와 `npm --prefix frontend run test:e2e`가 통과해야 한다.

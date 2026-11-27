@@ -104,7 +104,7 @@ V7은 익명 월별 검색 호출 수만 보존한다. PostgreSQL atomic upsert�
 
 ## 배포 준비와 데이터 삭제
 
-단일 GCP VM의 HTTPS proxy·Next.js·Spring Boot·PostgreSQL 구성과 VM attached Identity를 준비한다. 컨테이너는 별도 IAM identity 경계가 아니며 actual provisioning은 수행하지 않았다. [ADR 0019](decisions/0019-portfolio-deployment-preparation.md)를 따른다.
+단일 GCP VM의 HTTPS proxy·Next.js·Spring Boot·PostgreSQL 구성과 VM attached Identity를 준비한다. 컨테이너는 별도 IAM identity 경계가 아니며 actual provisioning은 수행하지 않았다. [ADR 0019](decisions/0019-portfolio-deployment-preparation.md)를 따른다. Cloud Run(Next.js ingress + Spring Boot sidecar)과 Neon PostgreSQL로의 전환이 [ADR 0025](decisions/0025-cloud-run-neon-deployment.md)로 결정되었으며, 전환 완료 전까지는 단일 VM 구성이 운영 기준이다.
 
 완료 의미와 이유·구매·재검토는 [ADR 0022](decisions/0022-decision-reasons-and-reusable-history.md), 선택적 AI 기록 해석은 [ADR 0023](decisions/0023-contextual-decision-memory.md)를 따른다. 별도 module·배포 단위·AI provider를 추가하지 않는다.
 
