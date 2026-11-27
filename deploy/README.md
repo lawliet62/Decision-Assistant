@@ -79,6 +79,11 @@ python3 deploy/release.py verify "$bundle" "$runtime" --running
 7. 실제 배포 시 인증/초대 거부/CSRF/다른 계정 격리, HTTPS cookie, 외부 기능 비활성화, 목록·삭제·재로그인을 확인한다. health 응답만으로 성공 처리하지 않는다.
 8. 초대 거부 뒤 다시 로그인하면 backend가 `prompt=login`을 보내 Auth0 로그인 화면이 다시 나오고 다른 계정으로 로그인할 수 있는지 운영 tenant에서 확인한다. 이 동작은 아직 운영 tenant에서 검증하지 않았다. Auth0 화면에서 Google을 고를 때 Google 계정 선택 화면까지 보장하려면 tenant의 Google connection이 `prompt=select_account`를 upstream으로 전달해야 한다([Auth0 Pass Parameters to Identity Providers](https://auth0.com/docs/authenticate/identity-providers/pass-parameters-to-idps)의 `options.upstream_params`). 이 tenant 설정은 저장소가 관리하지 않으며 적용 여부와 효과를 검증하지 않았다.
 
+## 운영 VM 읽기 전용 점검 접속
+
+- 컨테이너·백업·로그를 조회만 하는 점검에는 `gcloud compute ssh`를 사용하지 않는다. 이 명령은 접속 전에 프로젝트 메타데이터에 SSH 키를 추가하려 하므로, 조회 작업이 설정 변경을 시도하게 된다.
+- `gcloud compute start-iap-tunnel`로 터널만 열고, 인스턴스 메타데이터에 이미 등록된 키와 확인한 호스트 키로 접속한다. 절차와 근거는 [troubleshooting](../docs/troubleshooting/gcloud-ssh-project-metadata-write.md)에 있다.
+
 ## 백업·복원과 삭제 재적용
 
 - 백업은 암호화·접근 제한된 저장소에 7일 보존한다. 앱에서 영구 삭제된 데이터가 이전 백업에는 남을 수 있음을 안내한다. 이미 전송된 provider 데이터·메일은 앱 삭제가 취소하지 않는다.
