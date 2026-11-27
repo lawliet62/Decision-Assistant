@@ -22,7 +22,7 @@ Spring Security의 기본 request cache(`HttpSessionRequestCache`)가 인증되�
 
 ## 조치와 검증
 
-[`SecurityConfiguration`](../../backend/src/main/java/com/decisionassistant/identity/SecurityConfiguration.java)의 OIDC filter chain에서 request cache를 `NullRequestCache`로 바꿔 요청을 저장하지 않는다. 로그인 성공 뒤 이동 대상은 기존 기본값 `/` 그대로다. 비로그인 페이지 요청이 로그인 경로로, API 요청이 `401`로 처리되는 동작은 바뀌지 않는다.
+[`SecurityConfiguration`](../../backend/src/main/java/com/decisionassistant/identity/SecurityConfiguration.java)의 OIDC filter chain에서 request cache를 `NullRequestCache`로 바꿔 요청을 저장하지 않는다. 로그인 성공 뒤 이동 대상은 기존 기본값 `/` 그대로였다. 이 상대 경로가 Cloud Run 구성에서 잘못된 절대 주소가 되는 문제가 뒤에 확인돼 지금은 공개 주소의 `/`로 보낸다([후속 사례](login-success-forwarded-host.md)). 비로그인 페이지 요청이 로그인 경로로, API 요청이 `401`로 처리되는 동작은 바뀌지 않는다.
 
 frontend의 server-side 조회에 `Accept: application/json`을 붙이는 방법은 택하지 않았다. 같은 조건의 다른 호출자가 생기면 문제가 다시 생기고, 운영에서 Spring이 복귀시킬 페이지가 없다는 구조적 원인을 해결하지 않는다.
 

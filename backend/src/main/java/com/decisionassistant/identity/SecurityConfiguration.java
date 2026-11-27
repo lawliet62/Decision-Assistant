@@ -11,6 +11,7 @@ import org.springframework.security.oauth2.client.oidc.web.logout.OidcClientInit
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
+import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -34,10 +35,15 @@ public class SecurityConfiguration {
         var failureHandler = LoginRetryReauthentication.requireOnFailure(new SimpleUrlAuthenticationFailureHandler(
                 properties.publicBaseUrl() + "/login?error=access_denied"));
 
+        // 상대 경로 "/"는 forwarded header 처리 결과로 절대화된다. proxy가 host 없는 RFC 7239 Forwarded를 보내면
+        // sidecar Host(localhost:8080)가 남으므로 요청과 무관한 공개 주소로 보낸다.
+        var successHandler = new SimpleUrlAuthenticationSuccessHandler(properties.publicBaseUrl() + "/");
+
         configureCsrf(http, true);
         http
                 // 페이지는 Next.js가 제공하므로 Spring이 로그인 뒤 되돌려 보낼 요청이 없다. 저장하면 server-side
-                // 조회의 내부 주소(예: http://backend:8080/api/v1/me)로 redirect되므로 저장하지 않고 항상 "/"로 보낸다.
+                // 조회의 내부 주소(예: http://backend:8080/api/v1/me)로 redirect되므로 저장하지 않고
+                // 항상 공개 주소의 "/"로 보낸다.
                 .requestCache(cache -> cache.requestCache(new NullRequestCache()))
                 .sessionManagement(session -> session
                         .addSessionAuthenticationStrategy(LoginRetryReauthentication.clearOnSuccess()))
@@ -50,6 +56,7 @@ public class SecurityConfiguration {
                         .authorizationEndpoint(endpoint -> endpoint
                                 .authorizationRequestResolver(authorizationResolver))
                         .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUsers))
+                        .successHandler(successHandler)
                         .failureHandler(failureHandler))
                 .logout(logout -> logout
                         .logoutUrl("/logout")

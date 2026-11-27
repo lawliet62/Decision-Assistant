@@ -28,10 +28,12 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.test.context.junit.jupiter.web.SpringJUnitWebConfig;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.filter.ForwardedHeaderFilter;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -43,6 +45,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.UnaryOperator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,7 +60,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * 접근 거부 이후의 재로그인만 Auth0 로그인 화면을 다시 요구하는지(이슈 #84)와, 로그인 성공 뒤 저장된 요청이 아니라
- * 항상 "/"로 이동하는지를 OIDC filter chain 전체로 검증한다.
+ * 요청 Host나 forwarded header와 무관하게 항상 공개 주소의 "/"로 이동하는지를 OIDC filter chain 전체로 검증한다.
  */
 @SpringJUnitWebConfig(LoginRetrySecurityTest.WebConfig.class)
 class LoginRetrySecurityTest {
@@ -66,8 +69,13 @@ class LoginRetrySecurityTest {
     private static final String CLIENT_ID = "fixture-client";
     private static final String AUTHORIZE = APP_URL + "/oauth2/authorization/auth0";
     private static final String DENIED_TARGET = APP_URL + "/login?error=access_denied";
+    private static final String SUCCESS_TARGET = APP_URL + "/";
     /** 운영 frontend container의 `BACKEND_URL`(deploy/frontend.Dockerfile)로 보내는 server-side 조회 주소다. */
     private static final String INTERNAL_ME = "http://backend:8080/api/v1/me";
+    private static final String PUBLIC_HOST = "app.example.test";
+    /** Cloud Run에서 Next.js ingress가 같은 instance의 backend sidecar로 보내는 Host다. */
+    private static final String SIDECAR_HOST = "localhost:8080";
+    private static final String SIDECAR_URL = "http://" + SIDECAR_HOST;
 
     @Autowired
     WebApplicationContext context;
@@ -121,7 +129,7 @@ class LoginRetrySecurityTest {
                         .param("code", "fixture-code")
                         .param("state", abandonedRetry.getFirst("state")))
                 .andExpect(status().isFound())
-                .andExpect(header().string("Location", "/"));
+                .andExpect(header().string("Location", SUCCESS_TARGET));
         assertThat(session.getId()).as("session fixation 보호는 유지된다").isNotEqualTo(sessionId);
         mvc.perform(get("/api/v1/me").secure(true).session(session)).andExpect(status().isOk());
 
@@ -135,7 +143,7 @@ class LoginRetrySecurityTest {
         denyNextLogin();
         callback(session, authorize(session), DENIED_TARGET);
         allowNextLogin();
-        callback(session, authorize(session), "/");
+        callback(session, authorize(session), SUCCESS_TARGET);
 
         mvc.perform(post("/logout").secure(true).session(session)
                         .cookie(new Cookie("XSRF-TOKEN", "fixture-csrf"))
@@ -155,7 +163,7 @@ class LoginRetrySecurityTest {
 
         // 운영의 페이지는 Next.js가 제공하므로 Spring은 이전에 요청된 경로로 되돌려 보내지 않는다.
         allowNextLogin();
-        callback(session, authorize(session), "/");
+        callback(session, authorize(session), SUCCESS_TARGET);
     }
 
     @Test
@@ -168,7 +176,7 @@ class LoginRetrySecurityTest {
         anonymousInternalMeLookup(session);
 
         allowNextLogin();
-        callback(session, authorize(session), "/");
+        callback(session, authorize(session), SUCCESS_TARGET);
     }
 
     @Test
@@ -180,7 +188,51 @@ class LoginRetrySecurityTest {
         anonymousInternalMeLookup(session);
 
         allowNextLogin();
-        callback(session, authorization, "/");
+        callback(session, authorization, SUCCESS_TARGET);
+    }
+
+    @Test
+    void loginBehindCloudRunForwardedHeaderGoesToPublicRoot() throws Exception {
+        // Next.js rewrite가 Cloud Run front end의 RFC 7239 Forwarded를 그대로 넘기고 Host를 sidecar 주소로 바꾼 요청과 같다.
+        loginThroughProxy(headers -> headers
+                .header("Forwarded", "for=203.0.113.9;proto=https")
+                .header("X-Forwarded-Proto", "https")
+                .header("X-Forwarded-Host", PUBLIC_HOST));
+    }
+
+    @Test
+    void loginBehindCaddyForwardedHeadersGoesToPublicRoot() throws Exception {
+        // VM 구성의 Caddy는 Forwarded 없이 X-Forwarded-*만 보낸다.
+        loginThroughProxy(headers -> headers
+                .header("X-Forwarded-Proto", "https")
+                .header("X-Forwarded-Host", PUBLIC_HOST));
+    }
+
+    /**
+     * {@code server.forward-headers-strategy: framework}처럼 {@link ForwardedHeaderFilter}를 Spring Security보다
+     * 앞에 두고, backend가 받는 Host는 sidecar 주소인 요청으로 로그인한다.
+     */
+    private void loginThroughProxy(UnaryOperator<MockHttpServletRequestBuilder> proxyHeaders) throws Exception {
+        var proxied = MockMvcBuilders.webAppContextSetup(context)
+                .addFilters(new ForwardedHeaderFilter())
+                .apply(springSecurity())
+                .build();
+        var session = new MockHttpSession(context.getServletContext());
+        var location = proxied.perform(proxyHeaders.apply(get(SIDECAR_URL + "/oauth2/authorization/auth0")
+                        .header("Host", SIDECAR_HOST)
+                        .session(session)))
+                .andExpect(status().isFound())
+                .andReturn().getResponse().getHeader("Location");
+        var state = UriComponentsBuilder.fromUriString(location).build().getQueryParams().getFirst("state");
+
+        allowNextLogin();
+        proxied.perform(proxyHeaders.apply(get(SIDECAR_URL + "/login/oauth2/code/auth0")
+                        .header("Host", SIDECAR_HOST)
+                        .session(session)
+                        .param("code", "fixture-code")
+                        .param("state", URLDecoder.decode(state, StandardCharsets.UTF_8))))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", SUCCESS_TARGET));
     }
 
     @Test
