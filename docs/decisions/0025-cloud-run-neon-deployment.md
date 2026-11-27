@@ -46,7 +46,7 @@ ADR 0019의 단일 VM은 image 전달·Compose 기동·백업 timer·TLS 인증�
 - 사용자 데이터와 세션(`spring-session-jdbc`)이 GCP 밖의 제3자인 Neon(AWS 싱가포르 리전)에 저장된다. 지금까지는 GCP project 안의 VM disk와 GCS 백업에만 있었다.
 - backend는 sidecar가 되어도 외부에 노출되지 않는다. 공식 문서 기준으로 Cloud Run은 ingress container의 port만 외부 요청에 연결한다.
 - 같은 인스턴스의 container는 서비스 계정을 공유하므로 독립적인 IAM 경계가 아니다. ADR 0019의 "같은 VM의 컨테이너는 Identity 격리 경계가 아님"과 같은 성격이다.
-- Neon의 시점 복원(point-in-time restore) 이력에 삭제된 데이터가 일정 기간 남을 수 있다. 무료 플랜의 보존 기간은 미검증이다. 30일 만료 삭제와 7일 백업 보존 외에 이 기간이 추가로 생긴다.
+- Neon의 시점 복원(point-in-time restore) 이력에 삭제된 데이터가 일정 기간 남는다. 2026-11-28에 만든 project의 이력 보존 설정은 6시간(`history_retention_seconds` 21600)이다(관찰). 30일 만료 삭제와 7일 백업 보존 외에 이 기간이 추가로 생기며, 이 기간의 허용 여부와 고지는 전환 전에 human이 결정한다.
 - 미검증(추론): Cloud Run 서비스 계정의 ADC(Application Default Credentials)는 metadata server를 통해 `ComputeEngineCredentials`로 인식될 것으로 본다. 그렇다면 `GcpSecretLoader`가 허용하는 Identity 종류(`ComputeEngineCredentials`·`ExternalAccountCredentials`)를 바꾸지 않고 기존 Secret bootstrap이 동작한다. 전환 전에 실제 기동으로 확인한다.
 
 ## 결과와 제약
