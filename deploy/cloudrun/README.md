@@ -186,7 +186,7 @@ bash deploy/cloudrun/smoke.sh https://decision-assistant-277935636498.asia-south
   - `release` job이 tag `v0.2.1`(배포 commit)과 GitHub Release를 만들었고 릴리스 노트가 게시됐다.
   - 배포 뒤 리드가 두 revision을 조회해 비교했다. spec에서 다른 값은 두 container의 image뿐이고 env 개수(backend 21, frontend 0), startup probe, `container-dependencies`, 최대 인스턴스 수, 서비스 계정이 같았다. `--container ... --image`만 지정한 update는 나머지 설정을 바꾸지 않았다.
   - 배포 뒤 서비스의 traffic 대상은 LATEST가 아니라 `decision-assistant-00003-yan`으로 고정돼 있다.
-  - 배포 뒤 운영자가 새 revision에서 로그인한 상태로 결정을 만들고 추천 후보를 추가했으며 그 요청들은 200·201이었다(요청 log로 관찰). 같은 확인에서 예산 없이 만든 결정의 비교·평가 화면이 브라우저 예외로 깨지는 앱 버그가 드러났다. 서버 요청은 모두 200이었고 frontend 소스는 직전 revision과 같아 배포 방식과는 무관하다. 수정은 별도 PR에서 다룬다.
+  - 배포 뒤 운영자가 새 revision을 로그인한 상태로 사용했다. 요청 log에는 결정 생성(201), 초안 저장과 추천 후보 변경(200), 페이지·API 조회(200)가 남았고 error 수준 container log는 없었다. 운영자는 이어서 예산 없이 만든 결정에서 비교 단계로 이동할 때 Next.js 기본 오류 화면이 나왔다고 보고했다. 원인 분석과 수정은 별도 PR에서 다룬다.
 
 미검증:
 
