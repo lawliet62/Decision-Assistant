@@ -5,10 +5,12 @@ import { useId } from "react";
 const maximum = 10000;
 const button = "min-h-11 min-w-11 rounded-xl border border-zinc-300 bg-white px-2 text-sm hover:bg-zinc-50 focus-visible:outline-2 focus-visible:outline-emerald-700 disabled:opacity-40";
 
-export function BudgetInput({ label, value, onChange }: {
-  label: string; value?: number; onChange: (value?: number) => void;
+export function BudgetInput({ label, value: given, onChange }: {
+  label: string; value?: number | null; onChange: (value?: number) => void;
 }) {
   const id = useId();
+  // API는 예산이 없는 조건을 생략하지 않고 null로 보낸다. null도 "제한 없음"으로 다룬다.
+  const value = given ?? undefined;
   const amount = value === undefined ? undefined : value / 10000;
   const adjust = (delta: number) => onChange(Math.max(1, Math.min(maximum, Math.round(amount ?? 5) + delta)) * 10000);
 

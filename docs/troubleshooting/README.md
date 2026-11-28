@@ -15,6 +15,8 @@
 - [로그인 직후 backend 내부 주소로 이동하는 경우](login-saved-request-redirect.md): server-side 조회가 저장한 요청과 로그인 성공 redirect, 익명 API의 session 발급 확인
 - [Cloud Run에서 로그인 직후 연결 거부 화면으로 이동하는 경우](login-success-forwarded-host.md): host 없는 `Forwarded` header와 상대 경로 redirect의 절대화, `X-Forwarded-*` 무시 확인
 
+- [서버 요청은 모두 성공인데 화면이 "This page couldn't load"로 깨지는 경우](client-exception-null-optional-field.md): 선택 속성의 `null`과 `undefined` 불일치, 서버 log에 남지 않는 렌더링 예외, 예산 없는 결정으로 재현
+
 - [UI 촬영 성공과 화면 준비 완료의 구분](ui-gallery-capture.md): 목록 로딩·viewport 변경 중 전체 페이지 높이와 hydration 지연 확인
 - [겹친 Gradle 테스트의 결과 파일 충돌](parallel-gradle-test-output.md): 동일 build 디렉터리의 EOF·결과 파일 유실과 순차 검증
 
