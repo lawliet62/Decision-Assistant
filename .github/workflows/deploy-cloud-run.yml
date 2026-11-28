@@ -17,6 +17,11 @@ on:
 permissions:
   contents: read
 
+# shell을 명시하지 않으면 runner는 pipefail 없이 실행해 `smoke.sh | tee`의 실패가 가려진다. bash를 명시해 -eo pipefail을 적용한다.
+defaults:
+  run:
+    shell: bash
+
 # 진행 중인 배포를 취소하면 revision 생성과 traffic 전환 사이에서 멈출 수 있으므로 직렬화만 한다.
 concurrency:
   group: deploy-cloud-run

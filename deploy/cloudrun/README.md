@@ -29,7 +29,7 @@
 배포 권한은 human에게 종속되며 GitHub와 WIF 설정으로 강제한다.
 
 - **(가) 승인 관문.** workflow의 클라우드 단계(WIF 인증, Artifact Registry push, Cloud Run 배포, traffic 전환)는 모두 `environment: production`을 선언한 `deploy` job 하나에 있다. 이 environment에는 human이 GitHub 설정에서 required reviewer(저장소 소유자)와 배포 branch `main` 제한을 직접 구성한다. environment 설정은 저장소 관리자만 바꿀 수 있고 bot에는 그 권한이 없다. 에이전트(bot)는 workflow를 실행할 수 있지만 `deploy` job은 required reviewer인 human이 승인해야 시작된다.
-- **(나) WIF 조건.** provider는 `repository_id=1339097882`, `repository_owner_id=102518515`, `ref=refs/heads/main`인 GitHub OIDC token만 받고, 배포용 서비스 계정의 `roles/iam.workloadIdentityUser`는 `attribute.workflow_ref`가 `lawliet62/Decision-Assistant/.github/workflows/deploy-cloud-run.yml@refs/heads/main`인 주체에만 있다(2026-11-28 관찰). 여기에 `assertion.environment=='production'` 조건을 추가해 승인된 job 밖에서는 배포용 서비스 계정을 쓸 수 없게 한다. **이 environment 조건은 이 문서 작성 시점에 추가 예정이며 적용을 확인하지 않았다.** 다른 branch, PR, 다른 workflow 파일, 승인되지 않은 job은 이 계정을 쓸 수 없다. workflow 파일 이름이나 environment 이름을 바꾸면 GCP 조건도 바꿔야 한다.
+- **(나) WIF 조건.** provider는 `repository_id=1339097882`, `repository_owner_id=102518515`, `ref=refs/heads/main`인 GitHub OIDC token만 받고, 배포용 서비스 계정의 `roles/iam.workloadIdentityUser`는 `attribute.workflow_ref`가 `lawliet62/Decision-Assistant/.github/workflows/deploy-cloud-run.yml@refs/heads/main`인 주체에만 있다(2026-11-28 관찰). provider 조건에는 `assertion.environment=='production'`도 있어 `production` environment를 선언한 job의 token만 받는다(2026-11-28 리드가 적용하고 조회로 확인, 실제 인증으로는 미확인). 다른 branch, PR, 다른 workflow 파일, 승인되지 않은 job은 이 계정을 쓸 수 없다. workflow 파일 이름이나 environment 이름을 바꾸면 GCP 조건도 바꿔야 한다.
 - **(다) 관문의 범위.** 이 관문은 GitHub와 WIF 범위의 강제다. 에이전트가 PC에서 human의 개인 `gh` 로그인이나 배포 권한이 있는 `gcloud` 계정을 쓸 수 있다면 우회된다. 그 격리는 운영 에이전트의 권한 구성에서 따로 다룬다(미해결).
 - **(라) 대리 승인 경로 없음.** "human이 명령하면 에이전트가 직접 승인·배포"하는 경로는 두지 않는다. 그런 경로는 에이전트의 자기 승인과 구분해 강제할 수 없기 때문이다.
 - environment 이름은 정확히 `production`이어야 한다. workflow가 존재하지 않는 environment 이름을 참조하면 GitHub가 **보호 규칙 없는 environment를 자동으로 만들어** 승인 없이 job이 실행된다. 이름을 바꾸거나 새 job에 environment를 붙일 때는 GitHub 설정에 같은 이름의 보호 규칙이 먼저 있어야 한다.
@@ -180,10 +180,10 @@ bash deploy/cloudrun/smoke.sh https://decision-assistant-277935636498.asia-south
 미검증:
 
 - GitHub Actions에서의 승인 관문 동작, WIF 인증(environment 조건 포함), Artifact Registry push, `gcloud run services update`의 multi-container image 교체와 `--no-traffic --tag`, `update-traffic`, `gh release create`. `main`에서 승인된 실행으로만 확인할 수 있다.
-- `production` environment의 required reviewer·배포 branch 제한 구성, WIF provider의 `assertion.environment` 조건 적용(human·리드가 설정할 예정).
+- `production` environment의 required reviewer·배포 branch 제한 구성(human이 GitHub 설정에서 구성하며 이 문서에서는 상태를 확인하지 않았다). 이 보호 규칙이 없으면 `deploy` job은 승인 없이 시작되므로, 이 workflow를 `main`에 병합하기 전에 구성한다.
 - `--container ... --image`만 지정한 update가 env·`container-dependencies`·probe 등 나머지 설정을 그대로 두는지. gcloud 동작상 그럴 것으로 보지만 실제 revision으로 확인하지 않았다.
 - 서비스 수준 `roles/run.developer`로 `services describe`·`update-traffic`이 모두 허용되는지.
 - `replace` 뒤 traffic 동작, 후보 tag 주소의 실제 형식.
 - runner의 Docker가 push하는 manifest 형식(로컬은 containerd image store라 OCI index였다).
 - `actionlint` 검사(PC에 없어 YAML parse와 기존 workflow 대조로 대신했다).
-- Artifact Registry 사용량. 배포마다 image 두 개가 쌓이며 정리 정책이 없다. 무료 저장량을 넘으면 비용이 생긴다.
+- Artifact Registry 사용량. 저장소에는 cleanup policy(7일 지난 version 삭제, 최근 6개 version 유지)가 있다(2026-11-28 리드 관찰). 이 정책으로 저장량이 무료 범위 안에 머무는지는 확인하지 않았다.
