@@ -346,9 +346,11 @@ gcloud scheduler jobs describe decision-assistant-backup --project "$PROJECT" --
      pg_restore --exit-on-error --no-owner --no-acl --dbname=restore_check /work/backup.dump'
    ```
 
+   `--no-acl`이 필요한 이유(2026-11-28 관찰): 실제 Neon dump(`backups/neon/20261128T124826Z.dump`)를 일반 PostgreSQL 17에 `--exit-on-error --no-owner`로만 복원하면 `ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO neon_superuser ...`에서 실패했다. dump에 Neon 전용 role(`cloud_admin`, `neon_superuser`)의 권한 설정이 들어 있기 때문이다. `--no-acl`을 더하면 성공했고 table 29개의 행 수가 운영 DB와 같았다. 권한 설정을 복원하지 않으므로 복원한 database의 객체는 복원을 실행한 role이 소유한다. 실제 장애 복구에서 이 권한 상태로 충분한지는 확인하지 않았다. [VM 문서](../README.md#백업복원과-삭제-재적용)의 복원 명령은 VM dump 기준이라 `--no-acl`이 없다. Neon dump를 복원할 때는 이 명령을 쓴다.
+
 3. branch에 원래 있던 `decision_assistant`와 복원한 `restore_check`의 table별 행 수와 Flyway 버전을 비교한다. branch는 백업 뒤에 만들었으므로 그 사이의 쓰기만큼 차이가 날 수 있다.
 
-   `spring_session`·`spring_session_attributes`는 백업에 행이 없으므로([세션 데이터 제외](#job의-신뢰-경계)) 복원 쪽이 0행인 것이 정상이고, 원본에 세션이 있으면 이 두 줄만 다르게 나온다. 그래서 두 table은 비교에서 빼고 복원 쪽이 0행인지 따로 확인한다.
+   `spring_session`·`spring_session_attributes`는 백업에 행이 없으므로([세션 데이터 제외](#job의-신뢰-경계)) 복원 쪽이 0행인 것이 정상이다. 세션 제외로 생기는 차이는 이 두 줄뿐이다. 그래서 두 table은 비교에서 빼고 복원 쪽이 0행인지 따로 확인한다.
 
    저장소 루트에서 실행한다. [`restore-counts.sql`](restore-counts.sql)은 Flyway 버전과 `public` schema의 table별 행 수를 출력한다.
 
