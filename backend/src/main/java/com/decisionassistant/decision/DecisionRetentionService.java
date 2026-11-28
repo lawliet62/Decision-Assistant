@@ -85,10 +85,11 @@ public class DecisionRetentionService {
                 d.deletedAt() != null && Instant.now().isBefore(d.deletedAt().plus(RETENTION_DAYS, ChronoUnit.DAYS)), d.personalizationEnabled());
     }
 
+    /** 잠금 후 만료를 다시 확인해 영구 삭제한다. 이미 없거나 복구·미만료면 false다. */
     @Transactional
-    public void purgeExpired(UUID id, Instant now) {
+    public boolean purgeExpired(UUID id, Instant now) {
         var d = em.find(Decision.class, id, LockModeType.PESSIMISTIC_WRITE);
-        if (d == null || d.deletedAt() == null || d.deletedAt().plus(RETENTION_DAYS, ChronoUnit.DAYS).isAfter(now)) return;
+        if (d == null || d.deletedAt() == null || d.deletedAt().plus(RETENTION_DAYS, ChronoUnit.DAYS).isAfter(now)) return false;
         em.createNativeQuery("delete from decisions where id = :id").setParameter("id", id).executeUpdate();
         org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
                 new org.springframework.transaction.support.TransactionSynchronization() {
@@ -97,5 +98,6 @@ public class DecisionRetentionService {
                                 "product_event=decision_deleted decision_id={} deleted_at={}", id, now);
                     }
                 });
+        return true;
     }
 }

@@ -292,7 +292,7 @@
 
 | 규칙 | 현재 자동 검증 |
 | --- | --- |
-| BR-LIST-01, BR-DELETE-01 | `DecisionApiIntegrationTest`, `DiscoveryApiIntegrationTest.lateAiCompletionCannotRecreateADeletedDecision`, `frontend/e2e/decision-list.spec.ts` |
+| BR-LIST-01, BR-DELETE-01 | `DecisionApiIntegrationTest`, `DiscoveryApiIntegrationTest.lateAiCompletionCannotRecreateADeletedDecision`, `frontend/e2e/decision-list.spec.ts`, `DecisionPurgeJobTest`, `DecisionPurgeJobIntegrationTest` (일회 실행 purge) |
 | BR-CMP-01~02 | `ComparisonTest`, `DecisionApiIntegrationTest.comparisonConditionsConfirmationAndResolutionSnapshotSurviveReopening`, `frontend/e2e/comparison-flow.spec.ts` |
 | BR-AUTH-01 | `UserProvisioningServiceTest`, `LoginRetrySecurityTest` |
 | BR-CAT-01~03 | `CatalogPolicyTest`, `CatalogApiIntegrationTest`, `frontend/e2e/catalog.spec.ts`, `scripts/catalog/report.test.mjs` |
