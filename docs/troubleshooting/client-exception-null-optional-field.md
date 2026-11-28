@@ -2,7 +2,7 @@
 
 ## 증상과 기대 결과
 
-2026-11-28 Cloud Run 첫 배포(`v0.2.1`) 직후 운영자가 예산 없이 만든 결정에서 "후보 비교로 이동"을 누르자 화면 전체가 다음 문구로 바뀌었다.
+2026-11-28 Cloud Run에 `v0.2.1`을 배포한 직후 운영자가 예산 없이 만든 결정에서 "후보 비교로 이동"을 누르자 화면 전체가 다음 문구로 바뀌었다.
 
 ```text
 This page couldn't load
@@ -17,7 +17,7 @@ Reload to try again, or go back.
 
 - 그 시간대 Cloud Run 요청 log에서 해당 결정의 페이지·API 요청은 200·201뿐이었고 error 수준 container log가 없었다. 단계 전환 버튼은 서버를 거치지 않고 화면 단계만 바꾼다.
 - 이 앱에는 `error.tsx`·`global-error.tsx`가 없다. 위 문구는 화면을 그리다 예외가 났을 때 Next.js가 보여 주는 기본 화면이다.
-- 해당 결정은 DB에 예산과 저장된 비교 조건이 없었다. 이때 backend는 결정의 예산을 비교 조건의 `maxBudget`으로 쓰고(`Comparison.java`), 응답에서 `null`을 생략하는 Jackson 설정은 없다. 따라서 응답의 `comparison.settings.maxBudget`은 `null`이다(코드로 확인했고, 운영 응답 본문을 직접 보지는 않았다).
+- 해당 결정은 DB에 예산과 저장된 비교 조건이 없었다. 이때 backend는 추천 조건의 최대 예산(추천으로 만든 결정) 또는 결정의 예산을 비교 조건의 `maxBudget`으로 쓰고(`Comparison.java`, `DecisionService.java`), 응답에서 `null`을 생략하는 Jackson 설정은 없다. 따라서 응답의 `comparison.settings.maxBudget`은 `null`이다(코드로 확인했고, 운영 응답 본문을 직접 보지는 않았다).
 - `BudgetInput`은 값이 없는 경우를 `value === undefined`로만 검사했다. `null`이 들어오면 `value.toLocaleString(...)`에서 예외가 난다. mock backend가 `maxBudget: null`을 내려보내게 한 e2e에서 같은 화면 전환을 실행해 재현했다.
 
   ```text
