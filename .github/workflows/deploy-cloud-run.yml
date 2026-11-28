@@ -185,10 +185,12 @@ jobs:
           echo "배포 전 traffic 100% revision: ${previous:-확인 불가}"
           echo "previous=$previous" >> "$GITHUB_OUTPUT"
 
+          # 서비스 단위 flag는 첫 --container 앞에 둔다. --container 뒤의 flag는 그 container의 flag로 해석되어
+          # 서비스 단위 flag가 오면 "unrecognized arguments"로 실패한다(docs/troubleshooting/gcloud-run-container-flag-order.md).
           gcloud run services update "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
+            --no-traffic --tag "$CANDIDATE_TAG" --quiet \
             --container frontend --image "$FRONTEND_IMAGE" \
-            --container backend --image "$BACKEND_IMAGE" \
-            --no-traffic --tag "$CANDIDATE_TAG" --quiet
+            --container backend --image "$BACKEND_IMAGE"
 
           state="$(describe | jq -c --arg tag "$CANDIDATE_TAG" '{
             created: .status.latestCreatedRevisionName,

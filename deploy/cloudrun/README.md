@@ -29,7 +29,7 @@
 배포 권한은 human에게 종속되며 GitHub와 WIF 설정으로 강제한다.
 
 - **(가) 승인 관문.** workflow의 클라우드 단계(WIF 인증, Artifact Registry push, Cloud Run 배포, traffic 전환)는 모두 `environment: production`을 선언한 `deploy` job 하나에 있다. 이 environment에는 human이 GitHub 설정에서 required reviewer(저장소 소유자)와 배포 branch `main` 제한을 직접 구성한다. environment 설정은 저장소 관리자만 바꿀 수 있고 bot에는 그 권한이 없다. 에이전트(bot)는 workflow를 실행할 수 있지만 `deploy` job은 required reviewer인 human이 승인해야 시작된다.
-- **(나) WIF 조건.** provider는 `repository_id=1339097882`, `repository_owner_id=102518515`, `ref=refs/heads/main`인 GitHub OIDC token만 받고, 배포용 서비스 계정의 `roles/iam.workloadIdentityUser`는 `attribute.workflow_ref`가 `lawliet62/Decision-Assistant/.github/workflows/deploy-cloud-run.yml@refs/heads/main`인 주체에만 있다(2026-11-28 관찰). provider 조건에는 `assertion.environment=='production'`도 있어 `production` environment를 선언한 job의 token만 받는다(2026-11-28 리드가 적용하고 조회로 확인, 실제 인증으로는 미확인). 다른 branch, PR, 다른 workflow 파일, 승인되지 않은 job은 이 계정을 쓸 수 없다. workflow 파일 이름이나 environment 이름을 바꾸면 GCP 조건도 바꿔야 한다.
+- **(나) WIF 조건.** provider는 `repository_id=1339097882`, `repository_owner_id=102518515`, `ref=refs/heads/main`인 GitHub OIDC token만 받고, 배포용 서비스 계정의 `roles/iam.workloadIdentityUser`는 `attribute.workflow_ref`가 `lawliet62/Decision-Assistant/.github/workflows/deploy-cloud-run.yml@refs/heads/main`인 주체에만 있다(2026-11-28 관찰). provider 조건에는 `assertion.environment=='production'`도 있어 `production` environment를 선언한 job의 token만 받는다(2026-11-28 리드가 적용하고 조회로 확인. 같은 날 첫 실행에서 승인된 `deploy` job의 인증이 통과했다. 조건에 맞지 않는 token이 거부되는지는 실제 인증으로 확인하지 않았다). 다른 branch, PR, 다른 workflow 파일, 승인되지 않은 job은 이 계정을 쓸 수 없다. workflow 파일 이름이나 environment 이름을 바꾸면 GCP 조건도 바꿔야 한다.
 - **(다) 관문의 범위.** 이 관문은 GitHub와 WIF 범위의 강제다. 에이전트가 PC에서 human의 개인 `gh` 로그인이나 배포 권한이 있는 `gcloud` 계정을 쓸 수 있다면 우회된다. 그 격리는 운영 에이전트의 권한 구성에서 따로 다룬다(미해결).
 - **(라) 대리 승인 경로 없음.** "human이 명령하면 에이전트가 직접 승인·배포"하는 경로는 두지 않는다. 그런 경로는 에이전트의 자기 승인과 구분해 강제할 수 없기 때문이다.
 - environment 이름은 정확히 `production`이어야 한다. workflow가 존재하지 않는 environment 이름을 참조하면 GitHub가 **보호 규칙 없는 environment를 자동으로 만들어** 승인 없이 job이 실행된다. 이름을 바꾸거나 새 job에 environment를 붙일 때는 GitHub 설정에 같은 이름의 보호 규칙이 먼저 있어야 한다.
@@ -52,7 +52,7 @@
    1. Java 21로 backend `bootJar`, backend·frontend image build(`linux/amd64`, frontend는 `BACKEND_URL=http://localhost:8080`), tag는 commit SHA
    2. WIF 인증, Artifact Registry push, registry digest 확보
    3. 배포 전 traffic 100% revision을 log에 남김
-   4. `gcloud run services update --container frontend --image <digest> --container backend --image <digest> --no-traffic --tag candidate`로 traffic 없는 새 revision 생성. 새 revision이 준비되지 않으면 여기서 실패한다
+   4. `gcloud run services update --no-traffic --tag candidate --container frontend --image <digest> --container backend --image <digest>`로 traffic 없는 새 revision 생성. 서비스 단위 flag는 첫 `--container` 앞에 둔다([사례](../../docs/troubleshooting/gcloud-run-container-flag-order.md)). 새 revision이 준비되지 않으면 여기서 실패한다
    5. 후보 tag의 revision이 최신 생성·준비 revision인지, 서비스 template의 image가 이번 digest인지 확인
    6. 후보 tag 주소에서 smoke(최대 300초 재시도)
    7. traffic을 후보 revision 100%로 전환하고 실제 traffic이 그 revision 100%인지 확인
@@ -176,11 +176,12 @@ bash deploy/cloudrun/smoke.sh https://decision-assistant-277935636498.asia-south
 
 - 리드가 2026-11-28 위 template과 같은 구조로 배포: `/login` 200, 미인증 `/api/v1/me` 401, Flyway 30 적용, backend 기동 약 25초, Cloud Run 서비스 계정 ADC로 기존 Secret bootstrap 동작. 운영자가 로그인·결정 생성·목록·비교·로그아웃·재로그인을 확인했다(PR #103 수정 포함 revision `decision-assistant-00002-dq6`).
 - 로컬(Windows, Docker 29): 두 image build, frontend image의 rewrite 대상이 `http://localhost:8080`, 로컬 registry push 뒤 `RepoDigests`에서 registry digest 추출(registry의 `Docker-Content-Digest`와 일치), template YAML parse와 render, backend env 이름·고정값의 `deploy/compose.yaml` 대조, `smoke.sh`의 공개 주소 통과와 실패·입력 거부 동작, `notes.mjs`의 version 결정과 `v0.2.0` 이후 실제 Git 기록으로 만든 릴리스 노트.
+- 첫 실행(2026-11-28, `main` `805986c`, human이 `workflow_dispatch`로 시작): `production` environment에 required reviewer와 배포 branch `main` 제한이 구성돼 있었고, `deploy` job은 human의 승인 기록 뒤에 시작됐다. WIF 인증(environment 조건 포함)과 Artifact Registry push, registry digest 확보까지 통과했다. 이어진 `gcloud run services update`는 인자 해석에서 거부돼 revision을 만들지 못했고 traffic·tag·Release는 바뀌지 않았다([사례](../../docs/troubleshooting/gcloud-run-container-flag-order.md)).
+- 수정한 flag 순서의 `services update`와 `update-traffic --to-revisions`·`--remove-tags`, `services describe`가 gcloud 570.0.0에서 인자 해석을 통과하는 것(API 호출 전 단계까지만 확인).
 
 미검증:
 
-- GitHub Actions에서의 승인 관문 동작, WIF 인증(environment 조건 포함), Artifact Registry push, `gcloud run services update`의 multi-container image 교체와 `--no-traffic --tag`, `update-traffic`, `gh release create`. `main`에서 승인된 실행으로만 확인할 수 있다.
-- `production` environment의 required reviewer·배포 branch 제한 구성(human이 GitHub 설정에서 구성하며 이 문서에서는 상태를 확인하지 않았다). 이 보호 규칙이 없으면 `deploy` job은 승인 없이 시작되므로, 이 workflow를 `main`에 병합하기 전에 구성한다.
+- `gcloud run services update`의 multi-container image 교체와 `--no-traffic --tag`의 실제 동작, `update-traffic`, `gh release create`. `main`에서 승인된 실행으로만 확인할 수 있다.
 - `--container ... --image`만 지정한 update가 env·`container-dependencies`·probe 등 나머지 설정을 그대로 두는지. gcloud 동작상 그럴 것으로 보지만 실제 revision으로 확인하지 않았다.
 - 서비스 수준 `roles/run.developer`로 `services describe`·`update-traffic`이 모두 허용되는지.
 - `replace` 뒤 traffic 동작, 후보 tag 주소의 실제 형식.
