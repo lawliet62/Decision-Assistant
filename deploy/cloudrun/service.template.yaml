@@ -1,0 +1,64 @@
+# Cloud Run 서비스 정의 template. 운영자가 render해 `gcloud run services replace`로 적용한다.
+# 따옴표 안의 대문자 placeholder는 README의 render 절차(envsubst)로 채운다. render 결과에는 허용 email 같은
+# 비공개 값이 들어가므로 저장소 밖에만 만들고 commit하지 않는다. 이 주석에는 placeholder 표기를 쓰지 않는다.
+# backend env 이름과 고정값은 deploy/compose.yaml과 같게 유지한다.
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: decision-assistant
+  annotations:
+    run.googleapis.com/ingress: all
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: '0'
+        # 제품명 검색 burst 제한이 인스턴스 메모리에 있어 1로 고정한다(ADR 0025).
+        autoscaling.knative.dev/maxScale: '1'
+        run.googleapis.com/cpu-throttling: 'true'
+        run.googleapis.com/startup-cpu-boost: 'true'
+        run.googleapis.com/container-dependencies: '{"frontend":["backend"]}'
+    spec:
+      serviceAccountName: '${RUNTIME_SERVICE_ACCOUNT}'
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+        - name: frontend
+          image: '${FRONTEND_IMAGE}'
+          ports:
+            - containerPort: 3000
+          resources:
+            limits: { cpu: '1', memory: 512Mi }
+        - name: backend
+          image: '${BACKEND_IMAGE}'
+          env:
+            - { name: SPRING_PROFILES_ACTIVE, value: oidc }
+            - { name: SPRING_DOCKER_COMPOSE_ENABLED, value: 'false' }
+            - { name: DECISION_ASSISTANT_SECRETS_MODE, value: gcp }
+            - { name: DECISION_ASSISTANT_SECRETS_DEV_PROJECT_ID, value: '${DEV_PROJECT_ID}' }
+            - { name: DECISION_ASSISTANT_SECRETS_PROD_PROJECT_ID, value: '${PROD_PROJECT_ID}' }
+            - { name: DB_SECRET_VERSION, value: '${DB_SECRET_VERSION}' }
+            - { name: AUTH0_SECRET_VERSION, value: '${AUTH0_SECRET_VERSION}' }
+            - { name: AUTH0_CLIENT_ID, value: '${AUTH0_CLIENT_ID}' }
+            - { name: AUTH0_ISSUER_URI, value: '${AUTH0_ISSUER_URI}' }
+            - { name: DECISION_ASSISTANT_ALLOWED_EMAILS, value: '${ALLOWED_EMAILS}' }
+            - { name: DECISION_ASSISTANT_PUBLIC_BASE_URL, value: 'https://${PUBLIC_HOST}' }
+            - { name: DB_URL, value: 'jdbc:postgresql://${NEON_HOST}/decision_assistant?sslmode=require' }
+            - { name: DB_USERNAME, value: '${DB_USERNAME}' }
+            - { name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE, value: '10' }
+            - { name: DECISION_ASSISTANT_CATALOG_ENABLED, value: 'true' }
+            - { name: DECISION_ASSISTANT_CATALOG_REFRESH_ENABLED, value: 'false' }
+            - { name: DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED, value: 'false' }
+            - { name: DECISION_ASSISTANT_AI_ENABLED, value: 'false' }
+            - { name: DECISION_ASSISTANT_SEARCH_ENABLED, value: 'false' }
+            - { name: DECISION_ASSISTANT_WEB_ENABLED, value: 'false' }
+            - { name: DECISION_ASSISTANT_REMINDERS_ENABLED, value: 'false' }
+          resources:
+            limits: { cpu: '1', memory: 1Gi }
+          # JVM 기동(관찰 약 25초)과 Neon 재개를 고려해 최대 240초(5초 x 48회)까지 기다린다.
+          startupProbe:
+            tcpSocket: { port: 8080 }
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 48

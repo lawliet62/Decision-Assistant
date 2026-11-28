@@ -2,7 +2,7 @@
 
 현재 범위는 설정·로컬 검증이다. 아래 운영 명령은 **실제 배포 승인, 크레딧/비용 확인, PR 병합 이후 운영자만** 실행한다. 무료라고 가정해 VM·IP·bucket을 생성하지 않는다. 추가 유료 지출 승인액은 0원이다.
 
-[ADR 0025](../docs/decisions/0025-cloud-run-neon-deployment.md)로 Cloud Run·Neon 구성으로의 전환이 결정되었다. 전환이 완료될 때까지는 이 문서의 단일 VM 구성과 절차가 운영 기준이다.
+[ADR 0025](../docs/decisions/0025-cloud-run-neon-deployment.md)로 Cloud Run·Neon 구성으로의 전환이 결정되었다. 전환이 완료될 때까지는 이 문서의 단일 VM 구성과 절차가 운영 기준이다. 전환 전 검증 서비스의 배포 자산과 절차는 [Cloud Run 배포](cloudrun/README.md)에 있다.
 
 ## 구성과 신뢰 경계
 

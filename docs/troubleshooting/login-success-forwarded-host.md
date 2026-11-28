@@ -27,7 +27,7 @@ Spring의 forwarded header 처리는 RFC 7239 `Forwarded` header가 있으면 �
 
 회귀 시험은 Cloud Run 형태와 Caddy 형태의 header로 로그인했을 때 `Location`이 정확히 `https://app.example.test/`인지 확인한다. 수정 전에는 Cloud Run 형태만 실패했고 수정 후 모두 통과했다. 기존 로그인 성공 시험의 기대값도 상대 경로 `/`에서 공개 주소의 `/`로 바꿨다.
 
-상태는 부분 해결이다. 코드 수정과 회귀 시험은 끝났고, 수정된 Cloud Run 릴리스에서의 확인은 아직 하지 않았다.
+상태는 해결이다. 코드 수정과 회귀 시험이 끝났고, 이 수정을 포함한 Cloud Run 검증 서비스(revision `decision-assistant-00002-dq6`)에서 운영자가 로그인·재로그인이 정상임을 확인했다(2026-11-28). callback 응답의 `Location` 값은 따로 기록하지 않았다.
 
 ## 운영에서 확인하는 방법
 
