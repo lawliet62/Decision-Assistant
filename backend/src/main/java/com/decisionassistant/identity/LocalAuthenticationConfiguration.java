@@ -1,6 +1,7 @@
 package com.decisionassistant.identity;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -13,6 +14,8 @@ import java.util.UUID;
 
 @Configuration(proxyBeanMethods = false)
 @Profile("local")
+// job mode(non-web)에는 local 사용자 로그인 경로와 HttpSecurity가 없고 사용자 생성도 하지 않는다.
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class LocalAuthenticationConfiguration {
 
     public static final UUID LOCAL_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");

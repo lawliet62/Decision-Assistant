@@ -255,6 +255,16 @@ Serper는 제품명 검색, Firecrawl은 페이지 수집과 기존 대안 검�
 
 인증 도입 전 Decision이 있는 개발 DB에는 V3 ownership migration을 적용하지 않는다. 데이터가 disposable하다는 전제에서 컨테이너를 제거한 뒤 빈 DB로 migration한다. 개별 backend 실행에는 `--spring.profiles.active=local`을 명시한다. Production은 `oidc` profile, Auth0 설정, exact email allowlist가 모두 필요하다.
 
+### 휴지통 만료 purge job mode
+
+`DECISION_ASSISTANT_JOB=purge-expired-decisions` 또는 `--decision-assistant.job=purge-expired-decisions`를 주면 backend가 web server·예약 작업·카탈로그 기동 작업·Flyway migration 없이 만료 결정을 모두 purge하고 종료한다([ADR 0025](decisions/0025-cloud-run-neon-deployment.md) 결정 4). schema는 migration하지 않으므로 web 실행으로 migration된 DB가 필요하다. 로컬에서는 bootJar를 만든 뒤 개발 DB를 대상으로 실행한다. 종료 코드는 성공 0, 실패 또는 만료 결정 잔여 1이며 결과는 `product_event=decision_purge_run` 로그 한 줄로 남는다.
+
+```powershell
+cd backend
+.\gradlew.bat bootJar
+java -jar build\libs\decision-assistant-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --decision-assistant.job=purge-expired-decisions
+```
+
 ## 문서 유지
 
 - 문서는 작성 주체의 관점이 드러나는 대화체 대신 프로젝트의 결정·근거·현재 동작을 직접 서술한다. 예를 들어 요청자를 제3자로 지칭해 결정 사항을 설명하지 않는다.

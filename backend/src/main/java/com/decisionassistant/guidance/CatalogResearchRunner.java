@@ -9,7 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import java.time.*;
 
 /** 명시적으로 켠 개발 조사만 수행한다. 월 5개 슬롯은 실패해도 다시 소비하지 않는다. */
-@Component @Profile("local")
+@Component @Profile("local") @org.springframework.context.annotation.Conditional(com.decisionassistant.job.JobMode.Inactive.class)
 @ConditionalOnProperty(name="decision-assistant.catalog.research-enabled",havingValue="true")
 public class CatalogResearchRunner implements ApplicationRunner {
     private final JdbcTemplate jdbc; private final String key; private final String task; private final int slot;

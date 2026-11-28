@@ -33,6 +33,7 @@ Browser
 | `notification` | 회고 알림 설정·상태·scheduled email worker·Resend adapter를 담당한다. Decision 소유권과 현재 Resolution을 확인한다. |
 | `preference` | 성향 기억의 사용자 확인·수정·제외·삭제와 원본 수명에 따른 적용 가능 조회를 담당한다. |
 | `secrets` | backend 초기 설정 시 환경 identity로 Secret Manager 값을 읽는다. domain 데이터 저장소나 frontend API가 아니다. |
+| `job` | `decision-assistant.job` switch로 backend를 한 번 실행하고 종료하는 mode로 바꾼다. web server·예약 작업·Flyway·OAuth2 client 자동 구성을 끄며, 실제 작업은 각 domain package가 가진다(예: `decision`의 만료 삭제). |
 | `common` | HTTP 오류 변환과 작은 공통 예외를 제공한다. |
 
 frontend의 `app/`은 route·server composition, `features/`는 사용자 흐름, `shared/api/`는 generated OpenAPI 타입과 얇은 client다. 브라우저는 같은 origin의 Next.js `/api` rewrite를 통해 Spring에 접근한다. `/oauth2`, `/login/oauth2`, `/logout`도 backend로 전달하며 인증 token을 frontend에 복제하지 않는다.

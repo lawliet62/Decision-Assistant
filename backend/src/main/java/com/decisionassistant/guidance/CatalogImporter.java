@@ -10,8 +10,8 @@ import java.net.URI;
 import java.time.Instant;
 import java.util.*;
 
-/** 운영자가 검토해 배포한 manifest만 읽는다. 사용자 입력이나 외부 모델 출력은 등록 경로가 아니다. */
-@Component
+/** 운영자가 검토해 배포한 manifest만 읽는다. 사용자 입력이나 외부 모델 출력은 등록 경로가 아니다. job mode에서는 쓰지 않는다. */
+@Component @org.springframework.context.annotation.Conditional(com.decisionassistant.job.JobMode.Inactive.class)
 public class CatalogImporter implements ApplicationRunner {
     public record Entry(String id, int revision, String name, String purchaseUrl, String expectedIdentity,
                         List<CatalogProduct.Fact> facts, boolean active, String brandName, CatalogProduct.BrandStatus brandStatus) {}
