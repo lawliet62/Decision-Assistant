@@ -1,5 +1,5 @@
 // deploy/cloudrun의 Cloud Run 정의 template 정적 검사. YAML 문법과 Cloud Run schema는 gcloud가 적용할 때 검사하므로
-// 여기서는 placeholder·image 고정·env 일관성처럼 template을 고칠 때 깨지기 쉬운 약속만 본다.
+// 여기서는 placeholder·image 고정·env 일관성처럼 template을 고칠 때 깨지기 쉬운 약속만 본다. backup script의 dump 범위도 함께 본다.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
@@ -66,4 +66,13 @@ test("backup job은 libpq env와 숫자 version으로 고정한 secret 참조만
   assert.equal((body(backup).join("\n").match(/secretKeyRef/g) ?? []).length, 1);
   assert.doesNotMatch(body(backup).join("\n"), /latest|BACKUP_TEST_ENDPOINTS|BASE_URL/);
   assert.match(env(purge).DB_URL, /sslmode=require$/);
+});
+
+test("backup script의 pg_dump는 세션 두 table의 데이터만 빼고 구조는 남긴다", () => {
+  const script = body(read("backup/backup.sh")).join("\n").replace(/\\\n\s*/g, " ");
+  const dumps = script.split("\n").filter(line => /^\s*pg_dump\s/.test(line));
+  assert.equal(dumps.length, 1, "pg_dump 호출은 하나여야 합니다");
+  const excluded = [...dumps[0].matchAll(/--exclude-table-data=(\S+)/g)].map(([, name]) => name).sort();
+  assert.deepEqual(excluded, ["public.spring_session", "public.spring_session_attributes"]);
+  assert.doesNotMatch(dumps[0], /\s(?:-[tTnNsa]|--table|--schema|--exclude-table(?!-data)|--exclude-schema|--data-only|--schema-only)\b/);
 });

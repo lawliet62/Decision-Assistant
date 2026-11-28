@@ -40,7 +40,11 @@ trap 'rm -rf -- "$work"' EXIT
 trap 'exit 1' HUP INT TERM
 dump="$work/backup.dump"
 
-pg_dump --format=custom --no-password --file="$dump" || fail "pg_dump"
+# 로그인 세션 table은 구조만 남기고 행은 넣지 않는다. 복원 가치가 없고 직렬화된 OIDC ID token·email claim을 담는다.
+pg_dump --format=custom --no-password \
+  --exclude-table-data=public.spring_session \
+  --exclude-table-data=public.spring_session_attributes \
+  --file="$dump" || fail "pg_dump"
 [ -s "$dump" ] || fail "empty_dump"
 pg_restore --list "$dump" > /dev/null || fail "unreadable_archive"
 bytes=$(wc -c < "$dump" | tr -d ' ')
