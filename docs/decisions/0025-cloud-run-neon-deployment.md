@@ -48,6 +48,7 @@ ADR 0019의 단일 VM은 image 전달·Compose 기동·백업 timer·TLS 인증�
 ## 신뢰·보존 경계의 변화
 
 - 사용자 데이터와 세션(`spring-session-jdbc`)이 GCP 밖의 제3자인 Neon(AWS 싱가포르 리전)에 저장된다. 지금까지는 GCP project 안의 VM disk와 GCS 백업에만 있었다.
+  - 2026-11-28 관찰: Boot의 session 자동 구성 module이 빠져 있어 세션이 실제로는 DB에 저장되지 않고 인스턴스 메모리에만 있었다. `spring-boot-starter-session-jdbc`로 고쳤다([사례](../troubleshooting/spring-session-jdbc-autoconfig.md)). 수정 뒤에는 로그인한 사용자의 OIDC ID token과 claim(email 등)이 직렬화된 세션 행도 Neon과 일일 백업(`pg_dump`)에 포함된다.
 - backend는 sidecar가 되어도 외부에 노출되지 않는다. 공식 문서 기준으로 Cloud Run은 ingress container의 port만 외부 요청에 연결한다.
 - 같은 인스턴스의 container는 서비스 계정을 공유하므로 독립적인 IAM 경계가 아니다. ADR 0019의 "같은 VM의 컨테이너는 Identity 격리 경계가 아님"과 같은 성격이다.
 - Neon의 시점 복원(point-in-time restore) 이력에 삭제된 데이터가 일정 기간 남는다. 2026-11-28에 만든 project의 이력 보존 설정은 6시간(`history_retention_seconds` 21600)이다(관찰). 30일 만료 삭제와 7일 백업 보존 외에 이 기간이 추가로 생기며, 이 기간의 허용 여부와 고지는 전환 전에 human이 결정한다.
@@ -56,6 +57,7 @@ ADR 0019의 단일 VM은 image 전달·Compose 기동·백업 timer·TLS 인증�
 ## 결과와 제약
 
 - 요청이 없으면 인스턴스가 0개로 줄어 첫 요청에 콜드 스타트가 생긴다. sidecar 구성에서는 JVM 기동 동안 첫 요청이 더 지연된다. 검증 서비스에서 backend 기동은 약 25초였다(관찰, 2026-11-28). 콜드 스타트에서 사용자가 체감하는 첫 응답 시간은 따로 재지 않았다. Neon compute도 5분 유휴 후 0으로 줄어 재개 지연이 더해진다.
+- 세션이 Neon에 있으므로 인스턴스가 0개로 줄거나 새 revision이 배포되어도 로그인이 유지된다. 대신 session cookie가 있는 요청마다 세션 조회와 마지막 접근 시각 갱신(쓰기 1회)이 생긴다. 만료 세션 정리는 web 실행의 session 저장소가 자체 scheduler로 매분 실행하므로 요청을 처리하는 동안에만 진행되고(추론), job mode에는 없다.
 - 요청이 없을 때 background 작업이 실행되지 않는다. 지금 꺼져 있는 `@Scheduled` 기반 기능(검색·수집 worker, 알림, 카탈로그 가격·사양 갱신)을 켜려면 실행 방식을 다시 결정해야 한다.
 - 제품명 검색의 burst 제한(사용자별 5회/분, 동시 2건)은 single instance를 전제로 인스턴스 메모리에 둔다(`ProductLookupService`). 월 호출 상한은 PostgreSQL에 있어 인스턴스 수와 무관하다. burst 제한을 유지하기 위해 최대 인스턴스 수를 1로 둔다.
 - Cloud Run 요청 기반 과금의 무료 범위는 월 요청 200만 건·180,000 vCPU-초·360,000 GiB-초이며 결제 계정 단위로 합산된다. `asia-southeast1`은 Tier 2 가격 리전이고 무료 범위는 Tier 1 가격 기준 할인으로 적용되므로 같은 사용량이라도 Tier 1 리전보다 무료 범위를 빨리 소진한다. Cloud Scheduler는 결제 계정당 월 3개 job이 무료이며 이번 구성은 purge·백업 두 개를 쓴다. Neon 무료 플랜은 project당 월 100 CU-시간·저장 1GB다.
