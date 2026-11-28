@@ -1,0 +1,4 @@
+# 모든 Pull Request의 검토를 저장소 소유자에게 자동으로 요청한다.
+# 이 파일은 검토 요청만 담당하고, 승인 요건은 main ruleset이 강제한다.
+# 배경: docs/development.md "Commit and Pull Request"
+* @lawliet62
