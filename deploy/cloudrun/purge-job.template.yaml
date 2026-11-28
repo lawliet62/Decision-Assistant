@@ -1,0 +1,50 @@
+# 휴지통 만료 삭제 Cloud Run Job 정의 template. 운영자가 render해 `gcloud run jobs replace`로 적용한다.
+# 서비스와 같은 backend image를 일회 실행 mode(DECISION_ASSISTANT_JOB)로 실행한다. web server, 예약 작업,
+# Flyway, 카탈로그 기동 작업은 그 mode에서 실행되지 않는다. 남은 만료 대상이 없으면 0, 아니면 1로 끝난다.
+# 따옴표 안의 대문자 placeholder는 README의 render 절차(envsubst)로 채운다. render 결과는 저장소 밖에만 만든다.
+# env 이름과 값은 service.template.yaml의 backend container와 같게 두고, 공개 주소처럼 화면·redirect에만 쓰는 값은 뺀다.
+# 외부 기능과 카탈로그는 끈다. 이 주석에는 placeholder 표기를 쓰지 않는다.
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: decision-assistant-purge
+spec:
+  template:
+    spec:
+      taskCount: 1
+      parallelism: 1
+      template:
+        spec:
+          serviceAccountName: '${RUNTIME_SERVICE_ACCOUNT}'
+          # 삭제는 만료 대상이 없어질 때까지 반복하는 멱등 작업이라 일시 오류(Neon 재개 지연 등)에 한 번 재시도한다.
+          maxRetries: 1
+          # JVM 기동(서비스 관찰 약 25초)과 Neon 재개, 삭제 시간을 합쳐도 충분한 상한이다.
+          timeoutSeconds: 600
+          containers:
+            - name: purge
+              image: '${BACKEND_IMAGE}'
+              env:
+                - { name: DECISION_ASSISTANT_JOB, value: purge-expired-decisions }
+                - { name: SPRING_PROFILES_ACTIVE, value: oidc }
+                - { name: SPRING_DOCKER_COMPOSE_ENABLED, value: 'false' }
+                - { name: DECISION_ASSISTANT_SECRETS_MODE, value: gcp }
+                - { name: DECISION_ASSISTANT_SECRETS_DEV_PROJECT_ID, value: '${DEV_PROJECT_ID}' }
+                - { name: DECISION_ASSISTANT_SECRETS_PROD_PROJECT_ID, value: '${PROD_PROJECT_ID}' }
+                - { name: DB_SECRET_VERSION, value: '${DB_SECRET_VERSION}' }
+                - { name: AUTH0_SECRET_VERSION, value: '${AUTH0_SECRET_VERSION}' }
+                - { name: AUTH0_CLIENT_ID, value: '${AUTH0_CLIENT_ID}' }
+                - { name: AUTH0_ISSUER_URI, value: '${AUTH0_ISSUER_URI}' }
+                - { name: DECISION_ASSISTANT_ALLOWED_EMAILS, value: '${ALLOWED_EMAILS}' }
+                - { name: DB_URL, value: 'jdbc:postgresql://${NEON_HOST}/decision_assistant?sslmode=require' }
+                - { name: DB_USERNAME, value: '${DB_USERNAME}' }
+                # 서비스 인스턴스와 동시에 실행될 수 있어 연결 수를 작게 둔다.
+                - { name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE, value: '2' }
+                - { name: DECISION_ASSISTANT_CATALOG_ENABLED, value: 'false' }
+                - { name: DECISION_ASSISTANT_CATALOG_REFRESH_ENABLED, value: 'false' }
+                - { name: DECISION_ASSISTANT_CATALOG_SPEC_REFRESH_ENABLED, value: 'false' }
+                - { name: DECISION_ASSISTANT_AI_ENABLED, value: 'false' }
+                - { name: DECISION_ASSISTANT_SEARCH_ENABLED, value: 'false' }
+                - { name: DECISION_ASSISTANT_WEB_ENABLED, value: 'false' }
+                - { name: DECISION_ASSISTANT_REMINDERS_ENABLED, value: 'false' }
+              resources:
+                limits: { cpu: '1', memory: 1Gi }

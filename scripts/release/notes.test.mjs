@@ -85,6 +85,25 @@ test("릴리스 노트는 실행 결과가 없는 항목을 성공으로 채우�
   assert.match(notes, /미검증 항목/);
 });
 
+test("job image 갱신 결과를 확인한 항목에 그대로 적고, 없으면 성공으로 채우지 않는다", () => {
+  const base = {
+    version: "v0.3.0", commit: "e".repeat(40), previousTag: "v0.2.1",
+    migration: { included: false, files: [], schema: "스키마 30 유지" }, changes: [],
+    deployment: { backupImage: "r/backup@sha256:abc" },
+  };
+  const notes = renderNotes({ ...base, checks: { purgeJob: "갱신함(decision-assistant-purge)", backupJob: "건너뜀(job 없음)" } });
+  assert.match(notes, /- backup image: `r\/backup@sha256:abc`/);
+  assert.match(notes, /휴지통 만료 삭제 job image 갱신\(backend image\): 갱신함\(decision-assistant-purge\)/);
+  assert.match(notes, /백업 job image 갱신\(backup image\): 건너뜀\(job 없음\)/);
+  assert.match(notes, /백업 job과 휴지통 만료 삭제 job의 실제 실행 결과, 백업 복원/);
+  assert.doesNotMatch(notes, /실행 경로 미구현/);
+
+  const missing = renderNotes({ ...base, checks: {} });
+  assert.match(missing, /휴지통 만료 삭제 job image 갱신\(backend image\): 기록 없음/);
+  assert.match(missing, /백업 job image 갱신\(backup image\): 기록 없음/);
+  assert.match(renderNotes({ ...base, checks: {}, preview: true }), /백업 job image 갱신\(backup image\): 배포 후 기록/);
+});
+
 test("Git 기록에서 직전 릴리스 뒤 추가된 migration과 변경 목록을 모은다", () => {
   const repo = mkdtempSync(join(tmpdir(), "release-notes-"));
   try {

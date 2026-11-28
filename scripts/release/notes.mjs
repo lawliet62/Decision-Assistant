@@ -116,6 +116,7 @@ export function renderNotes({ version, commit, previousTag, migration, changes, 
     `- 배포 전 traffic revision: \`${value(deployment.previousRevision)}\``,
     `- backend image: \`${value(deployment.backendImage)}\``,
     `- frontend image: \`${value(deployment.frontendImage)}\``,
+    `- backup image: \`${value(deployment.backupImage)}\``,
     "",
     `## 포함된 변경 (${previousTag ?? "첫 릴리스"} 이후)`,
     "",
@@ -130,13 +131,15 @@ export function renderNotes({ version, commit, previousTag, migration, changes, 
     `- traffic 전환: ${value(checks.traffic)}`,
     `- 공개 주소 smoke: ${value(checks.publicSmoke)}`,
     `- 후보 tag 제거: ${value(checks.tagCleanup)}`,
+    `- 휴지통 만료 삭제 job image 갱신(backend image): ${value(checks.purgeJob)}`,
+    `- 백업 job image 갱신(backup image): ${value(checks.backupJob)}`,
     "",
     "미검증 항목(자동 배포가 확인하지 않음):",
     "",
     "- Auth0 실제 로그인, 초대 거부, 로그아웃·재로그인",
     "- 계정 간 데이터 격리, CSRF, 결정 생성·수정·삭제 같은 쓰기 흐름",
     "- 이전 revision이 현재 DB schema에서 동작하는지(rollback 가능 여부)",
-    "- 백업 생성·복원, 휴지통 30일 만료 삭제(Cloud Run 실행 경로 미구현)",
+    "- 백업 job과 휴지통 만료 삭제 job의 실제 실행 결과, 백업 복원(workflow는 job image만 바꾸고 job을 실행하지 않음)",
     "- 로그 보존, 비용·사용량",
     GENERATED_END,
     "",
@@ -179,7 +182,8 @@ function main(argv) {
   if (command === "notes") {
     const option = { type: "string" };
     const names = ["commit", "version", "started", "finished", "service", "region", "revision", "previous-revision",
-      "backend-image", "frontend-image", "candidate-smoke", "traffic", "public-smoke", "tag-cleanup"];
+      "backend-image", "frontend-image", "backup-image", "candidate-smoke", "traffic", "public-smoke", "tag-cleanup",
+      "purge-job", "backup-job"];
     const options = { ...Object.fromEntries(names.map(name => [name, option])), preview: { type: "boolean", default: false } };
     const { values } = parseArgs({ args: rest, options });
     if (!values.commit || !values.version) throw new Error("--commit과 --version이 필요합니다.");
@@ -192,11 +196,13 @@ function main(argv) {
         service: values.service, region: values.region, revision: values.revision,
         previousRevision: values["previous-revision"],
         backendImage: values["backend-image"], frontendImage: values["frontend-image"],
+        backupImage: values["backup-image"],
       },
       checks: {
         revision: values.revision ? `${values.revision} 생성·준비 완료, 서비스 template image가 이번 build digest와 일치` : "",
         candidateSmoke: values["candidate-smoke"], traffic: values.traffic,
         publicSmoke: values["public-smoke"], tagCleanup: values["tag-cleanup"],
+        purgeJob: values["purge-job"], backupJob: values["backup-job"],
       },
     }));
     return;
