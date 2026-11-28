@@ -54,5 +54,5 @@ gcloud run services update "$SERVICE" --project "$PROJECT_ID" --region "$REGION"
 ## 다음 진단에서 반복할 판단
 
 - "unrecognized arguments"가 존재하는 flag 이름을 그대로 되물으면 이름이 아니라 위치를 먼저 본다.
-- 실제 리소스를 바꾸는 gcloud 명령도 인자 해석은 권한 없이 확인할 수 있다. 병합 전에 가짜 project·서비스 이름으로 같은 인자를 실행해, 인자 오류가 아니라 인증 또는 API 오류까지 가는지 본다. 이번 workflow는 이 명령을 병합 전에 실행하지 않았고(PR #104의 [미검증 항목](../../deploy/cloudrun/README.md#확인한-항목과-미검증-항목)에 "승인된 실행으로만 확인할 수 있다"고 적었다), 인자 해석만 따로 확인하는 절차도 없어 첫 배포에서 실패했다.
+- 실제 리소스를 바꾸는 gcloud 명령도 인자 해석은 권한 없이 확인할 수 있다. 병합 전에 가짜 project·서비스 이름으로 같은 인자를 실행해, 인자 오류가 아니라 인증 또는 API 오류까지 가는지 본다. 이번 workflow는 이 명령을 병합 전에 실행하지 않았고(PR #104의 [미검증 항목](https://github.com/lawliet62/Decision-Assistant/blob/805986c/deploy/cloudrun/README.md#확인한-항목과-미검증-항목)에 "승인된 실행으로만 확인할 수 있다"고 적었다), 인자 해석만 따로 확인하는 절차도 없어 첫 배포에서 실패했다.
 - workflow의 gcloud 명령을 바꾸면 [배포 운영 문서](../../deploy/cloudrun/README.md)의 같은 명령 표기도 함께 바꾼다.

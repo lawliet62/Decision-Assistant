@@ -149,7 +149,7 @@ env·서비스 계정·scaling·resource 같은 서비스 설정은 workflow가 
      | jq '.status.traffic'
    ```
 
-   `replace`는 새 revision을 만들고 smoke 없이 바로 traffic을 줄 수 있다. template에는 traffic 항목이 없다. 2026-11-28 최초 적용 뒤의 traffic 대상은 LATEST 100%였다(첫 workflow 실행 log로 관찰). workflow 배포가 한 번 성공한 뒤에는 traffic이 특정 revision에 고정되는데, 그 상태에서 `replace`가 traffic을 어떻게 두는지는 확인하지 않았다. 적용 뒤 traffic을 확인하고, 필요하면 아래 rollback 명령으로 원하는 revision을 지정한다. 이 경로는 운영자의 개인 `gcloud` 권한으로 실행되며 workflow의 승인 관문을 거치지 않는다.
+   `replace`는 새 revision을 만들고 smoke 없이 바로 traffic을 줄 수 있다. template에는 traffic 항목이 없다. `replace`로만 적용해 온 서비스의 traffic 대상은 2026-11-28 첫 workflow 실행 시점에 LATEST 100%였다(그 실행의 log로 관찰). workflow 배포가 한 번 성공한 뒤에는 traffic이 특정 revision에 고정되는데, 그 상태에서 `replace`가 traffic을 어떻게 두는지는 확인하지 않았다. 적용 뒤 traffic을 확인하고, 필요하면 아래 rollback 명령으로 원하는 revision을 지정한다. 이 경로는 운영자의 개인 `gcloud` 권한으로 실행되며 workflow의 승인 관문을 거치지 않는다.
 
 최초 생성에도 같은 절차를 쓴다. 공개 호출 허용(`roles/run.invoker`), 위 신뢰 경계의 IAM binding, WIF provider, GitHub `production` environment의 보호 규칙은 template에 포함되지 않는 별도 설정이다. 앞의 셋은 2026-11-28에 리드가 human 승인 아래 만들었고, environment 보호 규칙은 human이 GitHub 설정에서 직접 구성한다. 다시 만들 때도 별도 승인을 받는다.
 
@@ -180,17 +180,19 @@ bash deploy/cloudrun/smoke.sh https://decision-assistant-277935636498.asia-south
 - `production` environment 구성(2026-11-28 첫 실행 전 리드가 GitHub API로 조회): required reviewer는 저장소 소유자 1명, 배포 branch 정책은 `main`. branch 제한이 다른 branch의 실행을 실제로 막는지는 확인하지 않았다(첫 실행은 `main`에서 시작됐다).
 - [첫 실행](https://github.com/lawliet62/Decision-Assistant/actions/runs/46130545418)(2026-11-28, `main` `805986c`, human이 `workflow_dispatch`로 시작): 실행의 승인 기록에 저장소 소유자의 `production` 승인이 있고 `deploy` job은 그 뒤에 시작됐다. WIF 인증(environment 조건 포함), Artifact Registry push, registry digest 확보까지 통과했다. 서비스 수준 `roles/run.developer`로 `services describe`(배포 전 revision 조회)와 `update-traffic --remove-tags`(정리 단계)가 허용됐다. `gcloud run services update`는 인자 해석에서 거부돼 revision을 만들지 못했고 `release` job은 건너뛰어 tag·Release가 생기지 않았다([사례](../../docs/troubleshooting/gcloud-run-container-flag-order.md)). 정리 단계의 출력은 traffic `100% LATEST (currently decision-assistant-00002-dq6)`였다. 그 시점 서비스의 traffic 대상은 특정 revision이 아니라 LATEST였다.
 - [두 번째 실행](https://github.com/lawliet62/Decision-Assistant/actions/runs/46134019406)(2026-11-28, `main` `6ebd2fd`, human이 시작·승인)이 모든 단계를 통과해 `v0.2.1`을 배포했다.
-  - `services update`가 traffic 0%의 revision `decision-assistant-00003-yan`을 만들었다. traffic 대상이 LATEST였던 상태에서 `--no-traffic`은 기존 traffic을 `decision-assistant-00002-dq6`에 둔 채 새 revision을 만들었다.
+  - `services update`가 traffic 0%의 revision `decision-assistant-00003-yan`을 만들었다. 첫 실행 시점에 traffic 대상은 LATEST였고, 이 실행에서 `--no-traffic`은 기존 traffic을 `decision-assistant-00002-dq6`에 둔 채 새 revision을 만들었다.
   - 후보 tag 주소는 `https://candidate---decision-assistant-<hash>-as.a.run.app` 형식이었고 smoke가 1회 만에 통과했다.
   - `update-traffic --to-revisions` 뒤 traffic은 새 revision 100%였고 공개 주소 smoke가 통과했다. 후보 tag는 제거됐다. 서비스 수준 `roles/run.developer`로 revision 생성과 traffic 전환이 모두 허용됐다.
   - `release` job이 tag `v0.2.1`(배포 commit)과 GitHub Release를 만들었고 릴리스 노트가 게시됐다.
   - 배포 뒤 리드가 두 revision을 조회해 비교했다. spec에서 다른 값은 두 container의 image뿐이고 env 개수(backend 21, frontend 0), startup probe, `container-dependencies`, 최대 인스턴스 수, 서비스 계정이 같았다. `--container ... --image`만 지정한 update는 나머지 설정을 바꾸지 않았다.
   - 배포 뒤 서비스의 traffic 대상은 LATEST가 아니라 `decision-assistant-00003-yan`으로 고정돼 있다.
+  - 배포 뒤 운영자가 새 revision에서 로그인한 상태로 결정을 만들고 추천 후보를 추가했으며 그 요청들은 200·201이었다(요청 log로 관찰). 같은 확인에서 예산 없이 만든 결정의 비교·평가 화면이 브라우저 예외로 깨지는 앱 버그가 드러났다. 서버 요청은 모두 200이었고 frontend 소스는 직전 revision과 같아 배포 방식과는 무관하다. 수정은 별도 PR에서 다룬다.
 
 미검증:
 
 - 실패 경로의 실제 동작: 후보 smoke 실패 시 traffic 유지, 공개 주소 smoke 실패 시의 안내, rollback 명령. 두 실행 모두 이 경로를 지나지 않았다.
-- 배포된 revision에서의 로그인·쓰기 흐름. workflow의 smoke는 `/login`과 미인증 `/api/v1/me`만 본다.
+- 새 revision에서의 로그아웃·재로그인, 계정 간 격리. workflow의 smoke는 `/login`과 미인증 `/api/v1/me`만 본다.
+- traffic이 특정 revision에 고정된 상태에서 `services replace`가 traffic을 어떻게 두는지.
 - runner의 Docker가 push하는 manifest 형식(로컬은 containerd image store라 OCI index였다).
 - `actionlint` 검사(PC에 없어 YAML parse와 기존 workflow 대조로 대신했다).
 - Artifact Registry 사용량. 저장소에는 cleanup policy(7일 지난 version 삭제, 최근 6개 version 유지)가 있다(2026-11-28 리드 관찰). 이 정책으로 저장량이 무료 범위 안에 머무는지는 확인하지 않았다.
