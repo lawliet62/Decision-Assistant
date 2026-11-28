@@ -176,15 +176,17 @@ bash deploy/cloudrun/smoke.sh https://decision-assistant-277935636498.asia-south
 
 - 리드가 2026-11-28 위 template과 같은 구조로 배포: `/login` 200, 미인증 `/api/v1/me` 401, Flyway 30 적용, backend 기동 약 25초, Cloud Run 서비스 계정 ADC로 기존 Secret bootstrap 동작. 운영자가 로그인·결정 생성·목록·비교·로그아웃·재로그인을 확인했다(PR #103 수정 포함 revision `decision-assistant-00002-dq6`).
 - 로컬(Windows, Docker 29): 두 image build, frontend image의 rewrite 대상이 `http://localhost:8080`, 로컬 registry push 뒤 `RepoDigests`에서 registry digest 추출(registry의 `Docker-Content-Digest`와 일치), template YAML parse와 render, backend env 이름·고정값의 `deploy/compose.yaml` 대조, `smoke.sh`의 공개 주소 통과와 실패·입력 거부 동작, `notes.mjs`의 version 결정과 `v0.2.0` 이후 실제 Git 기록으로 만든 릴리스 노트.
-- 첫 실행(2026-11-28, `main` `805986c`, human이 `workflow_dispatch`로 시작): `production` environment에 required reviewer와 배포 branch `main` 제한이 구성돼 있었고, `deploy` job은 human의 승인 기록 뒤에 시작됐다. WIF 인증(environment 조건 포함)과 Artifact Registry push, registry digest 확보까지 통과했다. 이어진 `gcloud run services update`는 인자 해석에서 거부돼 revision을 만들지 못했고 traffic·tag·Release는 바뀌지 않았다([사례](../../docs/troubleshooting/gcloud-run-container-flag-order.md)).
+- `production` environment 구성(2026-11-28 첫 실행 전 리드가 GitHub API로 조회): required reviewer는 저장소 소유자 1명, 배포 branch 정책은 `main`. branch 제한이 다른 branch의 실행을 실제로 막는지는 확인하지 않았다(첫 실행은 `main`에서 시작됐다).
+- [첫 실행](https://github.com/lawliet62/Decision-Assistant/actions/runs/46130545418)(2026-11-28, `main` `805986c`, human이 `workflow_dispatch`로 시작): 실행의 승인 기록에 저장소 소유자의 `production` 승인이 있고 `deploy` job은 그 뒤에 시작됐다. WIF 인증(environment 조건 포함), Artifact Registry push, registry digest 확보까지 통과했다. 서비스 수준 `roles/run.developer`로 `services describe`(배포 전 revision 조회)와 `update-traffic --remove-tags`(정리 단계)가 허용됐다. `gcloud run services update`는 인자 해석에서 거부돼 revision을 만들지 못했고 `release` job은 건너뛰어 tag·Release가 생기지 않았다([사례](../../docs/troubleshooting/gcloud-run-container-flag-order.md)). 정리 단계의 출력은 traffic `100% LATEST (currently decision-assistant-00002-dq6)`였다. 서비스의 traffic 대상은 특정 revision이 아니라 LATEST다.
 - 수정한 flag 순서의 `services update`와 `update-traffic --to-revisions`·`--remove-tags`, `services describe`가 gcloud 570.0.0에서 인자 해석을 통과하는 것(API 호출 전 단계까지만 확인).
 
 미검증:
 
 - `gcloud run services update`의 multi-container image 교체와 `--no-traffic --tag`의 실제 동작, `update-traffic`, `gh release create`. `main`에서 승인된 실행으로만 확인할 수 있다.
 - `--container ... --image`만 지정한 update가 env·`container-dependencies`·probe 등 나머지 설정을 그대로 두는지. gcloud 동작상 그럴 것으로 보지만 실제 revision으로 확인하지 않았다.
-- 서비스 수준 `roles/run.developer`로 `services describe`·`update-traffic`이 모두 허용되는지.
-- `replace` 뒤 traffic 동작, 후보 tag 주소의 실제 형식.
+- 서비스 수준 `roles/run.developer`로 `services update`(revision 생성)와 `update-traffic --to-revisions`가 허용되는지.
+- traffic 대상이 LATEST인 상태에서 `--no-traffic`이 기존 traffic을 현재 revision에 고정한 뒤 새 revision을 만드는지. gcloud 문서상 그렇게 동작하지만 실제 실행으로 확인하지 않았다.
+- 후보 tag 주소의 실제 형식.
 - runner의 Docker가 push하는 manifest 형식(로컬은 containerd image store라 OCI index였다).
 - `actionlint` 검사(PC에 없어 YAML parse와 기존 workflow 대조로 대신했다).
 - Artifact Registry 사용량. 저장소에는 cleanup policy(7일 지난 version 삭제, 최근 6개 version 유지)가 있다(2026-11-28 리드 관찰). 이 정책으로 저장량이 무료 범위 안에 머무는지는 확인하지 않았다.
