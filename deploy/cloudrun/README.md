@@ -96,7 +96,7 @@
 - 확인한 항목: workflow 실행 결과에서 온 값(smoke 마지막 줄, traffic 확인 값, tag 제거 결과, job별 image 갱신 결과 "갱신함(job 이름)"·"건너뜀(...)"·"실패(...)")만 쓴다. 값이 없으면 "기록 없음"으로 남기며 성공으로 채우지 않는다.
 - 미검증 항목: 자동 배포가 확인하지 않는 것(실제 로그인, 계정 간 격리, 쓰기 흐름, rollback 가능 여부, 두 job의 실제 실행 결과와 백업 복원, 로그 보존·비용)을 고정 목록으로 적는다. workflow는 job image만 바꾸고 job을 실행하지 않는다.
 
-로컬 확인: `node scripts/release/notes.mjs version [--input=vX.Y.Z]`, `node scripts/release/notes.mjs notes --preview --commit=HEAD --version=vX.Y.Z`. 규칙의 자동 시험은 `scripts/release/notes.test.mjs`, job template의 정적 검사(placeholder, digest placeholder image, purge env와 서비스 backend env의 차이, secret 참조)는 `scripts/cloudrun-templates.test.mjs`이며 둘 다 `npm run check:quick`에 포함된다.
+로컬 확인: `node scripts/release/notes.mjs version [--input=vX.Y.Z]`, `node scripts/release/notes.mjs notes --preview --commit=HEAD --version=vX.Y.Z`. 규칙의 자동 시험은 `scripts/release/notes.test.mjs`, job template의 정적 검사(placeholder, digest placeholder image, purge env와 서비스 backend env의 차이, secret 참조, backup script의 세션 table 데이터 제외)는 `scripts/cloudrun-templates.test.mjs`이며 둘 다 `npm run check:quick`에 포함된다.
 
 ### 보완 규칙
 
@@ -187,7 +187,7 @@ bash deploy/cloudrun/smoke.sh https://decision-assistant-277935636498.asia-south
 | job | image | 하는 일 | 실행 시각(UTC) |
 |---|---|---|---|
 | `decision-assistant-purge` | 서비스와 같은 backend image | `DECISION_ASSISTANT_JOB=purge-expired-decisions`로 web server·예약 작업·Flyway·카탈로그 기동 작업 없이 기동해 만료된 휴지통 결정을 남은 대상이 없을 때까지 삭제하고 끝난다. `product_event=decision_purge_run outcome=success\|incomplete\|failed purged=<n> remaining=<n\|unknown>`을 남기고 성공이면 0, 아니면 1로 끝난다 | 매일 03:05 |
-| `decision-assistant-backup` | [`backup/`](backup/)의 image(`postgres:17-alpine` + `curl`·`jq`) | `pg_dump -Fc`(TLS `sslmode=require`)로 dump를 임시 파일에 받고, 비어 있지 않은지와 `pg_restore --list`로 읽히는지 확인한 뒤 `gs://<bucket>/backups/neon/<UTC 시각>.dump`로 올린다. 마지막 줄은 `backup_completed object=... bytes=<n>`, 실패하면 `backup_failed reason=...`과 1 | 매일 03:00 |
+| `decision-assistant-backup` | [`backup/`](backup/)의 image(`postgres:17-alpine` + `curl`·`jq`) | `pg_dump -Fc`(TLS `sslmode=require`)로 dump를 임시 파일에 받고(로그인 세션 table `public.spring_session`·`public.spring_session_attributes`는 구조만 넣고 행은 넣지 않는다. 아래 신뢰 경계), 비어 있지 않은지와 `pg_restore --list`로 읽히는지 확인한 뒤 `gs://<bucket>/backups/neon/<UTC 시각>.dump`로 올린다. 마지막 줄은 `backup_completed object=... bytes=<n>`, 실패하면 `backup_failed reason=...`과 1 | 매일 03:00 |
 
 일회 실행 mode는 backend의 별도 변경으로 들어간다. purge job은 그 변경이 포함된 backend image에서만 의도대로 동작한다.
 
@@ -197,6 +197,7 @@ bash deploy/cloudrun/smoke.sh https://decision-assistant-277935636498.asia-south
 - **DB 비밀번호 전달.** backup job은 job 정의의 secret 참조(`db-password`, 숫자 version 고정, `latest` 금지)로 Cloud Run이 Secret Manager에서 읽어 `PGPASSWORD` env로 넣는다. job 정의와 `describe` 결과에는 secret 이름과 version만 보이고 값은 보이지 않는다. 값은 container 안의 process env에 있으므로 그 image가 실행하는 code는 값을 읽을 수 있다. script는 비밀번호·access token·접속 문자열을 출력하지 않는다.
 - **Cloud Storage 권한.** upload에는 bucket의 `storage.objects.create`만 쓴다. script는 object를 읽거나 나열하지 않으며 `ifGenerationMatch=0`으로 기존 object를 덮어쓰지 않는다. access token은 metadata server에서 받아 권한 077의 임시 header 파일로만 `curl`에 넘긴다.
 - **bucket.** 기존 비공개 bucket(US-CENTRAL1, uniform access, public access prevention, soft delete 끔, `backups/` 7일 삭제 lifecycle)을 그대로 쓴다. 새 object는 `backups/neon/` 아래에 쌓이고 같은 lifecycle로 지워진다. 전환 전까지 VM은 계속 `backups/<시각>.dump`를 쓴다(2026-11-28 human 결정).
+- **세션 데이터 제외.** `pg_dump`는 `--exclude-table-data=public.spring_session --exclude-table-data=public.spring_session_attributes`로 두 세션 table의 행을 넣지 않고 table·index·제약 정의만 넣는다(2026-11-28 human 결정, [ADR 0025](../../docs/decisions/0025-cloud-run-neon-deployment.md) 결정 5). 세션 행에는 직렬화된 Spring Security context(OIDC ID token, email claim 포함)가 들어 있다. 이유는 세 가지다. 세션은 복원할 가치가 없고(복구 절차가 세션 무효화를 요구한다), 백업에 담기는 개인정보를 줄이며, 복원 뒤 이미 로그아웃한 세션이 되살아나지 않게 한다. 따라서 이 백업에서 복원한 database에는 로그인 세션이 없고 모든 사용자가 다시 로그인한다. 다른 table을 빼려면 같은 방식으로 이름을 명시해 추가하며 wildcard는 쓰지 않는다. VM 백업(`deploy/backup.sh`)은 바꾸지 않는다. 2026-11-28 기준 VM은 #116 이전 image를 실행해 세션을 DB에 저장하지 않고, 전환 뒤 종료할 대상이다.
 - **배포용 계정.** workflow는 두 job의 image만 바꾸며 job을 실행하지 않는다. 그러려면 배포용 서비스 계정에 두 job 수준의 `roles/run.developer`가 있어야 하고, 리드가 job을 만든 뒤 human 승인 아래 따로 부여한다. 이 역할은 IAM상 job의 env·서비스 계정·secret 참조도 바꿀 수 있으며, image만 바꾸는 것은 서비스와 같이 workflow 내용으로 지키는 약속이다. 승인된 배포는 두 job에서도 임의의 code를 runtime 계정으로 실행할 수 있다(`actAs`).
 - **Scheduler 호출 계정.** 전용 서비스 계정 `decision-assistant-scheduler`에 두 job 수준의 `roles/run.invoker`만 준다. 이 계정은 job 실행만 요청할 수 있고 job 정의를 바꾸지 못한다.
 - **시험용 endpoint 변경.** `backup.sh`는 로컬 시험에서만 `BACKUP_TEST_ENDPOINTS=1`과 `BACKUP_METADATA_BASE_URL`·`BACKUP_STORAGE_BASE_URL`로 metadata·Storage 주소를 바꿀 수 있다. job 정의에는 넣지 않는다. 이 값 없이 주소 변경 env만 있으면 script가 실패한다.
@@ -342,10 +343,14 @@ gcloud scheduler jobs describe decision-assistant-backup --project "$PROJECT" --
    read -rs PGPASSWORD; export PGPASSWORD
    docker run --rm -e PGHOST -e PGUSER -e PGPASSWORD -e PGSSLMODE -v "$work:/work:ro" postgres:17-alpine sh -c '
      createdb restore_check &&
-     pg_restore --exit-on-error --no-owner --dbname=restore_check /work/backup.dump'
+     pg_restore --exit-on-error --no-owner --no-acl --dbname=restore_check /work/backup.dump'
    ```
 
+   `--no-acl`이 필요한 이유(2026-11-28 관찰): 세션 제외 전 image가 만든 실제 Neon dump(`backups/neon/20261128T124826Z.dump`)를 일반 PostgreSQL 17에 `--exit-on-error --no-owner`로만 복원하면 `ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO neon_superuser ...`에서 멈췄다. 이 문장은 Neon이 관리하는 role(`cloud_admin`, `neon_superuser`)을 참조하므로, 그 role이 없는 database에서는 실행할 수 없는 것으로 본다(추론, 오류 본문은 기록하지 않았다). `--no-acl`을 더하면 성공했고 table 29개의 행 수가 운영 DB와 같았다. `--no-acl`은 GRANT·REVOKE와 default privileges를 복원하지 않고, 객체 소유자를 복원을 실행한 role로 두는 것은 `--no-owner`다. 실제 장애 복구에서 원래 role에 준 권한 없이도 충분한지는 확인하지 않았다. [VM 문서](../README.md#백업복원과-삭제-재적용)의 복원 명령에는 `--no-owner`만 있다. Neon dump를 복원할 때는 이 명령을 쓴다.
+
 3. branch에 원래 있던 `decision_assistant`와 복원한 `restore_check`의 table별 행 수와 Flyway 버전을 비교한다. branch는 백업 뒤에 만들었으므로 그 사이의 쓰기만큼 차이가 날 수 있다.
+
+   `spring_session`·`spring_session_attributes`는 백업에 행이 없으므로([세션 데이터 제외](#job의-신뢰-경계)) 복원 쪽이 0행인 것이 정상이다. 세션 제외로 생기는 차이는 이 두 줄뿐이다. 그래서 두 table은 비교에서 빼고 복원 쪽이 0행인지 따로 확인한다.
 
    저장소 루트에서 실행한다. [`restore-counts.sql`](restore-counts.sql)은 Flyway 버전과 `public` schema의 table별 행 수를 출력한다.
 
@@ -354,7 +359,11 @@ gcloud scheduler jobs describe decision-assistant-backup --project "$PROJECT" --
      docker run --rm -e PGHOST -e PGUSER -e PGPASSWORD -e PGSSLMODE -v "$PWD/deploy/cloudrun:/sql:ro" postgres:17-alpine \
        psql -d "$db" -At -v ON_ERROR_STOP=1 -f /sql/restore-counts.sql > "$work/$db.txt"
    done
-   diff "$work/decision_assistant.txt" "$work/restore_check.txt" && echo "차이 없음"
+   sessions='^spring_session(_attributes)? '
+   grep -Ev "$sessions" "$work/decision_assistant.txt" > "$work/source.cmp"
+   grep -Ev "$sessions" "$work/restore_check.txt" > "$work/restored.cmp"
+   diff "$work/source.cmp" "$work/restored.cmp" && echo "세션 table 외 차이 없음"
+   grep -E "$sessions" "$work/restore_check.txt"  # 기대값: spring_session 0, spring_session_attributes 0
    ```
 
 4. 정리한다: `unset PGPASSWORD; rm -rf "$work"`, Neon console에서 restore branch를 삭제한다. 결과(대상 object, 복원 성공 여부, 차이)를 운영 기록에 남긴다.
@@ -381,6 +390,7 @@ gcloud scheduler jobs describe decision-assistant-backup --project "$PROJECT" --
   - gcloud 570.0.0(클라우드 작업 공간, API 접속 차단 환경)에서 가짜 값으로 render한 두 job 정의가 `gcloud run jobs replace`의 YAML·schema 해석을 통과해 API 호출 단계까지 갔다. 모르는 field를 넣으면 `Failed to parse value(s) in protobuf [Job]`로 거부되는 것도 확인했다. workflow의 `jobs describe --format=value(metadata.name)`, `jobs describe --format=json`, `jobs update --quiet --image <digest>`와 이 절의 `scheduler jobs create http`, `run jobs add-iam-policy-binding`, `run jobs execute --wait`, `run jobs executions list`, `scheduler jobs run`, `storage buckets add-iam-policy-binding`도 같은 방식으로 인자 해석을 통과했다.
   - `update-job-images.sh`를 가짜 `gcloud`로 실행: 정상 갱신, job 없음(`Cannot find job`), 권한 거부, 갱신 거부, 갱신 뒤 image 불일치를 각각 "갱신함"·"건너뜀(job 없음)"·"건너뜀(job 조회 실패...)"·"실패(...)"로 기록하고 항상 exit 0. describe의 env 값은 출력하지 않았다.
   - Git Bash에서 이 절의 `render` 함수(빈 값·남은 placeholder 메시지 포함)와 `restore-counts.sql`의 비교(같으면 "차이 없음", 행을 지우면 차이 감지)를 가짜 값과 로컬 DB로 실행했다.
+- 세션 데이터 제외(2026-11-28, 에이전트가 로컬에서 확인. Windows, Docker 29): 외부 연결이 없는 Docker network에 TLS를 켠 `postgres:17-alpine`과 가짜 metadata·Storage server를 두고, V3 migration과 같은 모양의 세션 두 table과 일반 table에 행을 넣은 뒤 새로 build한 backup image를 그대로 실행했다. exit 0, `backup_completed`. 받은 dump의 `pg_restore --list`에는 네 table 정의가 모두 있고 `TABLE DATA`는 세션이 아닌 두 table에만 있었다. `pg_restore --exit-on-error --no-owner --no-acl`로 새 database에 복원한 결과 `spring_session` 3 → 0, `spring_session_attributes` 6 → 0, `decisions` 5 → 5(내용 hash 같음), `flyway_schema_history` 1 → 1이었고 세션 table의 index 5개(PK index 2개 포함)와 제약 3개(PK 2개, FK 1개)가 남았다. 위 3단계 비교 명령의 `grep`·`diff` 부분은 클라우드 작업 공간의 bash에서 이 행 수 출력을 넣어 "세션 table 외 차이 없음"과 두 세션 table 0행을 내고, 일반 table 행 수를 바꾸면 차이를 내는 것을 확인했다.
 
 미검증:
 
@@ -390,6 +400,7 @@ gcloud scheduler jobs describe decision-assistant-backup --project "$PROJECT" --
   - `gcloud run jobs update --image`가 image 외의 job 설정을 바꾸지 않는지(서비스는 두 번째 실행에서 확인했다).
   - `roles/run.invoker`가 overrides 없는 `:run`만 허용하는지, Cloud Scheduler가 `asia-southeast1`에서 쓸 수 있는지, `gcloud run jobs execute --wait`가 실패한 실행에서 0이 아닌 값으로 끝나는지.
   - Neon(PostgreSQL 17)에 `postgres:17-alpine`의 `pg_dump`가 TLS로 접속하는지, Neon restore branch의 role이 `createdb`를 할 수 있는지.
+  - 실제 운영 DB의 dump에서 세션 두 table의 행이 빠지는지. 승인된 다음 배포로 새 backup image가 job에 들어간 뒤 첫 실행과 복원 시험에서 확인한다.
   - purge job의 env 구성이 일회 실행 mode에서 충분한지. 특히 `DECISION_ASSISTANT_ALLOWED_EMAILS`는 비어 있으면 기동이 실패하는 bean이 있어 남겼고, 그 mode에서 해당 bean이 만들어지지 않으면 뺄 수 있다.
 - 비용: job 실행의 vCPU·메모리 사용은 Cloud Run 무료 범위 안으로 예상하지만 측정하지 않았다. backup job(asia-southeast1)에서 bucket(US-CENTRAL1)으로의 지역 간 전송과 Neon의 외부 전송량이 0원으로 유지되는지는 확인하지 않았다.
 - workflow의 job 관련 변경: runner에서의 backup image build·push, `Update job images` 단계, 그 결과가 `deploy` job output을 거쳐 릴리스 노트에 들어가는지. 승인된 실제 실행 전에는 확인할 수 없다.

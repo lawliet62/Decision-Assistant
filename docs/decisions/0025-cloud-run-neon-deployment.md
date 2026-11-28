@@ -22,6 +22,7 @@ ADR 0019의 단일 VM은 image 전달·Compose 기동·백업 timer·TLS 인증�
    - 2026-11-28 구현: 같은 backend image를 `DECISION_ASSISTANT_JOB=purge-expired-decisions`(또는 `--decision-assistant.job=purge-expired-decisions`)로 실행하는 job mode다. 이 값 하나로 web server, 모든 `@Scheduled` 작업, 기동 시 카탈로그 import·refresh, Flyway migration, OAuth2 client 자동 구성(Auth0 issuer discovery 호출)을 끈다. 만료 결정이 남지 않을 때까지 purge한 뒤 종료 코드(성공 0, 실패 또는 만료 결정 잔여 1)로 끝난다. 알 수 없는 job 이름은 기동을 거부한다. `oidc` profile과 `gcp` secrets mode, DB·Auth0 secret 조회 규칙은 바꾸지 않는다. Cloud Run Job·Scheduler 구성은 후속 PR에서 다룬다.
 5. 백업은 Cloud Run Job이 `pg_dump`를 실행해 기존 비공개 GCS(Google Cloud Storage) bucket(7일 lifecycle)에 올리고 Cloud Scheduler가 매일 실행한다. DB 비밀번호를 GitHub에 두지 않는다.
    - 2026-11-28 human 결정: (1) 백업 image는 `postgres:17-alpine`(Neon과 같은 PostgreSQL 17) 기반의 작은 전용 image로 `pg_dump`와 upload script만 담는다. (2) 기존 runtime 서비스 계정, 기존 애플리케이션 DB role, 기존 `db-password` secret을 쓰며 백업용 서비스 계정·DB role·secret을 새로 만들지 않는다. 비밀번호는 job 정의의 숫자 version secret 참조로 env에 주입한다. (3) 기존 bucket(US-CENTRAL1, bucket 전체 7일 삭제 lifecycle, uniform access, public access prevention, soft delete 끔)을 유지하고 새 object는 `backups/neon/` 아래에 둔다. VM은 전환까지 `backups/<시각>.dump`를 계속 쓴다. 두 job은 Cloud Scheduler(무료 3개 중 2개)가 매일 실행하며 추가 유료 지출은 0원을 유지한다. 구현과 절차는 [Cloud Run 배포 문서](../../deploy/cloudrun/README.md#cloud-run-job휴지통-만료-삭제백업)에 있다.
+   - 2026-11-28 human 결정(PR #116 뒤): 일일 백업은 `public.spring_session`·`public.spring_session_attributes`의 데이터를 넣지 않고 구조만 남긴다(`pg_dump --exclude-table-data`, table 이름 명시). 이유는 세션에 복원 가치가 없고(복구 절차가 세션 무효화를 요구한다), 직렬화된 Spring Security context(OIDC ID token, email claim)를 백업에서 빼 개인정보를 줄이며, 복원 뒤 로그아웃한 세션이 되살아나지 않게 하기 위해서다. VM 백업(`deploy/backup.sh`)은 바꾸지 않는다. VM은 #116 이전 image라 세션을 DB에 저장하지 않으며 전환 뒤 종료한다.
 6. 공개 주소는 기존 hostname을 Cloud Run 도메인 매핑으로 연결한다. 현재 DNS 서비스가 필요한 레코드를 지원하지 않으면 Cloud Run 기본 `run.app` 주소를 쓴다. 로드 밸런서는 추가하지 않는다.
 7. 유료 결제 계정 전환은 새 구성을 검증한 뒤 무료 체험 종료일(2026-12-15) 전에 human이 직접 수행한다. Cloud Run 지출 상한 예산(spend cap budget)과 결제 계정 전체의 알림 전용 예산을 설정한다.
 8. 기존 VM 구성은 새 구성이 검증되어 전환할 때까지 그대로 운영한다.
@@ -48,7 +49,7 @@ ADR 0019의 단일 VM은 image 전달·Compose 기동·백업 timer·TLS 인증�
 ## 신뢰·보존 경계의 변화
 
 - 사용자 데이터와 세션(`spring-session-jdbc`)이 GCP 밖의 제3자인 Neon(AWS 싱가포르 리전)에 저장된다. 지금까지는 GCP project 안의 VM disk와 GCS 백업에만 있었다.
-  - 2026-11-28 관찰: Boot의 session 자동 구성 module이 빠져 있어 세션이 실제로는 DB에 저장되지 않고 인스턴스 메모리에만 있었다. `spring-boot-starter-session-jdbc`로 고쳤다([사례](../troubleshooting/spring-session-jdbc-autoconfig.md)). 수정 뒤에는 로그인한 사용자의 OIDC ID token과 claim(email 등)이 직렬화된 세션 행도 Neon과 일일 백업(`pg_dump`)에 포함된다.
+  - 2026-11-28 관찰: Boot의 session 자동 구성 module이 빠져 있어 세션이 실제로는 DB에 저장되지 않고 인스턴스 메모리에만 있었다. `spring-boot-starter-session-jdbc`로 고쳤다([사례](../troubleshooting/spring-session-jdbc-autoconfig.md)). 수정 뒤에는 로그인한 사용자의 OIDC ID token과 claim(email 등)이 직렬화된 세션 행도 Neon에 저장된다. Cloud Run 일일 백업(`pg_dump`)에는 두 세션 table의 구조만 들어가고 행은 들어가지 않는다(결정 5의 2026-11-28 human 결정). Neon의 시점 복원 이력에는 다른 데이터와 같이 남는다고 본다(추론, 아래 항목).
 - backend는 sidecar가 되어도 외부에 노출되지 않는다. 공식 문서 기준으로 Cloud Run은 ingress container의 port만 외부 요청에 연결한다.
 - 같은 인스턴스의 container는 서비스 계정을 공유하므로 독립적인 IAM 경계가 아니다. ADR 0019의 "같은 VM의 컨테이너는 Identity 격리 경계가 아님"과 같은 성격이다.
 - Neon의 시점 복원(point-in-time restore) 이력에 삭제된 데이터가 일정 기간 남는다. 2026-11-28에 만든 project의 이력 보존 설정은 6시간(`history_retention_seconds` 21600)이다(관찰). 30일 만료 삭제와 7일 백업 보존 외에 이 기간이 추가로 생기며, 이 기간의 허용 여부와 고지는 전환 전에 human이 결정한다.
