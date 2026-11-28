@@ -15,6 +15,9 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.scheduling.config.ScheduledTaskHolder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.session.SessionRepository;
+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.context.WebApplicationContext;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -72,6 +75,8 @@ class DecisionPurgeJobIntegrationTest {
                 assertThat(context.getBeanNamesForType(com.decisionassistant.guidance.CatalogStartupRefresh.class)).isEmpty();
                 assertThat(context.getBeanNamesForType(ClientRegistrationRepository.class)).isEmpty();
                 assertThat(context.getBeanNamesForType(ReactiveClientRegistrationRepository.class)).isEmpty();
+                // JDBC session 자동 구성은 servlet web application에서만 켜지므로 job은 session 저장소·정리 작업이 없다.
+                assertThat(context.getBeanNamesForType(SessionRepository.class)).isEmpty();
                 assertThat(SpringApplication.exit(context)).isZero();
             }
             assertThat(titled("expired")).isZero();
@@ -113,6 +118,11 @@ class DecisionPurgeJobIntegrationTest {
                     .flatMap(holder -> holder.getScheduledTasks().stream())
                     .map(task -> task.getTask().getRunnable().toString()).toList();
             assertThat(tasks).anyMatch(task -> task.contains("DecisionPurgeWorker.purge"));
+            // 만료 session 정리는 @Scheduled가 아니라 JDBC session 저장소가 자체 scheduler로 매분 0초에 실행한다.
+            var sessions = context.getBean(JdbcIndexedSessionRepository.class);
+            assertThat(ReflectionTestUtils.getField(sessions, "cleanupCron"))
+                    .isEqualTo(JdbcIndexedSessionRepository.DEFAULT_CLEANUP_CRON);
+            assertThat(ReflectionTestUtils.getField(sessions, "taskScheduler")).isNotNull();
             assertThat(context.containsBean("decisionPurgeJob")).isFalse();
             assertThat(context.getBeanNamesForType(Flyway.class)).isNotEmpty();
         }
