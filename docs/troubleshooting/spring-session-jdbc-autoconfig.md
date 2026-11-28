@@ -4,7 +4,7 @@
 
 Cloud Run 검증 서비스에서 Auth0 로그인이 끝난 직후에도 Neon의 `spring_session`·`spring_session_attributes`가 비어 있었다(2026-11-28). [ADR 0005](../decisions/0005-auth0-bff-session-and-ownership.md)와 [ADR 0025](../decisions/0025-cloud-run-neon-deployment.md)는 session을 PostgreSQL에 7일 비활성 만료로 저장한다고 정했다. 그래야 인스턴스가 0개로 줄거나 새 revision이 배포된 뒤에도 로그인이 유지된다.
 
-메모리 session에서는 로그인이 인스턴스 수명에 묶이고 `spring.session.timeout: 7d`도 적용되지 않는다. Tomcat 기본 비활성 만료(30분)가 적용된다고 보지만 운영에서 확인하지는 않았다(추론). cookie의 `Max-Age=7d`는 Tomcat에도 적용되므로 브라우저 cookie만 보고는 구분할 수 없다.
+메모리 session에서는 로그인이 인스턴스 수명에 묶이고 `spring.session.timeout: 7d`도 적용되지 않는다. Tomcat 기본 비활성 만료(30분)가 적용된다고 보지만 운영에서 확인하지는 않았다(추론). cookie의 이름과 `Max-Age=7d` 같은 속성은 Tomcat에도 같게 적용되므로 속성만 보고는 구분할 수 없다. 값 형식은 다르다. Tomcat session id는 32자 대문자 hex이고 Spring Session은 UUID의 Base64(48자)다.
 
 ## 원인
 
