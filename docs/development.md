@@ -154,7 +154,7 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 - commit은 review 가능한 논리 단위로 만들되 파일별로 기계적으로 분할하지 않는다. secret, credential, local-only 설정은 commit하지 않는다.
 - 긴 작업은 논리 단위가 완성되고 관련 검증이 통과한 시점에만 checkpoint commit·push한다. 컴파일되지 않거나 중간 상태만 담은 WIP commit을 자동 생성하지 않는다.
 - agent는 자신의 branch와 PR만 push·갱신하며, default branch push, PR merge, auto-merge 설정을 수행하지 않는다.
-- PR의 검토 요청은 [`.github/CODEOWNERS`](../.github/CODEOWNERS)에 따라 GitHub가 저장소 소유자에게 자동으로 보낸다. 어떤 agent나 도구가 PR을 열어도 같게 동작하도록 agent 지침이 아니라 저장소 설정에 둔다. human이 자신을 검토자로 지정할 필요가 없고, agent도 따로 지정하지 않는다. draft PR은 ready로 전환할 때 요청된다. 이 파일은 검토 요청만 담당하고, 승인 요건은 main ruleset이 강제한다.
+- PR의 검토 요청은 [`.github/CODEOWNERS`](../.github/CODEOWNERS)에 따라 GitHub가 저장소 소유자에게 자동으로 보낸다. 어떤 agent나 도구가 PR을 열어도 같게 동작하도록 agent 지침이 아니라 저장소 설정에 둔다. human이 자신을 검토자로 지정할 필요가 없고, agent도 따로 지정하지 않는다. draft PR은 ready로 전환할 때 요청된다. GitHub는 PR의 base branch에 있는 CODEOWNERS를 기준으로 삼는다. 승인 요건은 main ruleset이 강제하며, ruleset의 code owner review 요구에 따라 병합에는 이 파일에 적힌 소유자의 승인이 필요하다([현재 적용 상태](#repository-protection-target)).
 - main ruleset의 `validate`는 최신 main 동기화를 요구하므로 다른 PR이 merge되면 열린 PR이 뒤처진다. agent는 human이 요청하거나 merge 준비 완료를 보고하기 직전에, base가 `main`이고 [등록된 stack](stacked-prs.md)에 속하지 않는 자기 PR의 `mergeStateStatus`가 `BEHIND`이면 `& C:\Users\dlwld\Tools\github-agent\agent.ps1 exec gh pr update-branch <번호>`로 갱신한다. 이 명령의 기본 merge 방식은 GitHub 서버에서 main을 PR branch에 merge하므로 force push가 없다. `--rebase`는 쓰지 않는다. 등록됐거나 등록할 예정인 stack PR은 merge commit이 생기면 restack 자동화가 중단되므로 이 방법으로 갱신하지 않고, 뒤처진 사실을 보고한 뒤 stacked PR 절차에 따라 human의 정리를 기다린다.
 - 갱신 후 CI를 다시 확인하고 결과를 보고한다. 서버에서 갱신한 뒤에는 로컬 branch가 원격보다 뒤처지므로, 다음 commit·push 전에 fetch 후 원격 branch를 merge해 맞춘다. push가 거절돼도 force push하지 않는다.
 - 충돌로 갱신이 실패하거나 `mergeStateStatus`가 `DIRTY`이면 충돌을 해결하지 않고 충돌 파일과 원인을 보고한다. 충돌 해결은 새 코드 변경이므로 human이 요청한 경우에만 별도 commit으로 수행하고 리뷰·검증 절차를 다시 거친다.
@@ -174,7 +174,11 @@ review로 구현이 바뀌면 merge 전에 candidate도 최종 선택에 맞게 
 
 ## Repository protection target
 
-실제 적용 상태는 GitHub ruleset으로 확인한다. 현재 저장소에는 main의 PR 경유·선형 이력·삭제/force push 금지·`validate` 요구 규칙이 있다. 아래는 추가적인 보호 목표이며 이미 모두 적용됐다는 뜻은 아니다. 보호가 부족해도 default branch push 권한으로 해석하지 않는다. stacked PR 자동화 활성화 시 [별도 main 갱신 제한과 App 검사 설정](stacked-prs.md)을 적용한다.
+실제 적용 상태는 GitHub ruleset으로 확인한다. 2026-11-28에 main에 적용되는 규칙을 GitHub API로 조회한 결과는 다음과 같다. PR 경유, approving review 1개, 새 commit push 시 stale approval dismiss, 가장 최근 push에 대한 승인, code owner review, 선형 이력, 삭제·force push 금지, `validate` 요구와 최신 `main` 동기화가 적용돼 있다. conversation resolution 요구는 적용돼 있지 않고, ruleset이 허용하는 merge method는 merge·squash·rebase 전부다. administrator bypass 여부와 repository 수준의 merge method·head branch 자동 삭제 설정은 이 조회로 확인하지 못했다. "Allow GitHub Actions to create and approve pull requests"는 꺼져 있다(같은 날 human이 설정 화면에서 확인).
+
+code owner는 [`.github/CODEOWNERS`](../.github/CODEOWNERS)에 적힌 저장소 소유자 한 명이므로, 병합에 필요한 승인은 소유자의 것이어야 한다. 이 파일을 바꾸는 PR은 누가 승인할 수 있는지를 바꾸므로 ruleset 변경과 같은 무게로 검토한다.
+
+아래는 보호 목표이며 이미 모두 적용됐다는 뜻은 아니다. 보호가 부족해도 default branch push 권한으로 해석하지 않는다. stacked PR 자동화 활성화 시 [별도 main 갱신 제한과 App 검사 설정](stacked-prs.md)을 적용한다.
 
 - Pull Request를 통한 변경만 허용하고 approving review 1개를 요구한다.
 - 새 commit이 push되면 stale approval을 dismiss하고, 가장 최근 push는 PR 작성자가 아닌 human이 승인하게 한다.

@@ -40,7 +40,7 @@ gcloud run services update "$SERVICE" --project "$PROJECT_ID" --region "$REGION"
 
 ## 조치
 
-상태: **부분 해결.** 인자 해석 오류는 고쳤고, 그 뒤 단계(revision 생성, 후보 smoke, traffic 전환)는 다음 승인된 실행에서 확인한다.
+상태: **해결.** 순서를 고친 뒤의 [두 번째 실행](https://github.com/lawliet62/Decision-Assistant/actions/runs/46134019406)(`main` `6ebd2fd`)에서 같은 단계가 traffic 0%의 revision을 만들었고 후보 smoke, traffic 전환, Release 생성까지 통과했다.
 
 서비스 단위 flag를 첫 `--container` 앞에 둔다.
 
