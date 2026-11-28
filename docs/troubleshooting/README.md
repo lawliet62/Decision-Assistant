@@ -13,6 +13,7 @@
 - [로그아웃이 403으로 거부되는 경우](logout-csrf-token-rotation.md) — 양식과 쿠키의 CSRF 토큰 교체 시점, 기존 세션과 새 인증 구분
 - [로그아웃 후 로그인 화면에서 RSC 요청이 CORS 오류를 내는 경우](login-link-rsc-cors.md): cross-origin으로 리다이렉트되는 backend 경로의 `<Link>`, RSC·prefetch header 확인
 - [로그인 직후 backend 내부 주소로 이동하는 경우](login-saved-request-redirect.md): server-side 조회가 저장한 요청과 로그인 성공 redirect, 익명 API의 session 발급 확인
+- [서버 요청은 모두 성공인데 화면이 "This page couldn't load"로 깨지는 경우](client-exception-null-optional-field.md): 선택 속성의 `null`과 `undefined` 불일치, 서버 log에 남지 않는 렌더링 예외, 예산 없는 결정으로 재현
 - [Cloud Run에서 로그인 직후 연결 거부 화면으로 이동하는 경우](login-success-forwarded-host.md): host 없는 `Forwarded` header와 상대 경로 redirect의 절대화, `X-Forwarded-*` 무시 확인
 
 - [UI 촬영 성공과 화면 준비 완료의 구분](ui-gallery-capture.md): 목록 로딩·viewport 변경 중 전체 페이지 높이와 hydration 지연 확인

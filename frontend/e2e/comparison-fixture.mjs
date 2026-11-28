@@ -1,6 +1,7 @@
 // 브라우저 동작 전용 가상 제품. 판정 규칙은 Java 단위·API 통합 테스트에서 검증한다.
-export function comparisonFixture(current) {
-  current.comparison = { settings: { maxBudget: 100000, ancRequired: true, compatibility: "iOS", focus: "가격", deferredOptionIds: [] }, confirmations: [] };
+// maxBudget에 null을 주면 예산 없이 만든 결정의 실제 API 응답(maxBudget: null)을 흉내 낸다.
+export function comparisonFixture(current, maxBudget = 100000) {
+  current.comparison = { settings: { maxBudget, ancRequired: true, compatibility: "iOS", focus: "가격", deferredOptionIds: [] }, confirmations: [] };
   current.productFacts = current.options.map((option, index) => ({ optionId: option.id, facts: [{ name: "배터리", value: index ? "최대 8시간 (ANC 끔)" : "최대 6시간 (ANC 켬)", quote: "가상 테스트 근거", verificationStatus: "UNREVIEWED" }], sourceKind: "WEB" }));
   return recalculate(current);
 }
