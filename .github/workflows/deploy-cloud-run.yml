@@ -1,0 +1,313 @@
+name: Cloud Run deploy
+
+# 운영 절차와 신뢰 경계: deploy/cloudrun/README.md
+# Actions에서 main을 선택해 수동 실행한다. main 병합은 배포를 일으키지 않는다.
+# 클라우드에 닿는 단계는 모두 production environment의 deploy job에 있고, human(required reviewer)이 승인해야 시작된다.
+# WIF 권한은 main ref, production environment, 이 파일 경로(.github/workflows/deploy-cloud-run.yml)에만 부여된다.
+# 파일 이름이나 environment 이름을 바꾸면 GCP 쪽 조건도 함께 바꿔야 한다.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '릴리스 tag(vMAJOR.MINOR.PATCH). 비우면 가장 최근 semver tag의 patch를 1 올림'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+# 진행 중인 배포를 취소하면 revision 생성과 traffic 전환 사이에서 멈출 수 있으므로 직렬화만 한다.
+concurrency:
+  group: deploy-cloud-run
+  cancel-in-progress: false
+
+# 비밀값이 아닌 식별자만 둔다. env·서비스 계정·scaling 같은 서비스 설정은 이 workflow가 바꾸지 않는다.
+env:
+  PROJECT_ID: decision-assistant-prod
+  REGION: asia-southeast1
+  SERVICE: decision-assistant
+  REGISTRY: asia-southeast1-docker.pkg.dev
+  REPOSITORY: asia-southeast1-docker.pkg.dev/decision-assistant-prod/decision-assistant
+  PUBLIC_URL: https://decision-assistant-277935636498.asia-southeast1.run.app
+  CANDIDATE_TAG: candidate
+
+jobs:
+  # 승인 전에 실행된다. 클라우드 인증 없이 ref·version을 검사하고 릴리스 노트 미리보기를 job summary에 남긴다.
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Require main
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [[ "$REF" != "refs/heads/main" ]]; then
+            echo "::error::Cloud Run 배포는 main에서만 실행합니다(현재 $REF). WIF도 refs/heads/main만 허용합니다."
+            exit 1
+          fi
+
+      # 직전 릴리스 tag를 찾기 위해 tag와 전체 history를 가져온다. 배포 commit은 실행을 시작한 github.sha로 고정한다.
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+
+      - name: Decide release version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          version="$(node scripts/release/notes.mjs version --input="$INPUT_VERSION")"
+          echo "릴리스 version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Preview release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          {
+            echo "> 승인 전 미리보기입니다. 배포 결과 항목은 배포가 끝난 뒤 채워집니다."
+            echo
+            node scripts/release/notes.mjs notes --preview --commit="$GITHUB_SHA" --version="$VERSION" \
+              --service="$SERVICE" --region="$REGION"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # 승인 관문: production environment의 required reviewer(human)가 승인해야 시작된다.
+  # environment 이름은 정확히 production이어야 한다. 없는 이름을 쓰면 GitHub가 보호 규칙 없는 environment를 새로 만든다.
+  deploy:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      started: ${{ steps.deploy.outputs.started }}
+      finished: ${{ steps.public.outputs.finished }}
+      previous: ${{ steps.deploy.outputs.previous }}
+      revision: ${{ steps.deploy.outputs.revision }}
+      backend: ${{ steps.images.outputs.backend }}
+      frontend: ${{ steps.images.outputs.frontend }}
+      candidate_smoke: ${{ steps.candidate.outputs.result }}
+      traffic: ${{ steps.promote.outputs.traffic }}
+      public_smoke: ${{ steps.public.outputs.result }}
+      tag_cleanup: ${{ steps.cleanup.outcome == 'success' && '제거함' || '실패(운영자가 tag 상태 확인 필요)' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+          cache-dependency-path: |
+            backend/*.gradle
+            backend/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Build backend jar
+        run: |
+          chmod +x backend/gradlew
+          backend/gradlew -p backend bootJar
+
+      # GCP 인증 전에 build해 build context에 인증 파일(gha-creds-*.json)이 생기기 전 상태로 image를 만든다.
+      - name: Build images
+        run: |
+          docker build --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "$REPOSITORY/backend:$GITHUB_SHA" -f deploy/backend.Dockerfile .
+          docker build --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --build-arg BACKEND_URL=http://localhost:8080 \
+            -t "$REPOSITORY/frontend:$GITHUB_SHA" -f deploy/frontend.Dockerfile .
+
+      # 서비스 계정 key 없이 GitHub OIDC token을 WIF로 교환한다.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: projects/277935636498/locations/global/workloadIdentityPools/github/providers/decision-assistant
+          service_account: github-deployer@decision-assistant-prod.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Push images
+        id: images
+        run: |
+          gcloud auth configure-docker "$REGISTRY" --quiet
+          for name in backend frontend; do
+            ref="$REPOSITORY/$name:$GITHUB_SHA"
+            docker push --quiet "$ref"
+            digest="$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$ref" \
+              | grep -E "^${REPOSITORY//./\\.}/${name}@sha256:[0-9a-f]{64}$" | head -n 1 || true)"
+            if [[ -z "$digest" ]]; then
+              echo "$name image의 registry digest를 찾지 못했습니다." >&2
+              exit 1
+            fi
+            echo "$name: $digest"
+            echo "$name=$digest" >> "$GITHUB_OUTPUT"
+          done
+
+      # 두 container의 image만 digest로 바꾼 새 revision을 traffic 0%로 만든다.
+      - name: Deploy candidate revision without traffic
+        id: deploy
+        env:
+          FRONTEND_IMAGE: ${{ steps.images.outputs.frontend }}
+          BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
+        run: |
+          echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          # describe 결과에는 env(허용 email 등)가 들어 있으므로 jq로 필요한 값만 꺼내고 원문은 출력하지 않는다.
+          describe() { gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json; }
+          previous="$(describe | jq -r '[.status.traffic[] | select(.percent == 100) | .revisionName] | first // empty')"
+          echo "배포 전 traffic 100% revision: ${previous:-확인 불가}"
+          echo "previous=$previous" >> "$GITHUB_OUTPUT"
+
+          gcloud run services update "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
+            --container frontend --image "$FRONTEND_IMAGE" \
+            --container backend --image "$BACKEND_IMAGE" \
+            --no-traffic --tag "$CANDIDATE_TAG" --quiet
+
+          state="$(describe | jq -c --arg tag "$CANDIDATE_TAG" '{
+            created: .status.latestCreatedRevisionName,
+            ready: .status.latestReadyRevisionName,
+            images: ([.spec.template.spec.containers[] | {(.name): .image}] | add),
+            tagged: ([.status.traffic[] | select(.tag == $tag)] | first // {})
+          }')"
+          revision="$(jq -r '.tagged.revisionName // empty' <<<"$state")"
+          url="$(jq -r '.tagged.url // empty' <<<"$state")"
+          if [[ -z "$revision" || -z "$url" ]]; then
+            echo "후보 tag '$CANDIDATE_TAG'의 revision 또는 주소를 찾지 못했습니다." >&2
+            exit 1
+          fi
+          if [[ "$(jq -r '.created' <<<"$state")" != "$revision" || "$(jq -r '.ready' <<<"$state")" != "$revision" ]]; then
+            echo "후보 revision $revision 이 최신 생성·준비 revision과 다릅니다." >&2
+            exit 1
+          fi
+          if [[ "$(jq -r '.images.frontend' <<<"$state")" != "$FRONTEND_IMAGE" || "$(jq -r '.images.backend' <<<"$state")" != "$BACKEND_IMAGE" ]]; then
+            echo "서비스 template의 image가 이번 build의 digest와 다릅니다." >&2
+            exit 1
+          fi
+          echo "후보 revision: $revision ($url)"
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # 실패하면 traffic은 이전 revision에 그대로 남는다.
+      - name: Smoke test candidate revision
+        id: candidate
+        env:
+          CANDIDATE_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          bash deploy/cloudrun/smoke.sh "$CANDIDATE_URL" | tee "$RUNNER_TEMP/candidate-smoke.log"
+          echo "result=$(tail -n 1 "$RUNNER_TEMP/candidate-smoke.log")" >> "$GITHUB_OUTPUT"
+
+      - name: Route traffic to candidate revision
+        id: promote
+        env:
+          REVISION: ${{ steps.deploy.outputs.revision }}
+        run: |
+          gcloud run services update-traffic "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
+            --to-revisions "$REVISION=100" --quiet
+          traffic="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" --region "$REGION" --format=json \
+            | jq -r '[.status.traffic[] | select((.percent // 0) > 0) | "\(.revisionName) \(.percent)%"] | join(", ")')"
+          echo "traffic: $traffic"
+          if [[ "$traffic" != "$REVISION 100%" ]]; then
+            echo "traffic이 $REVISION 100%가 아닙니다." >&2
+            exit 1
+          fi
+          echo "traffic=$traffic" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test public URL
+        id: public
+        env:
+          PREVIOUS: ${{ steps.deploy.outputs.previous }}
+        run: |
+          if ! bash deploy/cloudrun/smoke.sh "$PUBLIC_URL" | tee "$RUNNER_TEMP/public-smoke.log"; then
+            echo "공개 주소 smoke 실패. traffic은 이미 새 revision에 있습니다." >&2
+            echo "되돌리려면(운영자): gcloud run services update-traffic $SERVICE --project $PROJECT_ID --region $REGION --to-revisions ${PREVIOUS:-<이전 revision>}=100" >&2
+            exit 1
+          fi
+          echo "result=$(tail -n 1 "$RUNNER_TEMP/public-smoke.log")" >> "$GITHUB_OUTPUT"
+          echo "finished=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      # 후보 tag 주소는 배포 중에만 쓴다. 실패한 revision이 tag 주소로 계속 열려 있지 않게 성공·실패 모두 제거한다.
+      # 후보 tag가 없으면 traffic 대상이 그대로 남는다(gcloud traffic.UpdateTags 동작).
+      # 배포와 smoke가 끝난 뒤의 정리라 실패해도 job을 실패시키지 않고 릴리스 노트에 결과를 남긴다.
+      - name: Remove candidate tag
+        id: cleanup
+        if: always() && steps.deploy.outcome != 'skipped'
+        continue-on-error: true
+        run: |
+          gcloud run services update-traffic "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
+            --remove-tags "$CANDIDATE_TAG" --quiet
+
+  # 배포 job이 성공했을 때만 실행된다. GitHub에 쓰는 권한은 이 job에만 있고 클라우드 인증은 없다.
+  release:
+    needs: [prepare, deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+
+      - name: Write release notes
+        env:
+          STARTED: ${{ needs.deploy.outputs.started }}
+          FINISHED: ${{ needs.deploy.outputs.finished }}
+          PREVIOUS: ${{ needs.deploy.outputs.previous }}
+          REVISION: ${{ needs.deploy.outputs.revision }}
+          BACKEND_IMAGE: ${{ needs.deploy.outputs.backend }}
+          FRONTEND_IMAGE: ${{ needs.deploy.outputs.frontend }}
+          CANDIDATE_SMOKE: ${{ needs.deploy.outputs.candidate_smoke }}
+          TRAFFIC: ${{ needs.deploy.outputs.traffic }}
+          PUBLIC_SMOKE: ${{ needs.deploy.outputs.public_smoke }}
+          TAG_CLEANUP: ${{ needs.deploy.outputs.tag_cleanup }}
+        run: |
+          node scripts/release/notes.mjs notes --commit="$GITHUB_SHA" --version="$VERSION" \
+            --started="$STARTED" --finished="$FINISHED" --service="$SERVICE" --region="$REGION" \
+            --revision="$REVISION" --previous-revision="$PREVIOUS" \
+            --backend-image="$BACKEND_IMAGE" --frontend-image="$FRONTEND_IMAGE" \
+            --candidate-smoke="$CANDIDATE_SMOKE" --traffic="$TRAFFIC" \
+            --public-smoke="$PUBLIC_SMOKE" --tag-cleanup="$TAG_CLEANUP" > "$RUNNER_TEMP/release-notes.md"
+          cat "$RUNNER_TEMP/release-notes.md" >> "$GITHUB_STEP_SUMMARY"
+
+      # gh release create는 같은 이름의 tag가 있으면 그 tag에 Release를 붙이므로 먼저 막는다.
+      - name: Create tag and GitHub Release
+        run: |
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$VERSION" --silent 2>/dev/null; then
+            echo "::error::tag $VERSION 이 이미 있습니다. 배포는 끝났으므로 운영자가 tag와 Release를 확인합니다."
+            exit 1
+          fi
+          gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "$VERSION" --notes-file "$RUNNER_TEMP/release-notes.md"
