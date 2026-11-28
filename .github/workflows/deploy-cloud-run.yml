@@ -27,7 +27,7 @@ concurrency:
   group: deploy-cloud-run
   cancel-in-progress: false
 
-# 비밀값이 아닌 식별자만 둔다. env·서비스 계정·scaling 같은 서비스 설정은 이 workflow가 바꾸지 않는다.
+# 비밀값이 아닌 식별자만 둔다. env·서비스 계정·scaling 같은 서비스·job 설정은 이 workflow가 바꾸지 않는다(image만 바꾼다).
 env:
   PROJECT_ID: decision-assistant-prod
   REGION: asia-southeast1
@@ -36,6 +36,8 @@ env:
   REPOSITORY: asia-southeast1-docker.pkg.dev/decision-assistant-prod/decision-assistant
   PUBLIC_URL: https://decision-assistant-277935636498.asia-southeast1.run.app
   CANDIDATE_TAG: candidate
+  PURGE_JOB: decision-assistant-purge
+  BACKUP_JOB: decision-assistant-backup
 
 jobs:
   # 승인 전에 실행된다. 클라우드 인증 없이 ref·version을 검사하고 릴리스 노트 미리보기를 job summary에 남긴다.
@@ -106,10 +108,13 @@ jobs:
       revision: ${{ steps.deploy.outputs.revision }}
       backend: ${{ steps.images.outputs.backend }}
       frontend: ${{ steps.images.outputs.frontend }}
+      backup: ${{ steps.images.outputs.backup }}
       candidate_smoke: ${{ steps.candidate.outputs.result }}
       traffic: ${{ steps.promote.outputs.traffic }}
       public_smoke: ${{ steps.public.outputs.result }}
       tag_cleanup: ${{ steps.cleanup.outcome == 'success' && '제거함' || '실패(운영자가 tag 상태 확인 필요)' }}
+      purge_job: ${{ steps.jobs.outputs.purge_job || (steps.jobs.outcome == 'failure' && '실패(job image 갱신 단계 오류. 운영자가 job image 확인 필요)' || '') }}
+      backup_job: ${{ steps.jobs.outputs.backup_job || (steps.jobs.outcome == 'failure' && '실패(job image 갱신 단계 오류. 운영자가 job image 확인 필요)' || '') }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -142,6 +147,10 @@ jobs:
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
             --build-arg BACKEND_URL=http://localhost:8080 \
             -t "$REPOSITORY/frontend:$GITHUB_SHA" -f deploy/frontend.Dockerfile .
+          # 백업 job image. build context는 script가 있는 디렉터리뿐이다.
+          docker build --platform linux/amd64 \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            -t "$REPOSITORY/backup:$GITHUB_SHA" -f deploy/cloudrun/backup/Dockerfile deploy/cloudrun/backup
 
       # 서비스 계정 key 없이 GitHub OIDC token을 WIF로 교환한다.
       - name: Authenticate to Google Cloud
@@ -158,7 +167,7 @@ jobs:
         id: images
         run: |
           gcloud auth configure-docker "$REGISTRY" --quiet
-          for name in backend frontend; do
+          for name in backend frontend backup; do
             ref="$REPOSITORY/$name:$GITHUB_SHA"
             docker push --quiet "$ref"
             digest="$(docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$ref" \
@@ -265,6 +274,21 @@ jobs:
           gcloud run services update-traffic "$SERVICE" --project "$PROJECT_ID" --region "$REGION" \
             --remove-tags "$CANDIDATE_TAG" --quiet
 
+      # 서비스 배포가 끝난 뒤 두 Cloud Run Job의 image만 이번 digest로 맞춘다. job을 실행하지는 않는다.
+      # job이 아직 없으면 경고와 함께 건너뛰고, 갱신이 실패해도 서비스를 되돌리지 않고 릴리스 노트에 결과를 남긴다.
+      # job 설정(env·서비스 계정·secret)은 운영자가 template으로 관리한다(deploy/cloudrun/README.md).
+      - name: Update job images
+        id: jobs
+        if: steps.public.outcome == 'success'
+        continue-on-error: true
+        env:
+          BACKEND_IMAGE: ${{ steps.images.outputs.backend }}
+          BACKUP_IMAGE: ${{ steps.images.outputs.backup }}
+        run: |
+          bash deploy/cloudrun/update-job-images.sh \
+            purge_job "$PURGE_JOB" "$BACKEND_IMAGE" \
+            backup_job "$BACKUP_JOB" "$BACKUP_IMAGE"
+
   # 배포 job이 성공했을 때만 실행된다. GitHub에 쓰는 권한은 이 job에만 있고 클라우드 인증은 없다.
   release:
     needs: [prepare, deploy]
@@ -300,13 +324,17 @@ jobs:
           TRAFFIC: ${{ needs.deploy.outputs.traffic }}
           PUBLIC_SMOKE: ${{ needs.deploy.outputs.public_smoke }}
           TAG_CLEANUP: ${{ needs.deploy.outputs.tag_cleanup }}
+          BACKUP_IMAGE: ${{ needs.deploy.outputs.backup }}
+          PURGE_JOB_RESULT: ${{ needs.deploy.outputs.purge_job }}
+          BACKUP_JOB_RESULT: ${{ needs.deploy.outputs.backup_job }}
         run: |
           node scripts/release/notes.mjs notes --commit="$GITHUB_SHA" --version="$VERSION" \
             --started="$STARTED" --finished="$FINISHED" --service="$SERVICE" --region="$REGION" \
             --revision="$REVISION" --previous-revision="$PREVIOUS" \
-            --backend-image="$BACKEND_IMAGE" --frontend-image="$FRONTEND_IMAGE" \
+            --backend-image="$BACKEND_IMAGE" --frontend-image="$FRONTEND_IMAGE" --backup-image="$BACKUP_IMAGE" \
             --candidate-smoke="$CANDIDATE_SMOKE" --traffic="$TRAFFIC" \
-            --public-smoke="$PUBLIC_SMOKE" --tag-cleanup="$TAG_CLEANUP" > "$RUNNER_TEMP/release-notes.md"
+            --public-smoke="$PUBLIC_SMOKE" --tag-cleanup="$TAG_CLEANUP" \
+            --purge-job="$PURGE_JOB_RESULT" --backup-job="$BACKUP_JOB_RESULT" > "$RUNNER_TEMP/release-notes.md"
           cat "$RUNNER_TEMP/release-notes.md" >> "$GITHUB_STEP_SUMMARY"
 
       # gh release create는 같은 이름의 tag가 있으면 그 tag에 Release를 붙이므로 먼저 막는다.
